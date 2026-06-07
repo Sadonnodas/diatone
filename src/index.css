@@ -52,6 +52,14 @@ body,
 #root {
   height: 100%;
 }
+/* #root is the flex item in <body>; give it a definite width so it fills the
+   screen (up to max-width) instead of shrink-wrapping to its content. Without
+   this, .app's width:100% resolves against a content-sized #root and the layout
+   width drifts with each question's content. */
+#root {
+  width: 100%;
+  max-width: 430px;
+}
 body {
   background: var(--bg);
   color: var(--text);
