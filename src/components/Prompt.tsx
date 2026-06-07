@@ -19,16 +19,16 @@ function Context({ keys }: { keys: string[] }) {
   if (keys.length === 2) {
     return (
       <div className="ctx reveal" style={{ animationDelay: '.04s' }}>
-        <span className="lead">transpose</span>
+        <span className="lead">from</span>
         <span className="k">{renderJazz(keys[0], 'kf')}</span>
-        <span className="arrow">→</span>
+        <span className="lead">to</span>
         <span className="k">{renderJazz(keys[1], 'kt')}</span>
       </div>
     );
   }
   return (
     <div className="ctx reveal" style={{ animationDelay: '.04s' }}>
-      <span className="lead">in</span>
+      <span className="lead">in the key of</span>
       <span className="k">{renderJazz(keys[0], 'k')}</span>
     </div>
   );

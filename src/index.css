@@ -173,13 +173,12 @@ button {
   display: flex;
   flex-direction: column;
   align-items: center;
-  /* Bottom-weighted: prompt + keypad group in the lower thumb zone, with one
-     calm margin at the top, instead of the prompt floating in mid-screen. */
-  justify-content: flex-end;
+  /* Hero centred in the space above the keypad, with the question text lifted a
+     bit higher above it (see .ctx margin-bottom). */
+  justify-content: center;
   gap: 6px;
   text-align: center;
   min-height: 0;
-  padding-bottom: clamp(20px, 5.5vh, 60px);
 }
 .eyebrow {
   font-size: 12.5px;
@@ -771,7 +770,10 @@ button {
   display: flex;
   align-items: baseline;
   justify-content: center;
+  flex-wrap: wrap;
   gap: 9px;
+  /* Lift the question text higher above the centred hero. */
+  margin-bottom: clamp(14px, 4.5vh, 40px);
 }
 .ctx .lead {
   font-size: 13px;
