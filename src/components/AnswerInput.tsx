@@ -4,15 +4,19 @@ import { DEGREE_KEYS } from '../lib/engine';
 import { display7th, progressionToJazz } from '../lib/jazz';
 import { renderJazz } from './ChordDisplay';
 
-// §17 — chromatic tap-to-build. Chord answers are [root][accidental?][quality];
-// numeral answers are just the degree (the quality is implied by the chord shown
-// and by the diatonic position, so it isn't re-entered — see Name Numeral).
+// §17 — chromatic tap-to-build, refined so you never re-enter information the
+// prompt already gives you:
+//  - Name Numeral: tap the degree (quality implied by the chord shown).        → 'degree'
+//  - Chord modes, quality shown: tap the root [+accidental] then ✓ to answer
+//    (the quality is implied by the numeral and auto-applied).                  → 'submit'
+//  - Chord modes, Hide-quality on: tap the root [+accidental] + quality, which
+//    also submits (quality is the thing being tested, so you supply it).        → 'quality'
 
 interface Quality {
-  ascii: string; // for the compare string
-  disp: string; // jazz glyph form, for live preview / committed chips
-  main: string; // button glyph
-  sub: string; // button caption
+  ascii: string;
+  disp: string;
+  main: string;
+  sub: string;
 }
 
 const CHORD_TRIAD: Quality[] = [
@@ -30,9 +34,13 @@ const CHORD_7TH: Quality[] = [
 const ROOTS = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
 const DEGREES = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
 const accG = (a: string) => (a === '#' ? '♯' : a === 'b' ? '♭' : '');
+const ROOT_RE = /^[A-G][#b]?/;
+const suffixOf = (chord: string) => chord.replace(ROOT_RE, ''); // quality part, jazz form
+
+export type InputMode = 'degree' | 'submit' | 'quality';
 
 export interface BuilderApi {
-  isNumeral: boolean;
+  inputMode: InputMode;
   slots: number;
   active: string | null; // in-progress root
   acc: string;
@@ -41,23 +49,25 @@ export interface BuilderApi {
   pickActive: (v: string) => void;
   toggleAcc: (v: 'b' | '#') => void;
   backspace: () => void;
-  commit: (q: Quality) => void; // chord modes (commit-on-quality)
-  commitDegree: (i: number) => void; // numeral mode (commit-on-degree)
+  commit: (q: Quality) => void; // quality mode
+  submit: () => void; // submit mode (quality implied)
+  commitDegree: (i: number) => void; // degree mode
   inProgressDisplay: string | null;
 }
 
 export function useAnswerBuilder(opts: {
   question: Question | null;
   use7thChords: boolean;
+  hideQuality: boolean;
   disabled: boolean;
   onSubmit: (ascii: string, display: string) => void;
   onTap?: () => void;
 }): BuilderApi {
-  const { question, use7thChords, disabled, onSubmit, onTap } = opts;
+  const { question, use7thChords, hideQuality, disabled, onSubmit, onTap } = opts;
   const isNumeral = question?.mode === 4;
-  // slots = number of chords/numerals to answer (1 for modes 1 & 4).
   const slots = question ? question.answer.split(' ').length : 1;
   const seventh = use7thChords;
+  const inputMode: InputMode = isNumeral ? 'degree' : hideQuality ? 'quality' : 'submit';
 
   const [active, setActive] = useState<string | null>(null);
   const [acc, setAcc] = useState('');
@@ -105,35 +115,46 @@ export function useAnswerBuilder(opts: {
     onTap?.();
   }, [disabled, active, committed.length, onTap]);
 
-  // Chord modes (1, 2, 3): root [+ accidental] + quality commits the chord.
-  const commit = useCallback(
-    (q: Quality) => {
-      if (disabled || !active) return;
-      onTap?.();
-      const ascii = active + acc + q.ascii;
-      const disp = active + accG(acc) + q.disp;
+  // Push an assembled chord to the slot strip; submit when the last slot fills.
+  const push = useCallback(
+    (ascii: string, disp: string) => {
       const nextAscii = [...committedAscii, ascii];
       const nextDisp = [...committed, disp];
       setCommittedAscii(nextAscii);
       setCommitted(nextDisp);
       setActive(null);
       setAcc('');
-      if (nextAscii.length >= slots) {
-        onSubmit(nextAscii.join(' '), nextDisp.join(' '));
-      }
+      if (nextAscii.length >= slots) onSubmit(nextAscii.join(' '), nextDisp.join(' '));
     },
-    [disabled, active, acc, committed, committedAscii, slots, onSubmit, onTap],
+    [committed, committedAscii, slots, onSubmit],
   );
 
-  // Name Numeral (mode 4): one tap. The degree determines the full diatonic
-  // numeral (quality/case auto-applied) — no quality to re-enter.
+  // Hide-quality chord modes: quality tap supplies + commits.
+  const commit = useCallback(
+    (q: Quality) => {
+      if (disabled || !active) return;
+      onTap?.();
+      push(active + acc + q.ascii, active + accG(acc) + q.disp);
+    },
+    [disabled, active, acc, push, onTap],
+  );
+
+  // Quality-shown chord modes: ✓ commits the root with the implied quality.
+  const submit = useCallback(() => {
+    if (disabled || !active || !question) return;
+    onTap?.();
+    const slotIdx = committedAscii.length;
+    const suffix = suffixOf(question.answer.split(' ')[slotIdx] ?? '');
+    push(active + acc + suffix, active + accG(acc) + suffix);
+  }, [disabled, active, acc, question, committedAscii.length, push, onTap]);
+
+  // Name Numeral: one tap. The degree fixes the full diatonic numeral.
   const commitDegree = useCallback(
     (i: number) => {
       if (disabled) return;
       onTap?.();
-      const built = display7th(DEGREE_KEYS[i], use7thChords); // e.g. ii / iim7 / viiø7 / V7
-      const disp = progressionToJazz(built); // ii / ii-7 / viiø7 / V7 / I△7
-      onSubmit(built, disp);
+      const built = display7th(DEGREE_KEYS[i], use7thChords);
+      onSubmit(built, progressionToJazz(built));
     },
     [disabled, use7thChords, onSubmit, onTap],
   );
@@ -141,7 +162,7 @@ export function useAnswerBuilder(opts: {
   const inProgressDisplay = active ? active + accG(acc) : null;
 
   return {
-    isNumeral,
+    inputMode,
     slots,
     active,
     acc,
@@ -151,16 +172,13 @@ export function useAnswerBuilder(opts: {
     toggleAcc,
     backspace,
     commit,
+    submit,
     commitDegree,
     inProgressDisplay,
   };
 }
 
 // ---- Preview (lives in the stage, under the hero, only while building) ----
-// Shows the live chord you're assembling. Progression modes always show the
-// slot strip (it's the only cue for "4 answers needed"); single chord modes show
-// a chip once you've started. Numeral mode commits instantly, so no preview.
-// Feedback is rendered by the Prompt, not here.
 export function Preview({ builder }: { builder: BuilderApi }) {
   const { slots, committed, inProgressDisplay, active } = builder;
 
@@ -193,11 +211,21 @@ export function Preview({ builder }: { builder: BuilderApi }) {
 
 // ---- Keypad (bottom of screen) ----
 export function Keypad({ builder, disabled }: { builder: BuilderApi; disabled: boolean }) {
-  const { isNumeral, active, acc, qualities, pickActive, toggleAcc, backspace, commit, commitDegree } =
-    builder;
+  const {
+    inputMode,
+    active,
+    acc,
+    qualities,
+    pickActive,
+    toggleAcc,
+    backspace,
+    commit,
+    submit,
+    commitDegree,
+  } = builder;
 
   // Name Numeral: just the degree — one tap answers.
-  if (isNumeral) {
+  if (inputMode === 'degree') {
     return (
       <div className="pad">
         <div className="cap">degree — tap to answer</div>
@@ -212,7 +240,7 @@ export function Keypad({ builder, disabled }: { builder: BuilderApi; disabled: b
     );
   }
 
-  // Chord modes: root → (accidental) → quality.
+  // Chord modes: root → (accidental) → answer.
   return (
     <div className="pad">
       <div className="cap">root</div>
@@ -249,20 +277,34 @@ export function Keypad({ builder, disabled }: { builder: BuilderApi; disabled: b
         </button>
       </div>
 
-      <div className="cap">quality — tap to answer</div>
-      <div className="row">
-        {qualities.map((q) => (
-          <button
-            key={q.sub + q.main}
-            className="key q"
-            onClick={() => commit(q)}
-            disabled={disabled || !active}
-          >
-            <span className="q-glyph">{q.main}</span>
-            <small>{q.sub}</small>
-          </button>
-        ))}
-      </div>
+      {inputMode === 'submit' ? (
+        <>
+          <div className="cap">tap to answer</div>
+          <div className="row">
+            <button className="key submit" onClick={submit} disabled={disabled || !active}>
+              <span className="q-glyph">✓</span>
+              <small>answer</small>
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="cap">quality — tap to answer</div>
+          <div className="row">
+            {qualities.map((q) => (
+              <button
+                key={q.sub + q.main}
+                className="key q"
+                onClick={() => commit(q)}
+                disabled={disabled || !active}
+              >
+                <span className="q-glyph">{q.main}</span>
+                <small>{q.sub}</small>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

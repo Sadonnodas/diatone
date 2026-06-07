@@ -351,6 +351,18 @@ button {
   color: var(--text-2);
   font-size: 16px;
 }
+.key.submit {
+  color: var(--accent);
+  border-color: var(--accent-line);
+  background: var(--accent-dim);
+}
+.key.submit .q-glyph {
+  font-size: 22px;
+}
+.key.submit small {
+  color: var(--accent);
+  opacity: 0.8;
+}
 .key:disabled {
   opacity: 0.4;
 }

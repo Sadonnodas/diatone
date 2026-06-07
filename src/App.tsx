@@ -69,6 +69,7 @@ export default function App() {
   const builder = useAnswerBuilder({
     question,
     use7thChords: state.settings.use7thChords,
+    hideQuality: state.settings.hideQuality,
     disabled,
     onSubmit: (ascii, display) => dispatch({ type: 'SUBMIT', answer: ascii, display }),
     onTap: () => {
