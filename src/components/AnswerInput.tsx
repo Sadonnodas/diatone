@@ -1,17 +1,18 @@
 import { useEffect, useState, useCallback } from 'react';
 import type { Question } from '../lib/engine';
+import { DEGREE_KEYS } from '../lib/engine';
+import { display7th, progressionToJazz } from '../lib/jazz';
 import { renderJazz } from './ChordDisplay';
 
-// §17 — chromatic tap-to-build. Every answer has the shape
-// [root|degree][accidental?][quality]; ~13 controls spell all of them. The
-// builder assembles a plain string compared via the §13 parser — no keyboard.
+// §17 — chromatic tap-to-build. Chord answers are [root][accidental?][quality];
+// numeral answers are just the degree (the quality is implied by the chord shown
+// and by the diatonic position, so it isn't re-entered — see Name Numeral).
 
 interface Quality {
   ascii: string; // for the compare string
   disp: string; // jazz glyph form, for live preview / committed chips
   main: string; // button glyph
   sub: string; // button caption
-  lower?: boolean; // numeral mode: lowercase the degree
 }
 
 const CHORD_TRIAD: Quality[] = [
@@ -25,17 +26,6 @@ const CHORD_7TH: Quality[] = [
   { ascii: '7', disp: '7', main: '7', sub: 'dom7' },
   { ascii: 'm7b5', disp: 'ø7', main: 'ø7', sub: 'm7b5' },
 ];
-const NUM_TRIAD: Quality[] = [
-  { ascii: '', disp: '', main: 'maj', sub: 'major' },
-  { ascii: '', disp: '', main: 'min', sub: 'minor', lower: true },
-  { ascii: 'dim', disp: '°', main: 'dim', sub: '°', lower: true },
-];
-const NUM_7TH: Quality[] = [
-  { ascii: 'maj7', disp: '△7', main: 'maj7', sub: '△7' },
-  { ascii: 'm7', disp: '-7', main: 'm7', sub: '-7', lower: true },
-  { ascii: '7', disp: '7', main: '7', sub: 'dom7' },
-  { ascii: 'm7b5', disp: 'ø7', main: 'ø7', sub: 'm7b5', lower: true },
-];
 
 const ROOTS = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
 const DEGREES = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
@@ -43,16 +33,16 @@ const accG = (a: string) => (a === '#' ? '♯' : a === 'b' ? '♭' : '');
 
 export interface BuilderApi {
   isNumeral: boolean;
-  use7th: boolean;
   slots: number;
-  active: string | null; // in-progress root or degree
+  active: string | null; // in-progress root
   acc: string;
   committed: string[]; // display chips
   qualities: Quality[];
   pickActive: (v: string) => void;
   toggleAcc: (v: 'b' | '#') => void;
   backspace: () => void;
-  commit: (q: Quality) => void;
+  commit: (q: Quality) => void; // chord modes (commit-on-quality)
+  commitDegree: (i: number) => void; // numeral mode (commit-on-degree)
   inProgressDisplay: string | null;
 }
 
@@ -82,13 +72,7 @@ export function useAnswerBuilder(opts: {
     setCommittedAscii([]);
   }, [sig]);
 
-  const qualities = isNumeral
-    ? seventh
-      ? NUM_7TH
-      : NUM_TRIAD
-    : seventh
-      ? CHORD_7TH
-      : CHORD_TRIAD;
+  const qualities = seventh ? CHORD_7TH : CHORD_TRIAD;
 
   const pickActive = useCallback(
     (v: string) => {
@@ -121,20 +105,13 @@ export function useAnswerBuilder(opts: {
     onTap?.();
   }, [disabled, active, committed.length, onTap]);
 
+  // Chord modes (1, 2, 3): root [+ accidental] + quality commits the chord.
   const commit = useCallback(
     (q: Quality) => {
       if (disabled || !active) return;
       onTap?.();
-      let ascii: string;
-      let disp: string;
-      if (isNumeral) {
-        const deg = q.lower ? active.toLowerCase() : active;
-        ascii = deg + q.ascii;
-        disp = deg + q.disp;
-      } else {
-        ascii = active + acc + q.ascii;
-        disp = active + accG(acc) + q.disp;
-      }
+      const ascii = active + acc + q.ascii;
+      const disp = active + accG(acc) + q.disp;
       const nextAscii = [...committedAscii, ascii];
       const nextDisp = [...committed, disp];
       setCommittedAscii(nextAscii);
@@ -145,14 +122,26 @@ export function useAnswerBuilder(opts: {
         onSubmit(nextAscii.join(' '), nextDisp.join(' '));
       }
     },
-    [disabled, active, acc, isNumeral, committed, committedAscii, slots, onSubmit, onTap],
+    [disabled, active, acc, committed, committedAscii, slots, onSubmit, onTap],
   );
 
-  const inProgressDisplay = active ? (isNumeral ? active : active + accG(acc)) : null;
+  // Name Numeral (mode 4): one tap. The degree determines the full diatonic
+  // numeral (quality/case auto-applied) — no quality to re-enter.
+  const commitDegree = useCallback(
+    (i: number) => {
+      if (disabled) return;
+      onTap?.();
+      const built = display7th(DEGREE_KEYS[i], use7thChords); // e.g. ii / iim7 / viiø7 / V7
+      const disp = progressionToJazz(built); // ii / ii-7 / viiø7 / V7 / I△7
+      onSubmit(built, disp);
+    },
+    [disabled, use7thChords, onSubmit, onTap],
+  );
+
+  const inProgressDisplay = active ? active + accG(acc) : null;
 
   return {
     isNumeral,
-    use7th: seventh,
     slots,
     active,
     acc,
@@ -162,14 +151,16 @@ export function useAnswerBuilder(opts: {
     toggleAcc,
     backspace,
     commit,
+    commitDegree,
     inProgressDisplay,
   };
 }
 
 // ---- Preview (lives in the stage, under the hero, only while building) ----
 // Shows the live chord you're assembling. Progression modes always show the
-// slot strip (it's the only cue for "4 answers needed"); single modes show a
-// chip only once you've started. Feedback is rendered by the Prompt, not here.
+// slot strip (it's the only cue for "4 answers needed"); single chord modes show
+// a chip once you've started. Numeral mode commits instantly, so no preview.
+// Feedback is rendered by the Prompt, not here.
 export function Preview({ builder }: { builder: BuilderApi }) {
   const { slots, committed, inProgressDisplay, active } = builder;
 
@@ -202,13 +193,31 @@ export function Preview({ builder }: { builder: BuilderApi }) {
 
 // ---- Keypad (bottom of screen) ----
 export function Keypad({ builder, disabled }: { builder: BuilderApi; disabled: boolean }) {
-  const { isNumeral, active, acc, qualities, pickActive, toggleAcc, backspace, commit } = builder;
+  const { isNumeral, active, acc, qualities, pickActive, toggleAcc, backspace, commit, commitDegree } =
+    builder;
 
+  // Name Numeral: just the degree — one tap answers.
+  if (isNumeral) {
+    return (
+      <div className="pad">
+        <div className="cap">degree — tap to answer</div>
+        <div className="row">
+          {DEGREES.map((d, i) => (
+            <button key={d} className="key" onClick={() => commitDegree(i)} disabled={disabled}>
+              {d}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Chord modes: root → (accidental) → quality.
   return (
     <div className="pad">
-      <div className="cap">{isNumeral ? 'degree' : 'root'}</div>
+      <div className="cap">root</div>
       <div className="row">
-        {(isNumeral ? DEGREES : ROOTS).map((r) => (
+        {ROOTS.map((r) => (
           <button
             key={r}
             className={`key${active === r ? ' sel' : ''}`}
@@ -220,27 +229,25 @@ export function Keypad({ builder, disabled }: { builder: BuilderApi; disabled: b
         ))}
       </div>
 
-      {!isNumeral && (
-        <div className="row">
-          <button
-            className={`key${acc === 'b' ? ' sel' : ''}`}
-            onClick={() => toggleAcc('b')}
-            disabled={disabled || !active}
-          >
-            {'♭'}
-          </button>
-          <button
-            className={`key${acc === '#' ? ' sel' : ''}`}
-            onClick={() => toggleAcc('#')}
-            disabled={disabled || !active}
-          >
-            {'♯'}
-          </button>
-          <button className="key util" onClick={backspace} disabled={disabled}>
-            {'⌫'}
-          </button>
-        </div>
-      )}
+      <div className="row">
+        <button
+          className={`key${acc === 'b' ? ' sel' : ''}`}
+          onClick={() => toggleAcc('b')}
+          disabled={disabled || !active}
+        >
+          {'♭'}
+        </button>
+        <button
+          className={`key${acc === '#' ? ' sel' : ''}`}
+          onClick={() => toggleAcc('#')}
+          disabled={disabled || !active}
+        >
+          {'♯'}
+        </button>
+        <button className="key util" onClick={backspace} disabled={disabled}>
+          {'⌫'}
+        </button>
+      </div>
 
       <div className="cap">quality — tap to answer</div>
       <div className="row">
@@ -255,11 +262,6 @@ export function Keypad({ builder, disabled }: { builder: BuilderApi; disabled: b
             <small>{q.sub}</small>
           </button>
         ))}
-        {isNumeral && (
-          <button className="key util" onClick={backspace} disabled={disabled}>
-            {'⌫'}
-          </button>
-        )}
       </div>
     </div>
   );
