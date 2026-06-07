@@ -173,10 +173,13 @@ button {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  /* Bottom-weighted: prompt + keypad group in the lower thumb zone, with one
+     calm margin at the top, instead of the prompt floating in mid-screen. */
+  justify-content: flex-end;
   gap: 6px;
   text-align: center;
   min-height: 0;
+  padding-bottom: clamp(20px, 5.5vh, 60px);
 }
 .eyebrow {
   font-size: 12.5px;
@@ -296,7 +299,7 @@ button {
 .pad {
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 10px;
 }
 .cap {
   font-size: 11px;
@@ -312,7 +315,7 @@ button {
 .key {
   flex: 1;
   min-width: 0;
-  height: 52px;
+  height: clamp(58px, 8.2vh, 80px);
   border: 0.5px solid var(--line-strong);
   background: var(--surface-2);
   border-radius: var(--radius);
@@ -779,7 +782,7 @@ button {
 .ctx .k {
   font-family: var(--font-display);
   font-weight: 500;
-  font-size: clamp(28px, 9vw, 38px);
+  font-size: clamp(30px, 9.5vw, 42px);
   line-height: 1;
   color: var(--accent);
 }
@@ -831,7 +834,7 @@ button {
 
 /* Bigger hero now that the screen is decluttered. */
 .hero.single {
-  font-size: clamp(84px, 30vw, 148px);
+  font-size: clamp(96px, 33vw, 176px);
 }
 .hero.correct {
   color: var(--accent);

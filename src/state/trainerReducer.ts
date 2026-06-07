@@ -43,7 +43,7 @@ export const initialSettings: Settings = {
   selectedKeys: DEFAULT_KEYS,
   selectedModes: [1, 4],
   use7thChords: false,
-  generationMethod: 'weighted',
+  generationMethod: 'random',
   majorWeights: [10, 6, 4, 8, 10, 8, 2],
   degreeToggles: { I: true, ii: true, iii: true, IV: true, V: true, vi: true, 'vii°': true },
   autoAdvance: true,
