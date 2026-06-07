@@ -3,12 +3,12 @@ import { degreeGlyphs } from './scaleData';
 
 // A note ready to draw: position + resolved colours/label.
 export interface FretNote {
-  string: number; // 1 (high E, top) .. 6 (low E, bottom)
-  fret: number; // absolute
+  string: number;
+  fret: number;
   fill: string;
   stroke: string;
-  text: string; // label colour
-  label: string; // '', 'R', a degree…
+  text: string;
+  label: string;
   tappable: boolean;
 }
 
@@ -20,66 +20,68 @@ const NOTE_R = 15;
 const HIT_R = 21;
 const MARKERS = new Set([3, 5, 7, 9, 15, 17, 19, 21]);
 
+const DEFAULT_STRINGS = [1, 2, 3, 4, 5, 6];
+
 export function FretboardWindow({
   notes,
   startFret,
   endFret,
   onTap,
+  strings = DEFAULT_STRINGS,
 }: {
   notes: FretNote[];
   startFret: number;
   endFret: number;
   onTap: (string: number, fret: number) => void;
+  strings?: number[];
 }) {
   const cols = endFret - startFret + 1;
   const W = PAD_X * 2 + cols * FRET_W;
-  const H = PAD_Y * 2 + 5 * STRING_GAP;
+  const H = PAD_Y * 2 + (strings.length - 1) * STRING_GAP;
+  const fullBoard = strings.length === 6;
 
   const cellX = (fret: number) => PAD_X + (fret - startFret) * FRET_W + FRET_W / 2;
   const boundaryX = (k: number) => PAD_X + k * FRET_W;
-  const stringY = (s: number) => PAD_Y + (s - 1) * STRING_GAP;
-  const midY = PAD_Y + 2.5 * STRING_GAP;
+  const stringY = (s: number) => PAD_Y + Math.max(0, strings.indexOf(s)) * STRING_GAP;
+  const topY = PAD_Y;
+  const botY = PAD_Y + (strings.length - 1) * STRING_GAP;
+  const midY = PAD_Y + ((strings.length - 1) / 2) * STRING_GAP;
 
-  const fade =
-    'linear-gradient(to right, transparent 0, #000 11%, #000 89%, transparent 100%)';
+  const markerFrets = Array.from({ length: cols }, (_, c) => startFret + c);
+  const fade = 'linear-gradient(to right, transparent 0, #000 11%, #000 89%, transparent 100%)';
 
   return (
-    <div
-      className="fretwrap"
-      style={{
-        WebkitMaskImage: fade,
-        maskImage: fade,
-      }}
-    >
+    <div className="fretwrap" style={{ WebkitMaskImage: fade, maskImage: fade }}>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" preserveAspectRatio="xMidYMid meet">
         {/* inlay markers */}
-        {Array.from({ length: cols }, (_, c) => startFret + c)
+        {markerFrets
           .filter((f) => MARKERS.has(f))
           .map((f) => (
             <circle key={`m${f}`} cx={cellX(f)} cy={midY} r={5} fill="var(--line-strong)" />
           ))}
-        {Array.from({ length: cols }, (_, c) => startFret + c)
-          .filter((f) => f === 12 || f === 24)
-          .flatMap((f) => [
-            <circle key={`m${f}a`} cx={cellX(f)} cy={stringY(2)} r={5} fill="var(--line-strong)" />,
-            <circle key={`m${f}b`} cx={cellX(f)} cy={stringY(5)} r={5} fill="var(--line-strong)" />,
-          ])}
+        {fullBoard &&
+          markerFrets
+            .filter((f) => f === 12 || f === 24)
+            .flatMap((f) => [
+              <circle key={`m${f}a`} cx={cellX(f)} cy={stringY(2)} r={5} fill="var(--line-strong)" />,
+              <circle key={`m${f}b`} cx={cellX(f)} cy={stringY(5)} r={5} fill="var(--line-strong)" />,
+            ])}
 
-        {/* frets (vertical) — nut thicker when the window starts at fret 0 */}
+        {/* frets — nut thicker when the window starts at fret 0 */}
         {Array.from({ length: cols + 1 }, (_, k) => (
           <line
             key={`f${k}`}
             x1={boundaryX(k)}
-            y1={stringY(1)}
+            y1={topY}
             x2={boundaryX(k)}
-            y2={stringY(6)}
+            y2={botY}
             stroke="var(--line-strong)"
             strokeWidth={startFret === 0 && k === 0 ? 4 : 1}
           />
         ))}
 
-        {/* strings (horizontal), low E thickest, drawn full-width so they fade out */}
-        {[1, 2, 3, 4, 5, 6].map((s) => (
+        {/* strings (low E thickest), drawn full-width so they fade out */}
+        {strings.map((s) => (
           <line
             key={`s${s}`}
             x1={0}

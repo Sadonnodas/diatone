@@ -1,18 +1,13 @@
 import { useEffect, useState } from 'react';
-import { FretboardWindow, type FretNote } from './FretboardWindow';
+import { FretboardWindow } from './FretboardWindow';
 import { FretboardSettings } from './FretboardSettings';
-import {
-  useFretboardGame,
-  defaultFretSettings,
-  type FretSettings,
-  type FretQuestion,
-} from './useFretboardGame';
-import { SCALE_TYPE_INFO, degreeGlyphs } from './scaleData';
+import { useFretboardGame, defaultFretSettings, type FretSettings } from './useFretboardGame';
+import { SCALE_TYPE_INFO, degreeGlyphs, degreeOrdinal, degreeIsRoot } from './scaleData';
+import { buildFretNotes } from './fretDisplay';
 import { renderJazz } from '../components/ChordDisplay';
 import { haptic, TAP, CORRECT, WRONG } from '../lib/haptics';
 
 const STORAGE_KEY = 'diatone.fret.v1';
-const ROOT_STRINGS = new Set([4, 5, 6]);
 
 function loadSettings(): FretSettings {
   try {
@@ -24,44 +19,17 @@ function loadSettings(): FretSettings {
   return defaultFretSettings;
 }
 
-// Resolve each note's colours/label for the current state.
-function buildFretNotes(q: FretQuestion, selected: Set<string>, answered: boolean): FretNote[] {
-  return q.notes.map((n) => {
-    const key = `${n.string}-${n.fret}`;
-    const sel = selected.has(key);
-    const isTarget = n.degree === q.target;
-    const pos = { string: n.string, fret: n.fret };
-
-    if (answered) {
-      if (isTarget && sel)
-        return { ...pos, fill: 'var(--correct)', stroke: 'var(--correct)', text: '#0a0c10', label: n.degree, tappable: false };
-      if (isTarget && !sel)
-        return { ...pos, fill: 'transparent', stroke: 'var(--correct)', text: 'var(--correct)', label: n.degree, tappable: false };
-      if (!isTarget && sel)
-        return { ...pos, fill: 'var(--wrong)', stroke: 'var(--wrong)', text: '#fff', label: n.degree, tappable: false };
-      return { ...pos, fill: 'var(--surface-1)', stroke: 'var(--line)', text: 'var(--text-3)', label: n.degree, tappable: false };
-    }
-
-    if (sel)
-      return { ...pos, fill: 'var(--accent-deep)', stroke: 'var(--accent)', text: '#fff', label: '', tappable: true };
-    if (q.contextMode === 'rootGiven' && n.isRoot && ROOT_STRINGS.has(n.string))
-      return { ...pos, fill: 'var(--accent-dim)', stroke: 'var(--accent-line)', text: 'var(--accent)', label: 'R', tappable: true };
-    return { ...pos, fill: 'var(--surface-2)', stroke: 'var(--line-strong)', text: 'var(--text)', label: '', tappable: true };
-  });
-}
-
-function contextLabel(q: FretQuestion): string {
-  if (q.contextMode === 'qualityGiven') return `${q.quality} pattern`;
-  return SCALE_TYPE_INFO[q.scaleType].label;
-}
-
 export default function FretboardGame({ onBack }: { onBack: () => void }) {
   const [settings, setSettings] = useState<FretSettings>(loadSettings);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [flash, setFlash] = useState<'' | 'flash-ok' | 'flash-no'>('');
+  const [hintShown, setHintShown] = useState(false);
 
   const { question, selected, answered, correct, streak, toggle, check, generate, scheduleAdvance } =
     useFretboardGame(settings);
+
+  // Reset the per-question scale-type hint whenever a new question loads.
+  useEffect(() => setHintShown(false), [question]);
 
   useEffect(() => {
     try {
@@ -89,7 +57,29 @@ export default function FretboardGame({ onBack }: { onBack: () => void }) {
     toggle(string, fret);
   };
 
-  const fretNotes = question && !question.error ? buildFretNotes(question, selected, answered) : [];
+  const fretNotes =
+    question && !question.error
+      ? buildFretNotes(
+          question.notes,
+          question.target,
+          selected,
+          answered,
+          question.contextMode === 'rootGiven' ? 'low' : 'none',
+        )
+      : [];
+
+  // Root-given hides the scale type behind a Hint button (unless revealed); the
+  // quality-given mode always states the quality.
+  const showScaleType =
+    !!question &&
+    !question.error &&
+    (question.contextMode === 'qualityGiven' || settings.revealScaleType || hintShown || answered);
+  const ctxLabel =
+    question && !question.error
+      ? question.contextMode === 'qualityGiven'
+        ? `${question.quality} pattern`
+        : SCALE_TYPE_INFO[question.scaleType].label
+      : '';
 
   return (
     <div className={`app ${flash}`}>
@@ -123,10 +113,18 @@ export default function FretboardGame({ onBack }: { onBack: () => void }) {
         ) : question ? (
           <>
             <div className="ctx reveal" style={{ animationDelay: '.04s' }}>
-              <span className="lead">{contextLabel(question)}</span>
+              {showScaleType ? (
+                <span className="lead">{ctxLabel}</span>
+              ) : (
+                <button className="hint-btn" onClick={() => setHintShown(true)}>
+                  Hint: reveal scale
+                </button>
+              )}
             </div>
             <div className="fret-prompt reveal" style={{ animationDelay: '.08s' }}>
-              tap every <span className="t">{renderJazz(degreeGlyphs(question.target), 'tgt')}</span>
+              <span className="lead">tap every</span>
+              <span className="t">{renderJazz(degreeGlyphs(degreeOrdinal(question.target)), 'tgt')}</span>
+              {!degreeIsRoot(question.target) && <span className="lead">degree</span>}
             </div>
             <FretboardWindow
               notes={fretNotes}

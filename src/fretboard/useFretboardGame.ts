@@ -16,6 +16,7 @@ export interface FretSettings {
   scaleTypes: Record<ScaleType, boolean>;
   shapes: Record<ShapeKey, boolean>;
   contextModes: Record<ContextMode, boolean>;
+  revealScaleType: boolean; // root-given: show the scale type instead of a hint button
   autoAdvance: boolean;
 }
 
@@ -28,6 +29,7 @@ export const defaultFretSettings: FretSettings = {
   },
   shapes: { E: true, A: true, G: true, C: true, D: true },
   contextModes: { rootGiven: true, qualityGiven: false },
+  revealScaleType: false,
   autoAdvance: true,
 };
 

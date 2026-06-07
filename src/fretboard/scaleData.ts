@@ -236,6 +236,52 @@ export const noteKey = (n: { string: number; fret: number }) => `${n.string}-${n
 // the proper musical symbols for display (renderJazz then styles them).
 export const degreeGlyphs = (d: string) => d.replace(/b/g, '♭').replace(/#/g, '♯');
 
+// Spoken/ordinal form of a degree for prompts: '2' → '2nd', 'b3' → '♭3rd',
+// '1' → 'root'.
+const ORDINALS: Record<string, string> = { '1': 'st', '2': 'nd', '3': 'rd', '4': 'th', '5': 'th', '6': 'th', '7': 'th' };
+export const degreeIsRoot = (d: string) => d === '1';
+export function degreeOrdinal(d: string): string {
+  if (d === '1') return 'root';
+  const acc = d[0] === 'b' ? '♭' : d[0] === '#' ? '♯' : '';
+  const num = d.replace(/[b#]/g, '');
+  return acc + num + (ORDINALS[num] ?? 'th');
+}
+
+// ---- Warm-up building blocks (Fret Science: the rectangle & the stack) ----
+// Relative shapes (s = row, 0 at top; f = fret offset). Every pentatonic shape
+// is built from these; the degree positions are fixed per quality.
+export type WarmupShape = 'rectangle' | 'stack';
+export interface MiniNote {
+  s: number;
+  f: number;
+  degree: string;
+  root?: boolean;
+}
+export const WARMUP_SHAPES: Record<WarmupShape, Record<'major' | 'minor', MiniNote[]>> = {
+  rectangle: {
+    minor: [
+      { s: 0, f: 0, degree: '1', root: true }, { s: 0, f: 3, degree: 'b3' },
+      { s: 1, f: 0, degree: '5' }, { s: 1, f: 3, degree: 'b7' },
+    ],
+    major: [
+      { s: 0, f: 0, degree: '6' }, { s: 0, f: 3, degree: '1', root: true },
+      { s: 1, f: 0, degree: '3' }, { s: 1, f: 3, degree: '5' },
+    ],
+  },
+  stack: {
+    minor: [
+      { s: 0, f: 0, degree: 'b3' }, { s: 0, f: 2, degree: '4' },
+      { s: 1, f: 0, degree: 'b7' }, { s: 1, f: 2, degree: '1', root: true },
+      { s: 2, f: 0, degree: '4' }, { s: 2, f: 2, degree: '5' },
+    ],
+    major: [
+      { s: 0, f: 0, degree: '1', root: true }, { s: 0, f: 2, degree: '2' },
+      { s: 1, f: 0, degree: '5' }, { s: 1, f: 2, degree: '6' },
+      { s: 2, f: 0, degree: '2' }, { s: 2, f: 2, degree: '3' },
+    ],
+  },
+};
+
 // Place a shape so its anchor root sits at `rootFret`. Returns null if any note
 // would fall outside [0, maxFret].
 export function placeShape(

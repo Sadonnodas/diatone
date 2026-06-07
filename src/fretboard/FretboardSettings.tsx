@@ -95,6 +95,18 @@ export function FretboardSettings({
             </div>
           </div>
 
+          {/* Reveal scale type */}
+          <div className="setting-row">
+            <div>
+              <div className="label">Always show scale type</div>
+              <div className="desc">Root-given: show it instead of a Hint button.</div>
+            </div>
+            <Switch
+              on={settings.revealScaleType}
+              onClick={() => onChange({ ...settings, revealScaleType: !settings.revealScaleType })}
+            />
+          </div>
+
           {/* Auto-advance */}
           <div className="setting-row">
             <div>

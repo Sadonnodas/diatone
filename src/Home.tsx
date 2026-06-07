@@ -1,4 +1,16 @@
-export type Screen = 'home' | 'numerals' | 'fretboard';
+export type Screen = 'home' | 'numerals' | 'fretboard' | 'warmup';
+
+function RectStackIcon() {
+  return (
+    <svg width="34" height="26" viewBox="0 0 34 26" fill="none" aria-hidden="true">
+      <rect x="3" y="6" width="13" height="14" rx="2" stroke="currentColor" strokeWidth="1.6" opacity="0.55" />
+      <circle cx="20" cy="9" r="2.6" fill="currentColor" />
+      <circle cx="28" cy="9" r="2.6" fill="currentColor" />
+      <circle cx="20" cy="17" r="2.6" fill="currentColor" />
+      <circle cx="28" cy="17" r="2.6" fill="currentColor" />
+    </svg>
+  );
+}
 
 function FretIcon() {
   return (
@@ -51,6 +63,21 @@ export default function Home({ onPick }: { onPick: (g: Screen) => void }) {
           <div className="gc-text">
             <div className="gc-title">Fretboard</div>
             <div className="gc-desc">Find scale degrees in CAGED shapes</div>
+          </div>
+          <div className="gc-arrow">→</div>
+        </button>
+
+        <button
+          className="gamecard reveal"
+          style={{ animationDelay: '.22s' }}
+          onClick={() => onPick('warmup')}
+        >
+          <div className="gc-icon">
+            <RectStackIcon />
+          </div>
+          <div className="gc-text">
+            <div className="gc-title">Warm-up</div>
+            <div className="gc-desc">Degrees in the rectangle & stack shapes</div>
           </div>
           <div className="gc-arrow">→</div>
         </button>
