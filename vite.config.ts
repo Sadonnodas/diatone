@@ -7,11 +7,17 @@ const REPO = 'diatone'; // GitHub Pages project path: https://<user>.github.io/d
 
 export default defineConfig({
   base: `/${REPO}/`,
+  define: {
+    // Build timestamp so the app can show which version is installed.
+    __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+  },
   plugins: [
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt' so we control when the new version is applied (manual button +
+      // an "update available" banner) instead of a silent reload mid-drill.
+      registerType: 'prompt',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'fonts/*.woff2'],
       manifest: {
         name: 'Diatone',

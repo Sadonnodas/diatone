@@ -12,6 +12,7 @@ import { useAnswerBuilder, Preview, Keypad } from './components/AnswerInput';
 import { SettingsSheet } from './components/SettingsSheet';
 import { Review } from './components/Review';
 import { haptic, TAP, CORRECT, WRONG } from './lib/haptics';
+import { usePwa } from './pwa';
 
 const STORAGE_KEY = 'diatone.settings.v1';
 const CORRECT_ADVANCE_MS = 700; // snappy when drilling
@@ -49,6 +50,7 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [flash, setFlash] = useState<'' | 'flash-ok' | 'flash-no'>('');
   const advanceTimer = useRef<number | null>(null);
+  const pwa = usePwa();
 
   const question = currentQuestion(state);
   const reviewing = state.reviewIndex !== null;
@@ -119,6 +121,12 @@ export default function App() {
 
   return (
     <div className={`app ${flash}`} onClick={onAppClick}>
+      {pwa.needRefresh && (
+        <div className="update-banner" onClick={stop}>
+          <span>New version available</span>
+          <button onClick={pwa.updateNow}>Update</button>
+        </div>
+      )}
       <div className="top reveal" style={{ animationDelay: '.02s' }} onClick={stop}>
         <div className="streak" aria-label={`Streak ${state.streak}`}>
           <span className="dot" />
@@ -196,6 +204,7 @@ export default function App() {
             settings={state.settings}
             onChange={updateSettings}
             onClose={() => setSettingsOpen(false)}
+            pwa={pwa}
           />
         </div>
       )}

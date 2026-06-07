@@ -762,22 +762,71 @@ button {
   gap: 9px;
 }
 
-/* The only words on the play screen: the key (or transpose direction). */
+/* The only words on the play screen: the key (or transpose direction). The
+   key is set in the display serif at a legible size so it reads as a key. */
 .ctx {
-  font-size: 12.5px;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 9px;
+}
+.ctx .lead {
+  font-size: 13px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--text-3);
 }
 .ctx .k {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(28px, 9vw, 38px);
+  line-height: 1;
   color: var(--accent);
-  font-weight: 600;
-  letter-spacing: 0.06em;
 }
 .ctx .arrow {
   color: var(--text-3);
-  margin: 0 8px;
-  letter-spacing: 0;
+  font-size: 22px;
+}
+
+/* Update banner — slim pill, floats at the top, out of layout flow. */
+.update-banner {
+  position: fixed;
+  top: max(10px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 8px 8px 16px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 0.5px solid var(--accent-line);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+  font-size: 13px;
+  color: var(--text);
+  animation: rise 0.4s cubic-bezier(0.2, 0.7, 0.2, 1);
+  white-space: nowrap;
+}
+.update-banner button {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--accent-deep);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+}
+.update-banner button:active {
+  transform: scale(0.96);
+}
+
+/* Accidentals (♯ / ♭) — symbol font, set slightly smaller like real accidentals. */
+.acc {
+  font-family: var(--font-ui), 'Apple Symbols', 'Segoe UI Symbol', sans-serif;
+  font-size: 0.62em;
+  vertical-align: 0.1em;
+  font-weight: 500;
+  padding-left: 0.02em;
 }
 
 /* Bigger hero now that the screen is decluttered. */

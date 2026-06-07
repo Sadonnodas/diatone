@@ -16,7 +16,7 @@ function renderTemplate(text: string, keys: string[], chordType?: string): React
     if (p === '{key}')
       return (
         <span className="k" key={i}>
-          {keys[keyIdx++] ?? ''}
+          {renderJazz(keys[keyIdx++] ?? '', `rk${i}`)}
         </span>
       );
     if (p === '{chordType}') return <React.Fragment key={i}>{chordType}</React.Fragment>;
