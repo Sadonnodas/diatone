@@ -822,6 +822,16 @@ button {
 .update-banner button:active {
   transform: scale(0.96);
 }
+.update-banner button:disabled {
+  opacity: 0.7;
+}
+.update-banner .banner-x {
+  background: none;
+  color: var(--text-3);
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 500;
+}
 
 /* Accidentals (♯ / ♭) — symbol font, set slightly smaller like real accidentals. */
 .acc {

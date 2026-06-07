@@ -3,6 +3,7 @@ import { useRegisterSW } from 'virtual:pwa-register/react';
 
 export interface PwaApi {
   needRefresh: boolean; // a new version is downloaded and waiting
+  updating: boolean; // an update is being applied
   checking: boolean; // a manual check is in flight
   lastChecked: number | null;
   buildTime: string;
@@ -11,16 +12,16 @@ export interface PwaApi {
 }
 
 // Wraps vite-plugin-pwa's service-worker registration: surfaces when a new
-// version is ready, checks for updates on focus + hourly, and exposes a manual
-// "check now" for the settings sheet. Checks only succeed when online.
+// version is ready, checks for updates on focus + hourly, and applies an update
+// reliably. Checks only succeed when online.
 export function usePwa(): PwaApi {
   const regRef = useRef<ServiceWorkerRegistration | undefined>(undefined);
   const [checking, setChecking] = useState(false);
+  const [updating, setUpdating] = useState(false);
   const [lastChecked, setLastChecked] = useState<number | null>(null);
 
   const {
     needRefresh: [needRefresh],
-    updateServiceWorker,
   } = useRegisterSW({
     onRegisteredSW(_swUrl, r) {
       regRef.current = r;
@@ -52,12 +53,48 @@ export function usePwa(): PwaApi {
     setChecking(false);
   };
 
+  // Apply the waiting version. Don't rely on workbox-window's implicit
+  // controllerchange→reload (it can silently fail): activate the waiting worker
+  // ourselves, reload when it takes control, and hard-reload as a fallback so
+  // the banner can never get stuck.
+  const updateNow = async () => {
+    setUpdating(true);
+    const reload = () => {
+      window.location.reload();
+    };
+    try {
+      navigator.serviceWorker?.addEventListener('controllerchange', reload, { once: true });
+
+      let r = regRef.current;
+      if (!r && 'serviceWorker' in navigator) {
+        r = await navigator.serviceWorker.getRegistration();
+      }
+      // Make sure we have the freshest waiting worker.
+      try {
+        await r?.update();
+      } catch {
+        /* ignore */
+      }
+
+      const waiting = r?.waiting ?? r?.installing;
+      if (waiting) {
+        waiting.postMessage({ type: 'SKIP_WAITING' });
+      }
+    } catch {
+      /* fall through to the fallback reload */
+    }
+    // If controllerchange doesn't fire promptly (no waiting worker, or the SW
+    // doesn't hand over control), reload anyway to pick up the latest.
+    setTimeout(reload, 2000);
+  };
+
   return {
     needRefresh,
+    updating,
     checking,
     lastChecked,
     buildTime: __BUILD_TIME__,
-    updateNow: () => updateServiceWorker(true),
+    updateNow,
     checkForUpdates,
   };
 }

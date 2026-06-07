@@ -38,6 +38,9 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
         navigateFallback: `/${REPO}/index.html`,
+        // Once the waiting worker is told to skipWaiting (via the Update button),
+        // claim open pages so control hands over and the reload actually fires.
+        clientsClaim: true,
       },
     }),
   ],

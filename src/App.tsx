@@ -49,6 +49,7 @@ export default function App() {
   const [state, dispatch] = useReducer(trainerReducer, undefined, loadInitialState);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [flash, setFlash] = useState<'' | 'flash-ok' | 'flash-no'>('');
+  const [updateDismissed, setUpdateDismissed] = useState(false);
   const advanceTimer = useRef<number | null>(null);
   const pwa = usePwa();
 
@@ -121,10 +122,21 @@ export default function App() {
 
   return (
     <div className={`app ${flash}`} onClick={onAppClick}>
-      {pwa.needRefresh && (
+      {pwa.needRefresh && !updateDismissed && (
         <div className="update-banner" onClick={stop}>
-          <span>New version available</span>
-          <button onClick={pwa.updateNow}>Update</button>
+          <span>{pwa.updating ? 'Updating…' : 'New version available'}</span>
+          <button onClick={pwa.updateNow} disabled={pwa.updating}>
+            {pwa.updating ? '…' : 'Update'}
+          </button>
+          {!pwa.updating && (
+            <button
+              className="banner-x"
+              aria-label="Dismiss"
+              onClick={() => setUpdateDismissed(true)}
+            >
+              ✕
+            </button>
+          )}
         </div>
       )}
       <div className="top reveal" style={{ animationDelay: '.02s' }} onClick={stop}>
