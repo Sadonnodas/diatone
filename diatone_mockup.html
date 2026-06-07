@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Diatone — aesthetic mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Hanken+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0A0C10; --s1:#13171E; --s2:#1A202A; --s3:#262F3D;
+  --line:rgba(255,255,255,.07); --line2:rgba(255,255,255,.14);
+  --tx:#EAEDF2; --tx2:#929AA7; --tx3:#586271;
+  --ac:#74E3CC; --ac-dim:rgba(116,227,204,.12);
+  --ok:#5FE0A0; --ok-dim:rgba(95,224,160,.13);
+  --no:#F2767F; --no-dim:rgba(242,118,127,.13);
+  --fd:'Fraunces',serif; --fu:'Hanken Grotesk',-apple-system,sans-serif;
+  --r:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--tx); font-family:var(--fu);
+  -webkit-font-smoothing:antialiased; overflow:hidden;
+  display:flex; justify-content:center;
+}
+body::before{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background:radial-gradient(58% 42% at 50% -4%, rgba(116,227,204,.10), transparent 68%);
+}
+body::after{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:0; opacity:.045; mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.app{
+  position:relative; z-index:1; width:100%; max-width:430px; height:100%;
+  display:flex; flex-direction:column;
+  padding:max(20px,env(safe-area-inset-top)) 22px max(26px,env(safe-area-inset-bottom));
+}
+.top{display:flex; align-items:center; justify-content:space-between; height:30px}
+.mark{font-family:var(--fd); font-weight:500; font-size:19px; letter-spacing:.02em; color:var(--tx)}
+.mark b{color:var(--ac); font-weight:600}
+.streak{display:flex; align-items:center; gap:7px; font-size:13px; color:var(--tx2)}
+.streak .n{font-family:var(--fd); font-size:16px; color:var(--tx); font-weight:500}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--ac);box-shadow:0 0 10px var(--ac)}
+
+.stage{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; text-align:center}
+.eyebrow{font-size:12.5px; letter-spacing:.18em; text-transform:uppercase; color:var(--tx3)}
+.eyebrow b{color:var(--ac); font-weight:600; letter-spacing:.06em}
+.hero{
+  font-family:var(--fd); font-weight:500; font-variation-settings:"opsz" 144;
+  font-size:128px; line-height:.96; letter-spacing:-.01em; color:var(--tx);
+  transition:color .25s ease;
+}
+.sub{font-size:14px; color:var(--tx2); margin-top:2px; transition:opacity .2s}
+.preview{
+  min-height:46px; margin-top:18px; display:flex; align-items:center; justify-content:center; gap:10px;
+}
+.chip{font-family:var(--fd); font-size:34px; font-weight:500; color:var(--tx)}
+.chip.ghost{color:var(--tx3); font-size:30px}
+.verdict{font-size:14px; font-weight:500; letter-spacing:.01em}
+.ok{color:var(--ok)} .no{color:var(--no)}
+
+.pad{display:flex; flex-direction:column; gap:9px}
+.cap{font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--tx3); margin:2px 0 -2px 3px}
+.row{display:flex; gap:8px}
+.key{
+  flex:1; min-width:0; height:52px; border:0.5px solid var(--line2); background:var(--s2);
+  border-radius:var(--r); color:var(--tx); font-family:var(--fu); font-size:19px; font-weight:500;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1.05;
+  cursor:pointer; -webkit-tap-highlight-color:transparent; user-select:none;
+  transition:transform .08s ease, background .15s ease, border-color .15s ease, color .15s ease;
+}
+.key:active{transform:scale(.95); background:var(--s3)}
+.key small{font-family:var(--fu); font-size:10.5px; letter-spacing:.04em; color:var(--tx3); margin-top:2px}
+.key.sel{color:var(--ac); border-color:rgba(116,227,204,.55); background:var(--ac-dim)}
+.key.util{flex:.7; color:var(--tx2); font-size:16px}
+.key.q small{color:var(--tx3)}
+
+.reveal{opacity:0; transform:translateY(8px); animation:rise .5s cubic-bezier(.2,.7,.2,1) forwards}
+@keyframes rise{to{opacity:1; transform:none}}
+.flash-ok{animation:fok .5s ease}
+.flash-no{animation:fno .5s ease}
+@keyframes fok{0%{background:var(--bg)}30%{background:#0c1512}100%{background:var(--bg)}}
+@keyframes fno{0%{background:var(--bg)}30%{background:#150d0f}100%{background:var(--bg)}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="top reveal" style="animation-delay:.02s">
+    <div class="mark">Dia<b>tone</b></div>
+    <div class="streak"><span class="dot"></span><span class="n" id="streak">7</span><span>streak</span></div>
+  </div>
+
+  <div class="stage">
+    <div class="eyebrow reveal" style="animation-delay:.08s">in the key of <b id="key">G</b></div>
+    <div class="hero reveal" id="hero" style="animation-delay:.12s">V</div>
+    <div class="sub reveal" id="sub" style="animation-delay:.16s">name the triad</div>
+    <div class="preview reveal" id="preview" style="animation-delay:.2s"><span class="chip ghost">—</span></div>
+  </div>
+
+  <div class="pad">
+    <div class="cap reveal" style="animation-delay:.24s">root</div>
+    <div class="row reveal" id="roots" style="animation-delay:.26s"></div>
+    <div class="row reveal" id="mods" style="animation-delay:.3s"></div>
+    <div class="cap reveal" style="animation-delay:.34s">quality — tap to answer</div>
+    <div class="row reveal" id="quals" style="animation-delay:.36s"></div>
+  </div>
+</div>
+
+<script>
+const Q=[{key:'G',num:'V',ans:'D'},{key:'G',num:'vi',ans:'Em'},{key:'G',num:'IV',ans:'C'},{key:'G',num:'vii\u00B0',ans:'F#dim'}];
+const QUAL=[{g:'maj',a:'',d:''},{g:'\u2013',c:'min',a:'m',d:'-'},{g:'\u00B0',c:'dim',a:'dim',d:'\u00B0'}];
+const app=document.getElementById('app');
+let qi=0, root=null, acc='', streak=7, done=false;
+const norm=s=>s.toLowerCase().replace(/\u00B0/g,'dim').replace(/([a-g][#b]?)-/g,'$1m').replace(/\s+/g,' ').trim();
+const accG=a=>a==='#'?'\u266F':a==='b'?'\u266D':'';
+function jazz(t){return t.replace(/dim/,'\u00B0').replace(/m$/,'-');}
+
+function roots(){const r=document.getElementById('roots');r.innerHTML='';
+  ['C','D','E','F','G','A','B'].forEach(n=>{const b=document.createElement('button');b.className='key'+(root===n?' sel':'');b.textContent=n;b.onclick=()=>{if(done)return;root=n;acc='';render();};r.appendChild(b);});}
+function mods(){const m=document.getElementById('mods');m.innerHTML='';
+  [['b','\u266D'],['#','\u266F']].forEach(([v,g])=>{const b=document.createElement('button');b.className='key'+(acc===v?' sel':'');b.textContent=g;b.onclick=()=>{if(done||!root)return;acc=acc===v?'':v;render();};m.appendChild(b);});
+  const bk=document.createElement('button');bk.className='key util';bk.textContent='\u232B';bk.onclick=()=>{if(done)return;root=null;acc='';render();};m.appendChild(bk);}
+function quals(){const q=document.getElementById('quals');q.innerHTML='';
+  QUAL.forEach(qq=>{const b=document.createElement('button');b.className='key q';b.innerHTML=qq.g+(qq.c?'<small>'+qq.c+'</small>':'<small>maj</small>');b.onclick=()=>answer(qq);q.appendChild(b);});}
+
+function preview(){const p=document.getElementById('preview');
+  if(!root){p.innerHTML='<span class="chip ghost">\u2014</span>';return;}
+  p.innerHTML='<span class="chip">'+root+accG(acc)+'</span>';}
+
+function answer(qq){
+  if(done||!root)return;
+  const built=root+acc+qq.a, disp=root+accG(acc)+qq.d;
+  const ok=norm(built)===norm(Q[qi].ans);
+  done=true;
+  document.getElementById('preview').innerHTML='<span class="chip">'+disp+'</span>'+
+    '<span class="verdict '+(ok?'ok':'no')+'">'+(ok?'\u2713 correct':'\u2715  '+jazz(Q[qi].ans))+'</span>';
+  document.getElementById('hero').style.color=ok?'var(--ac)':'var(--tx2)';
+  document.getElementById('sub').style.opacity='0';
+  app.classList.add(ok?'flash-ok':'flash-no');
+  setTimeout(()=>app.classList.remove('flash-ok','flash-no'),500);
+  if(ok){streak++;}else{streak=0;}
+  document.getElementById('streak').textContent=streak;
+  app.addEventListener('click',next,{once:true});
+}
+function next(){qi=(qi+1)%Q.length;root=null;acc='';done=false;
+  document.getElementById('hero').style.color='var(--tx)';
+  document.getElementById('hero').textContent=Q[qi].num;
+  document.getElementById('key').textContent=Q[qi].key;
+  document.getElementById('sub').style.opacity='1';
+  render();}
+function render(){document.getElementById('hero').textContent=Q[qi].num;preview();roots();mods();quals();}
+roots();mods();quals();
+</script>
+</body>
+</html>
