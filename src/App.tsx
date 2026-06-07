@@ -11,8 +11,10 @@ import { Prompt } from './components/Prompt';
 import { useAnswerBuilder, Preview, Keypad } from './components/AnswerInput';
 import { SettingsSheet } from './components/SettingsSheet';
 import { Review } from './components/Review';
+import { haptic, TAP, CORRECT, WRONG } from './lib/haptics';
 
 const STORAGE_KEY = 'diatone.settings.v1';
+const CORRECT_ADVANCE_MS = 700; // snappy when drilling
 
 function loadInitialState(): TrainerState {
   try {
@@ -25,6 +27,21 @@ function loadInitialState(): TrainerState {
     /* ignore corrupt storage */
   }
   return initialState;
+}
+
+// "Hide quality" glyph — a universal eye-off mark.
+function EyeOff() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M3 3l18 18M10.6 10.7a2 2 0 002.7 2.7M9.4 5.2A9.7 9.7 0 0112 5c5 0 9 4.5 9 7 0 1-.7 2.3-1.9 3.6M6.1 6.6C3.8 8 2 10.3 2 12c0 2.5 4 7 10 7 1.6 0 3-.3 4.3-.9"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 }
 
 export default function App() {
@@ -51,10 +68,13 @@ export default function App() {
     use7thChords: state.settings.use7thChords,
     disabled,
     onSubmit: (ascii, display) => dispatch({ type: 'SUBMIT', answer: ascii, display }),
-    onTap: () => dispatch({ type: 'TAP' }),
+    onTap: () => {
+      haptic(TAP);
+      dispatch({ type: 'TAP' });
+    },
   });
 
-  // Feedback side effects: flash + (correct & autoAdvance) auto-roll after 1500ms (§18).
+  // Feedback side effects: haptic + flash + (correct & autoAdvance) auto-roll (§18).
   useEffect(() => {
     if (advanceTimer.current) {
       clearTimeout(advanceTimer.current);
@@ -64,10 +84,11 @@ export default function App() {
       setFlash('');
       return;
     }
+    haptic(state.feedback.correct ? CORRECT : WRONG);
     setFlash(state.feedback.correct ? 'flash-ok' : 'flash-no');
     const t = window.setTimeout(() => setFlash(''), 500);
     if (state.feedback.correct && state.settings.autoAdvance) {
-      advanceTimer.current = window.setTimeout(() => dispatch({ type: 'NEXT' }), 1500);
+      advanceTimer.current = window.setTimeout(() => dispatch({ type: 'NEXT' }), CORRECT_ADVANCE_MS);
     }
     return () => {
       window.clearTimeout(t);
@@ -99,15 +120,31 @@ export default function App() {
   return (
     <div className={`app ${flash}`} onClick={onAppClick}>
       <div className="top reveal" style={{ animationDelay: '.02s' }} onClick={stop}>
-        <div className="mark">
-          Dia<b>tone</b>
+        <div className="streak" aria-label={`Streak ${state.streak}`}>
+          <span className="dot" />
+          <span className="n">{state.streak}</span>
         </div>
         <div className="top-right">
-          <div className="streak">
-            <span className="dot" />
-            <span className="n">{state.streak}</span>
-            <span>streak</span>
-          </div>
+          <button
+            className={`chip-mini${state.settings.use7thChords ? ' on' : ''}`}
+            aria-label="7th chords"
+            aria-pressed={state.settings.use7thChords}
+            onClick={() =>
+              updateSettings({ ...state.settings, use7thChords: !state.settings.use7thChords })
+            }
+          >
+            <span className="q-glyph">△7</span>
+          </button>
+          <button
+            className={`chip-mini${state.settings.hideQuality ? ' on' : ''}`}
+            aria-label="Hide quality"
+            aria-pressed={state.settings.hideQuality}
+            onClick={() =>
+              updateSettings({ ...state.settings, hideQuality: !state.settings.hideQuality })
+            }
+          >
+            <EyeOff />
+          </button>
           <button
             className="icon-btn"
             aria-label="Review"
@@ -127,15 +164,12 @@ export default function App() {
           <>
             <Prompt
               question={question}
-              feedback={state.feedback ? (state.feedback.correct ? 'correct' : 'wrong') : null}
-            />
-            <Preview
-              builder={builder}
               feedback={state.feedback}
-              correctAnswer={state.feedback?.correctAnswer ?? null}
+              userAnswer={state.userAnswer}
             />
+            {!state.feedback && <Preview builder={builder} />}
             {state.feedback && !(state.feedback.correct && state.settings.autoAdvance) && (
-              <div className="next-hint">tap anywhere or press Enter to continue →</div>
+              <div className="next-hint">tap to continue →</div>
             )}
           </>
         ) : (
@@ -151,29 +185,9 @@ export default function App() {
       </div>
 
       {question && (
-        <>
-          <div className="pills" onClick={stop}>
-            <button
-              className={`pill${state.settings.hideQuality ? ' on' : ''}`}
-              onClick={() =>
-                updateSettings({ ...state.settings, hideQuality: !state.settings.hideQuality })
-              }
-            >
-              hide quality
-            </button>
-            <button
-              className={`pill${state.settings.use7thChords ? ' on' : ''}`}
-              onClick={() =>
-                updateSettings({ ...state.settings, use7thChords: !state.settings.use7thChords })
-              }
-            >
-              7th chords
-            </button>
-          </div>
-          <div onClick={stop}>
-            <Keypad builder={builder} disabled={disabled} />
-          </div>
-        </>
+        <div onClick={stop}>
+          <Keypad builder={builder} disabled={disabled} />
+        </div>
       )}
 
       {settingsOpen && (

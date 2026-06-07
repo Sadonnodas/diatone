@@ -717,5 +717,114 @@ button {
   font-size: 12.5px;
   color: var(--text-3);
   letter-spacing: 0.04em;
-  margin-top: 10px;
+  margin-top: 12px;
+  opacity: 0.75;
+}
+
+/* ---- Mobile declutter redesign ---- */
+/* Compact modifier chips in the top bar (7th chords / hide quality). */
+.chip-mini {
+  min-width: 36px;
+  height: 30px;
+  padding: 0 9px;
+  border-radius: 9px;
+  border: 0.5px solid var(--line-strong);
+  background: var(--surface-1);
+  color: var(--text-3);
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.14s ease, background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.chip-mini:active {
+  transform: scale(0.93);
+}
+.chip-mini.on {
+  color: var(--accent);
+  border-color: var(--accent-line);
+  background: var(--accent-dim);
+}
+.chip-mini .q-glyph {
+  font-size: 14px;
+  line-height: 1;
+}
+.top-right {
+  gap: 9px;
+}
+
+/* The only words on the play screen: the key (or transpose direction). */
+.ctx {
+  font-size: 12.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.ctx .k {
+  color: var(--accent);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+.ctx .arrow {
+  color: var(--text-3);
+  margin: 0 8px;
+  letter-spacing: 0;
+}
+
+/* Bigger hero now that the screen is decluttered. */
+.hero.single {
+  font-size: clamp(84px, 30vw, 148px);
+}
+.hero.correct {
+  color: var(--accent);
+}
+.hero.wrong {
+  color: var(--wrong);
+}
+
+/* On a miss: the question, recalled small in serif, above the big answer. */
+.ask-recall {
+  font-family: var(--font-display);
+  color: var(--text-3);
+  line-height: 1;
+  margin-top: 2px;
+}
+.ask-recall.single {
+  font-size: 30px;
+}
+.ask-recall.multi {
+  font-size: 22px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3em;
+  justify-content: center;
+}
+.guess {
+  font-size: 13px;
+  color: var(--text-3);
+  margin-top: 14px;
+}
+.guess .g {
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: var(--text-2);
+  margin-left: 3px;
+}
+.tick {
+  color: var(--correct);
+  font-size: 20px;
+  font-weight: 600;
+  margin-top: 8px;
+  animation: tickin 0.25s ease;
+}
+@keyframes tickin {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }

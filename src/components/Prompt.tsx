@@ -1,74 +1,71 @@
-import React from 'react';
 import type { Question } from '../lib/engine';
+import type { Feedback } from '../state/trainerReducer';
 import { renderJazz } from './ChordDisplay';
 
-const MODE_NAMES: Record<number, string> = {
-  1: 'Name Chord',
-  2: 'Progression',
-  3: 'Transpose',
-  4: 'Name Numeral',
-};
+// Render a content string (one or more space-separated jazz tokens).
+function Glyphs({ text, className }: { text: string; className: string }) {
+  const tokens = text.split(' ');
+  const multi = tokens.length > 1;
+  return (
+    <div className={`${className} ${multi ? 'multi' : 'single'}`}>
+      {multi ? tokens.map((t, i) => <span key={i}>{renderJazz(t, `g${i}`)}</span>) : renderJazz(text, 'g')}
+    </div>
+  );
+}
 
-// §10 — render the prompt template, styling {key} (accent) and {chordType} (accent).
-function renderTemplate(text: string, keys: string[], chordType?: string): React.ReactNode[] {
-  const parts = text.split(/(\{key\}|\{chordType\})/);
-  let keyIdx = 0;
-  return parts
-    .filter((p) => p !== '')
-    .map((p, i) => {
-      if (p === '{key}') {
-        const k = keys[keyIdx++] ?? '';
-        return (
-          <span className="k" key={i}>
-            {k}
-          </span>
-        );
-      }
-      if (p === '{chordType}') {
-        return (
-          <span className="ct" key={i}>
-            {chordType}
-          </span>
-        );
-      }
-      return <React.Fragment key={i}>{p}</React.Fragment>;
-    });
+// The key/transpose context — the only words on the play screen. Everything
+// else about the task (chord vs numeral, triad vs 7th) is implied by the keypad.
+function Context({ keys }: { keys: string[] }) {
+  if (keys.length === 2) {
+    return (
+      <div className="ctx reveal" style={{ animationDelay: '.04s' }}>
+        <span className="k">{keys[0]}</span>
+        <span className="arrow">→</span>
+        <span className="k">{keys[1]}</span>
+      </div>
+    );
+  }
+  return (
+    <div className="ctx reveal" style={{ animationDelay: '.04s' }}>
+      in <span className="k">{keys[0]}</span>
+    </div>
+  );
 }
 
 export function Prompt({
   question,
   feedback,
+  userAnswer,
 }: {
   question: Question;
-  feedback: 'correct' | 'wrong' | null;
+  feedback: Feedback | null;
+  userAnswer: string;
 }) {
-  const { prompt, mode, reminder } = question;
-  const tokens = prompt.content.split(' ');
-  const multi = tokens.length > 1;
-  const heroColor =
-    feedback === 'correct' ? 'var(--accent)' : feedback === 'wrong' ? 'var(--text-2)' : undefined;
+  const { prompt } = question;
 
+  // Miss: show the correct answer big; recall the question quietly above it.
+  if (feedback && !feedback.correct) {
+    return (
+      <>
+        <Context keys={prompt.keys} />
+        <Glyphs text={prompt.content} className="ask-recall" />
+        <Glyphs text={feedback.correctAnswer} className="hero wrong" />
+        <div className="guess">
+          you played <span className="g">{renderJazz(userAnswer || '—', 'ua')}</span>
+        </div>
+      </>
+    );
+  }
+
+  // Answering, or a correct answer (glyph pulses to the accent).
   return (
     <>
-      <div className="eyebrow reveal" style={{ animationDelay: '.06s' }}>
-        {MODE_NAMES[mode]}
-      </div>
-      <div className="sub reveal" style={{ animationDelay: '.1s' }}>
-        {renderTemplate(prompt.text, prompt.keys, prompt.chordType)}
-      </div>
-      <div
-        className={`hero reveal ${multi ? 'multi' : 'single'}`}
-        style={{ animationDelay: '.14s', color: heroColor }}
-      >
-        {multi
-          ? tokens.map((t, i) => <span key={i}>{renderJazz(t, `h${i}`)}</span>)
-          : renderJazz(prompt.content, 'h')}
-      </div>
-      {!feedback && (
-        <div className="hint reveal" style={{ animationDelay: '.18s' }}>
-          {reminder}
-        </div>
-      )}
+      <Context keys={prompt.keys} />
+      <Glyphs
+        text={prompt.content}
+        className={`hero${feedback?.correct ? ' correct' : ''}`}
+      />
+      {feedback?.correct && <div className="tick">✓</div>}
     </>
   );
 }

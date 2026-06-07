@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
 import type { Question } from '../lib/engine';
-import type { Feedback } from '../state/trainerReducer';
 import { renderJazz } from './ChordDisplay';
 
 // §17 — chromatic tap-to-build. Every answer has the shape
@@ -167,16 +166,11 @@ export function useAnswerBuilder(opts: {
   };
 }
 
-// ---- Preview (lives in the stage, under the hero) ----
-export function Preview({
-  builder,
-  feedback,
-  correctAnswer,
-}: {
-  builder: BuilderApi;
-  feedback: Feedback | null;
-  correctAnswer: string | null;
-}) {
+// ---- Preview (lives in the stage, under the hero, only while building) ----
+// Shows the live chord you're assembling. Progression modes always show the
+// slot strip (it's the only cue for "4 answers needed"); single modes show a
+// chip only once you've started. Feedback is rendered by the Prompt, not here.
+export function Preview({ builder }: { builder: BuilderApi }) {
   const { slots, committed, inProgressDisplay, active } = builder;
 
   if (slots > 1) {
@@ -185,49 +179,23 @@ export function Preview({
         <div className="slotstrip">
           {Array.from({ length: slots }).map((_, i) => {
             const filled = i < committed.length;
-            const isActive = i === committed.length && !feedback;
-            const content = filled
-              ? committed[i]
-              : isActive && inProgressDisplay
-                ? inProgressDisplay
-                : '·';
+            const isActive = i === committed.length;
+            const show = filled ? committed[i] : isActive && inProgressDisplay ? inProgressDisplay : null;
             return (
-              <span
-                key={i}
-                className={`slot${filled ? ' filled' : ''}${isActive ? ' active' : ''}`}
-              >
-                {filled ? renderJazz(content, `s${i}`) : isActive && inProgressDisplay ? renderJazz(content, `s${i}`) : content}
+              <span key={i} className={`slot${filled ? ' filled' : ''}${isActive ? ' active' : ''}`}>
+                {show ? renderJazz(show, `s${i}`) : '·'}
               </span>
             );
           })}
         </div>
-        {feedback && (
-          <span className={`verdict ${feedback.correct ? 'ok' : 'no'}`}>
-            {feedback.correct ? '✓ correct' : <>{'✕ '}{renderJazz(correctAnswer ?? '', 'fb')}</>}
-          </span>
-        )}
       </div>
     );
   }
 
-  // Single-chord modes
-  if (feedback) {
-    return (
-      <div className="preview">
-        <span className="chip">{renderJazz(committed[0] ?? '', 'c')}</span>
-        <span className={`verdict ${feedback.correct ? 'ok' : 'no'}`}>
-          {feedback.correct ? '✓ correct' : <>{'✕ '}{renderJazz(correctAnswer ?? '', 'fb')}</>}
-        </span>
-      </div>
-    );
-  }
+  if (!active) return null;
   return (
     <div className="preview">
-      {active ? (
-        <span className="chip">{renderJazz(inProgressDisplay ?? '', 'ip')}</span>
-      ) : (
-        <span className="chip ghost">{'—'}</span>
-      )}
+      <span className="chip">{renderJazz(inProgressDisplay ?? '', 'ip')}</span>
     </div>
   );
 }
