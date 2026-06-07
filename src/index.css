@@ -847,6 +847,146 @@ button {
   font-weight: 500;
 }
 
+/* ---- Home / launcher ---- */
+.home {
+  justify-content: center;
+  gap: clamp(28px, 7vh, 56px);
+}
+.home-head {
+  text-align: center;
+}
+.home-head .mark {
+  font-size: 40px;
+}
+.home-sub {
+  font-size: 13px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-top: 8px;
+}
+.home-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.gamecard {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  text-align: left;
+  padding: 18px 18px;
+  border-radius: var(--radius);
+  border: 0.5px solid var(--line-strong);
+  background: var(--surface-1);
+  transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease;
+}
+.gamecard:active {
+  transform: scale(0.985);
+  background: var(--surface-2);
+}
+.gc-icon {
+  width: 52px;
+  height: 52px;
+  flex: none;
+  border-radius: 12px;
+  background: var(--surface-2);
+  border: 0.5px solid var(--line-strong);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.gc-icon.serif {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 500;
+}
+.gc-text {
+  flex: 1;
+  min-width: 0;
+}
+.gc-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--text);
+}
+.gc-desc {
+  font-size: 13px;
+  color: var(--text-2);
+  margin-top: 2px;
+}
+.gc-arrow {
+  color: var(--text-3);
+  font-size: 20px;
+  flex: none;
+}
+
+/* ---- Fretboard game ---- */
+.top-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.fret-stage {
+  justify-content: center;
+  gap: clamp(14px, 3vh, 26px);
+}
+.fret-prompt {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 10px;
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  color: var(--text-2);
+}
+.fret-prompt .t {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(36px, 12vw, 56px);
+  color: var(--accent);
+  line-height: 1;
+}
+.fretwrap {
+  width: 100%;
+}
+.fret-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding-top: 6px;
+}
+.bigbtn {
+  width: 100%;
+  max-width: 360px;
+  padding: 16px;
+  border-radius: var(--radius);
+  background: var(--accent-deep);
+  color: #fff;
+  font-weight: 600;
+  font-size: 16px;
+  transition: transform 0.1s ease, opacity 0.15s ease;
+}
+.bigbtn:active {
+  transform: scale(0.98);
+}
+.bigbtn:disabled {
+  opacity: 0.35;
+}
+.fb {
+  font-weight: 600;
+  font-size: 15px;
+}
+.fb.ok {
+  color: var(--correct);
+}
+.fb.no {
+  color: var(--wrong);
+}
+
 /* Accidentals (♯ / ♭) — symbol font, set slightly smaller like real accidentals. */
 .acc {
   font-family: var(--font-ui), 'Apple Symbols', 'Segoe UI Symbol', sans-serif;
