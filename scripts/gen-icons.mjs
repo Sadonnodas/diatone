@@ -1,10 +1,13 @@
-// Generates app icons (no external deps): an outlined maj7 △ in the accent on
-// the --bg canvas, matching the editorial-serif identity (§2.3). Pure zlib PNG.
+// Generates app icons (no external deps): a rounded, gradient-filled maj7 △ with
+// a soft accent halo over a glowing dark canvas, matching the editorial identity
+// (§1.5 / §2.3). Supersampled for crisp edges. Pure zlib PNG.
 import { deflateSync } from 'node:zlib';
 import { writeFileSync, mkdirSync } from 'node:fs';
 
-const BG = [0x0a, 0x0c, 0x10, 0xff];
-const ACCENT = [0x9b, 0x8c, 0xff, 0xff];
+const BG = [0x0a, 0x0c, 0x10]; // app canvas
+const GRAD_TOP = [0xc2, 0xb8, 0xff]; // light periwinkle (triangle top)
+const GRAD_BOT = [0x7e, 0x6e, 0xf0]; // accent-deep (triangle bottom)
+const ACCENT = [0x9b, 0x8c, 0xff]; // halo / glow
 
 // CRC32
 const crcTable = (() => {
@@ -65,38 +68,97 @@ function distSeg(px, py, ax, ay, bx, by) {
   return Math.hypot(px - cx, py - cy);
 }
 
+// Winding sign for point-in-triangle.
+function sign(px, py, ax, ay, bx, by) {
+  return (px - bx) * (ay - by) - (ax - bx) * (py - by);
+}
+function inTriangle(px, py, v) {
+  const d1 = sign(px, py, v[0][0], v[0][1], v[1][0], v[1][1]);
+  const d2 = sign(px, py, v[1][0], v[1][1], v[2][0], v[2][1]);
+  const d3 = sign(px, py, v[2][0], v[2][1], v[0][0], v[0][1]);
+  const neg = d1 < 0 || d2 < 0 || d3 < 0;
+  const pos = d1 > 0 || d2 > 0 || d3 > 0;
+  return !(neg && pos);
+}
+const mix = (a, b, t) => a + (b - a) * t;
+
 function drawIcon(size, safeFraction) {
-  const rgba = Buffer.alloc(size * size * 4);
-  const cx = size / 2;
-  const cy = size / 2;
-  const R = (size / 2) * safeFraction; // circumradius of the triangle
+  const SS = 4; // supersample factor
+  const S = size * SS;
+  const acc = new Float64Array(size * size * 3);
+
+  const cx = S / 2;
+  const cy = S / 2;
+  const round = S * 0.07; // corner radius of the rounded triangle
+  const R = (S / 2) * safeFraction - round; // core circumradius
   // upward equilateral triangle, nudged down so the optical centre sits centred
-  const oy = cy + R * 0.12;
+  const oy = cy + R * 0.16;
   const v = [
     [cx, oy - R],
     [cx - R * 0.8660254, oy + R * 0.5],
     [cx + R * 0.8660254, oy + R * 0.5],
   ];
-  const stroke = Math.max(2, size * 0.052);
-  const half = stroke / 2;
-  const aa = 1.2;
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
+  const topY = v[0][1];
+  const botY = v[1][1];
+
+  // Background radial glow centred a touch above the mark.
+  const glowR = S * 0.62;
+  const glowCx = cx;
+  const glowCy = oy - R * 0.15;
+  const glowMax = 0.42; // peak glow strength
+  const haloWidth = S * 0.06; // accent halo around the triangle
+
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
       const px = x + 0.5,
         py = y + 0.5;
-      const d = Math.min(
+
+      // --- background + radial glow ---
+      const gd = Math.hypot(px - glowCx, py - glowCy) / glowR;
+      const glow = glowMax * Math.exp(-(gd * gd) * 1.6);
+      let r = mix(BG[0], ACCENT[0], glow);
+      let g = mix(BG[1], ACCENT[1], glow);
+      let b = mix(BG[2], ACCENT[2], glow);
+
+      // --- triangle (rounded, gradient fill) + outer halo ---
+      const edge = Math.min(
         distSeg(px, py, v[0][0], v[0][1], v[1][0], v[1][1]),
         distSeg(px, py, v[1][0], v[1][1], v[2][0], v[2][1]),
         distSeg(px, py, v[2][0], v[2][1], v[0][0], v[0][1]),
       );
-      // anti-aliased coverage of the stroke band
-      const cov = Math.max(0, Math.min(1, (half - d) / aa + 0.5));
-      const i = (y * size + x) * 4;
-      for (let c = 0; c < 4; c++) {
-        rgba[i + c] = Math.round(BG[c] * (1 - cov) + ACCENT[c] * cov);
+      const inside = inTriangle(px, py, v);
+      const distOut = inside ? -1 : edge - round; // <=0 means inside the rounded shape
+
+      if (distOut <= 0) {
+        const ty = Math.max(0, Math.min(1, (py - topY) / (botY - topY)));
+        r = mix(GRAD_TOP[0], GRAD_BOT[0], ty);
+        g = mix(GRAD_TOP[1], GRAD_BOT[1], ty);
+        b = mix(GRAD_TOP[2], GRAD_BOT[2], ty);
+      } else {
+        // soft accent halo hugging the mark
+        const halo = 0.55 * Math.exp(-distOut / haloWidth);
+        r = mix(r, ACCENT[0], halo);
+        g = mix(g, ACCENT[1], halo);
+        b = mix(b, ACCENT[2], halo);
       }
-      rgba[i + 3] = 0xff;
+
+      // accumulate into the downsampled buffer
+      const ox = (x / SS) | 0;
+      const oyy = (y / SS) | 0;
+      const oi = (oyy * size + ox) * 3;
+      acc[oi] += r;
+      acc[oi + 1] += g;
+      acc[oi + 2] += b;
     }
+  }
+
+  const rgba = Buffer.alloc(size * size * 4);
+  const n = SS * SS;
+  for (let i = 0; i < size * size; i++) {
+    rgba[i * 4] = Math.round(acc[i * 3] / n);
+    rgba[i * 4 + 1] = Math.round(acc[i * 3 + 1] / n);
+    rgba[i * 4 + 2] = Math.round(acc[i * 3 + 2] / n);
+    rgba[i * 4 + 3] = 0xff;
   }
   return encodePNG(size, size, rgba);
 }
