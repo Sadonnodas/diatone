@@ -2,12 +2,6 @@ import type { Settings } from '../lib/engine';
 import { ALL_KEYS, ENHARMONIC_KEYS } from '../lib/chordData';
 import { DEGREE_KEYS } from '../lib/engine';
 import { renderJazz } from './ChordDisplay';
-import type { PwaApi } from '../pwa';
-
-function formatBuild(iso: string): string {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? iso : d.toLocaleString();
-}
 
 const MODES: { id: number; label: string }[] = [
   { id: 1, label: 'Name Chord' },
@@ -30,12 +24,10 @@ export function SettingsSheet({
   settings,
   onChange,
   onClose,
-  pwa,
 }: {
   settings: Settings;
   onChange: (s: Settings) => void;
   onClose: () => void;
-  pwa: PwaApi;
 }) {
   const update = (partial: Partial<Settings>) => onChange({ ...settings, ...partial });
 
@@ -235,36 +227,6 @@ export function SettingsSheet({
               ))}
             </div>
           )}
-
-          {/* App / updates */}
-          <div>
-            <div className="group-label">App</div>
-            <div className="setting-row">
-              <div>
-                <div className="label">Version</div>
-                <div className="desc">Installed {formatBuild(pwa.buildTime)}</div>
-              </div>
-              {pwa.needRefresh ? (
-                <button className="tog on" onClick={pwa.updateNow}>
-                  Update now
-                </button>
-              ) : (
-                <button className="tog" onClick={pwa.checkForUpdates} disabled={pwa.checking}>
-                  {pwa.checking ? 'Checking…' : 'Check for updates'}
-                </button>
-              )}
-            </div>
-            {!pwa.needRefresh && pwa.lastChecked !== null && !pwa.checking && (
-              <div className="desc" style={{ marginTop: 8 }}>
-                You're on the latest version.
-              </div>
-            )}
-            {pwa.needRefresh && (
-              <div className="desc" style={{ marginTop: 8 }}>
-                A new version is ready — tap Update now to load it.
-              </div>
-            )}
-          </div>
         </div>
       </div>
     </>

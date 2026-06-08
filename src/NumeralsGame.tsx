@@ -12,7 +12,6 @@ import { useAnswerBuilder, Preview, Keypad } from './components/AnswerInput';
 import { SettingsSheet } from './components/SettingsSheet';
 import { Review } from './components/Review';
 import { haptic, TAP, CORRECT, WRONG } from './lib/haptics';
-import type { PwaApi } from './pwa';
 
 const STORAGE_KEY = 'diatone.settings.v1';
 const CORRECT_ADVANCE_MS = 700; // snappy when drilling
@@ -45,7 +44,7 @@ function EyeOff() {
   );
 }
 
-export default function NumeralsGame({ onBack, pwa }: { onBack: () => void; pwa: PwaApi }) {
+export default function NumeralsGame({ onBack }: { onBack: () => void }) {
   const [state, dispatch] = useReducer(trainerReducer, undefined, loadInitialState);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [flash, setFlash] = useState<'' | 'flash-ok' | 'flash-no'>('');
@@ -200,7 +199,6 @@ export default function NumeralsGame({ onBack, pwa }: { onBack: () => void; pwa:
             settings={state.settings}
             onChange={updateSettings}
             onClose={() => setSettingsOpen(false)}
-            pwa={pwa}
           />
         </div>
       )}

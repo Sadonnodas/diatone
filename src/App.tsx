@@ -27,8 +27,8 @@ export default function App() {
         </div>
       )}
 
-      {screen === 'home' && <Home onPick={setScreen} />}
-      {screen === 'numerals' && <NumeralsGame onBack={() => setScreen('home')} pwa={pwa} />}
+      {screen === 'home' && <Home onPick={setScreen} pwa={pwa} />}
+      {screen === 'numerals' && <NumeralsGame onBack={() => setScreen('home')} />}
       {screen === 'fretboard' && <FretboardGame onBack={() => setScreen('home')} />}
       {screen === 'warmup' && <WarmupGame onBack={() => setScreen('home')} />}
     </>

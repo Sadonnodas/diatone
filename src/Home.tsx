@@ -1,4 +1,11 @@
+import type { PwaApi } from './pwa';
+
 export type Screen = 'home' | 'numerals' | 'fretboard' | 'warmup';
+
+function formatBuild(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString();
+}
 
 function RectStackIcon() {
   return (
@@ -28,7 +35,7 @@ function FretIcon() {
   );
 }
 
-export default function Home({ onPick }: { onPick: (g: Screen) => void }) {
+export default function Home({ onPick, pwa }: { onPick: (g: Screen) => void; pwa: PwaApi }) {
   return (
     <div className="app home">
       <div className="home-head reveal" style={{ animationDelay: '.04s' }}>
@@ -81,6 +88,22 @@ export default function Home({ onPick }: { onPick: (g: Screen) => void }) {
           </div>
           <div className="gc-arrow">→</div>
         </button>
+      </div>
+
+      <div className="home-foot reveal" style={{ animationDelay: '.28s' }}>
+        {pwa.needRefresh ? (
+          <button className="update-link on" onClick={pwa.updateNow} disabled={pwa.updating}>
+            {pwa.updating ? 'Updating…' : 'Update to latest'}
+          </button>
+        ) : (
+          <button className="update-link" onClick={pwa.checkForUpdates} disabled={pwa.checking}>
+            {pwa.checking ? 'Checking…' : 'Check for updates'}
+          </button>
+        )}
+        <div className="home-version">
+          {pwa.lastChecked !== null && !pwa.needRefresh && !pwa.checking && 'Up to date · '}
+          installed {formatBuild(pwa.buildTime)}
+        </div>
       </div>
     </div>
   );

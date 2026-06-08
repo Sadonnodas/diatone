@@ -928,6 +928,39 @@ button {
   font-size: 20px;
   flex: none;
 }
+.home-foot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.update-link {
+  font-size: 13px;
+  color: var(--text-2);
+  border: 0.5px solid var(--line-strong);
+  background: var(--surface-1);
+  border-radius: 999px;
+  padding: 8px 16px;
+  transition: transform 0.1s ease, color 0.15s, border-color 0.15s;
+}
+.update-link:active {
+  transform: scale(0.97);
+}
+.update-link:disabled {
+  opacity: 0.6;
+}
+.update-link.on {
+  color: var(--accent);
+  border-color: var(--accent-line);
+  background: var(--accent-dim);
+  font-weight: 600;
+}
+.home-version {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--text-3);
+}
 
 /* ---- Fretboard game ---- */
 .top-left {
