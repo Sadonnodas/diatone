@@ -1092,6 +1092,12 @@ button {
   justify-content: center;
   gap: clamp(14px, 3vh, 26px);
 }
+/* Constant-height context so swapping the Hint button for the scale-type label
+   on answer doesn't move the board. */
+.fret-stage .ctx {
+  min-height: 32px;
+  align-items: center;
+}
 .fret-prompt {
   display: flex;
   align-items: baseline;
@@ -1136,8 +1142,12 @@ button {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 10px;
   padding-top: 6px;
+  /* Reserve a constant height so swapping Check ↔ feedback/Next (or the review
+     nav) never resizes this area — keeps the board above it from shifting. */
+  min-height: 108px;
 }
 .bigbtn {
   width: 100%;
