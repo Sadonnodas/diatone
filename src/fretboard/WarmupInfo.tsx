@@ -148,7 +148,7 @@ function Swatch({ fill, stroke }: { fill: string; stroke: string }) {
 
 export function WarmupInfo({ onClose }: { onClose: () => void }) {
   return (
-    <InfoModal title="How it works" onClose={onClose}>
+    <InfoModal title="How it works" subtitle="a Fret Science idea" onClose={onClose}>
       {/* The idea */}
       <p>
         Every pentatonic shape is built from two small blocks — the <b>rectangle</b> and the{' '}

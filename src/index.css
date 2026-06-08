@@ -479,6 +479,13 @@ button {
   font-size: 22px;
   font-weight: 500;
 }
+.title-sub {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--text-3);
+}
 .done-btn {
   color: var(--accent);
   font-weight: 600;
