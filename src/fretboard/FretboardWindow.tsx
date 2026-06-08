@@ -18,6 +18,7 @@ export interface Region {
   cells: { string: number; fromFret: number; toFret: number }[];
   fill: string;
   stroke: string;
+  dashed?: boolean; // a block only partly inside the box
 }
 
 const FRET_W = 58;
@@ -87,7 +88,15 @@ export function FretboardWindow({
           }
           const d = 'M' + pts.map((pt) => pt.join(' ')).join(' L') + ' Z';
           return (
-            <path key={`rg${i}`} d={d} fill={rg.fill} stroke={rg.stroke} strokeWidth={1.5} strokeLinejoin="round" />
+            <path
+              key={`rg${i}`}
+              d={d}
+              fill={rg.fill}
+              stroke={rg.stroke}
+              strokeWidth={1.5}
+              strokeLinejoin="round"
+              strokeDasharray={rg.dashed ? '6 5' : undefined}
+            />
           );
         })}
 
