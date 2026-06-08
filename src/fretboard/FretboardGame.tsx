@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { FretboardWindow } from './FretboardWindow';
 import { FretboardSettings } from './FretboardSettings';
+import { InfoModal } from '../components/InfoModal';
 import { useFretboardGame, defaultFretSettings, type FretSettings } from './useFretboardGame';
 import { SCALE_TYPE_INFO, degreeGlyphs, degreeOrdinal, degreeIsRoot } from './scaleData';
 import { buildFretNotes } from './fretDisplay';
@@ -22,6 +23,7 @@ function loadSettings(): FretSettings {
 export default function FretboardGame({ onBack }: { onBack: () => void }) {
   const [settings, setSettings] = useState<FretSettings>(loadSettings);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
   const [flash, setFlash] = useState<'' | 'flash-ok' | 'flash-no'>('');
   const [hintShown, setHintShown] = useState(false);
 
@@ -95,6 +97,9 @@ export default function FretboardGame({ onBack }: { onBack: () => void }) {
           </div>
         </div>
         <div className="top-right">
+          <button className="icon-btn" aria-label="How it works" onClick={() => setInfoOpen(true)}>
+            ?
+          </button>
           <button
             className="icon-btn"
             aria-label="Review"
@@ -188,6 +193,29 @@ export default function FretboardGame({ onBack }: { onBack: () => void }) {
           onChange={setSettings}
           onClose={() => setSettingsOpen(false)}
         />
+      )}
+
+      {infoOpen && (
+        <InfoModal title="Fretboard — scale degrees" onClose={() => setInfoOpen(false)}>
+          <p>
+            A scale shape is shown on a slice of the neck. <b>Tap every note</b> of the degree
+            you're asked for, then <b>Check</b>. Correct picks turn green, missed notes are
+            outlined, wrong picks turn red.
+          </p>
+          <p>Two modes — enable either or both in settings:</p>
+          <ul>
+            <li>
+              <b>Root given</b> — the root is marked on a low string to orient you.
+            </li>
+            <li>
+              <b>Quality given</b> — you're told only major or minor; find the root from the
+              pattern yourself.
+            </li>
+          </ul>
+          <p className="info-dim">
+            In Root-given mode the scale type is hidden — tap <b>Hint</b> to reveal it.
+          </p>
+        </InfoModal>
       )}
     </div>
   );

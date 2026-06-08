@@ -11,6 +11,16 @@ export interface FretNote {
   tappable: boolean;
 }
 
+// Translucent highlight box drawn behind notes (used by the explainer diagrams).
+export interface Region {
+  fromString: number;
+  toString: number;
+  fromFret: number;
+  toFret: number;
+  fill: string;
+  stroke: string;
+}
+
 const FRET_W = 58;
 const STRING_GAP = 46;
 const PAD_X = 26;
@@ -27,12 +37,14 @@ export function FretboardWindow({
   endFret,
   onTap,
   strings = DEFAULT_STRINGS,
+  regions = [],
 }: {
   notes: FretNote[];
   startFret: number;
   endFret: number;
   onTap: (string: number, fret: number) => void;
   strings?: number[];
+  regions?: Region[];
 }) {
   const cols = endFret - startFret + 1;
   const W = PAD_X * 2 + cols * FRET_W;
@@ -52,6 +64,28 @@ export function FretboardWindow({
   return (
     <div className="fretwrap" style={{ WebkitMaskImage: fade, maskImage: fade }}>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" preserveAspectRatio="xMidYMid meet">
+        {/* highlight regions (behind everything) */}
+        {regions.map((rg, i) => {
+          const pad = NOTE_R + 6;
+          const xs = [cellX(rg.fromFret), cellX(rg.toFret)];
+          const ys = [stringY(rg.fromString), stringY(rg.toString)];
+          const x = Math.min(...xs) - pad;
+          const y = Math.min(...ys) - pad;
+          return (
+            <rect
+              key={`rg${i}`}
+              x={x}
+              y={y}
+              width={Math.abs(xs[1] - xs[0]) + 2 * pad}
+              height={Math.abs(ys[1] - ys[0]) + 2 * pad}
+              rx={16}
+              fill={rg.fill}
+              stroke={rg.stroke}
+              strokeWidth={1.5}
+            />
+          );
+        })}
+
         {/* inlay markers */}
         {markerFrets
           .filter((f) => MARKERS.has(f))

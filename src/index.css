@@ -807,6 +807,42 @@ button {
   color: var(--text-2);
   margin: 2px 0 2px 4px;
 }
+.legend {
+  display: flex;
+  gap: 18px;
+  justify-content: center;
+  margin-top: 8px;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+.legend-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1px solid;
+  display: inline-block;
+}
+.info-body ul {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.info-body li {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+.info-body li b {
+  color: var(--text);
+  font-weight: 600;
+}
 
 /* ---- Mobile declutter redesign ---- */
 /* Compact modifier chips in the top bar (7th chords / hide quality). */

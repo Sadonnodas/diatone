@@ -11,6 +11,7 @@ import { Prompt } from './components/Prompt';
 import { useAnswerBuilder, Preview, Keypad } from './components/AnswerInput';
 import { SettingsSheet } from './components/SettingsSheet';
 import { Review } from './components/Review';
+import { InfoModal } from './components/InfoModal';
 import { haptic, TAP, CORRECT, WRONG } from './lib/haptics';
 
 const STORAGE_KEY = 'diatone.settings.v1';
@@ -47,6 +48,7 @@ function EyeOff() {
 export default function NumeralsGame({ onBack }: { onBack: () => void }) {
   const [state, dispatch] = useReducer(trainerReducer, undefined, loadInitialState);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
   const [flash, setFlash] = useState<'' | 'flash-ok' | 'flash-no'>('');
   const advanceTimer = useRef<number | null>(null);
 
@@ -152,6 +154,9 @@ export default function NumeralsGame({ onBack }: { onBack: () => void }) {
           >
             <EyeOff />
           </button>
+          <button className="icon-btn" aria-label="How it works" onClick={() => setInfoOpen(true)}>
+            ?
+          </button>
           <button
             className="icon-btn"
             aria-label="Review"
@@ -200,6 +205,34 @@ export default function NumeralsGame({ onBack }: { onBack: () => void }) {
             onChange={updateSettings}
             onClose={() => setSettingsOpen(false)}
           />
+        </div>
+      )}
+
+      {infoOpen && (
+        <div onClick={stop}>
+          <InfoModal title="Numerals" onClose={() => setInfoOpen(false)}>
+            <p>Read the prompt and answer in a couple of taps — no keyboard.</p>
+            <ul>
+              <li>
+                <b>Name Chord</b> — shown a numeral (like V); tap the chord's root.
+              </li>
+              <li>
+                <b>Name Numeral</b> — shown a chord (like A‑); tap its degree.
+              </li>
+              <li>
+                <b>Progression</b> &amp; <b>Transpose</b> — short four-chord sequences.
+              </li>
+            </ul>
+            <p>
+              The quality is implied by the prompt, so you only supply the note (or degree). Use
+              the <b>△7</b> chip for 7th chords and the <b>eye</b> chip to hide quality (then you
+              choose it).
+            </p>
+            <p className="info-dim">
+              Major keys only, jazz notation (A‑7, C△7, Bø7) — though Am7 / Cmaj7 / Bm7b5 are
+              accepted too.
+            </p>
+          </InfoModal>
         </div>
       )}
 
