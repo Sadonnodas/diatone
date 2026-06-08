@@ -42,18 +42,14 @@ function block(shape: WarmupShape, quality: 'major' | 'minor') {
   };
 }
 
-// A highlight box around the notes living on a given set of strings (its fret
-// extent auto-expands to include a B-string-shifted note).
+// A highlight that follows the notes on each string in the group, so the
+// outline steps to track a B-string shift instead of being one broad box.
 function regionFor(placed: Placed[], strings: number[], fill: string, stroke: string): Region {
-  const frets = placed.filter((n) => strings.includes(n.string)).map((n) => n.fret);
-  return {
-    fromString: Math.min(...strings),
-    toString: Math.max(...strings),
-    fromFret: Math.min(...frets),
-    toFret: Math.max(...frets),
-    fill,
-    stroke,
-  };
+  const cells = strings.map((s) => {
+    const frets = placed.filter((n) => n.string === s).map((n) => n.fret);
+    return { string: s, fromFret: Math.min(...frets), toFret: Math.max(...frets) };
+  });
+  return { cells, fill, stroke };
 }
 
 // Full minor-pentatonic box with its rectangle + stack highlighted.

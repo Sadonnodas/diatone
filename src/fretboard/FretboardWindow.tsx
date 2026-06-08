@@ -11,12 +11,11 @@ export interface FretNote {
   tappable: boolean;
 }
 
-// Translucent highlight box drawn behind notes (used by the explainer diagrams).
+// Translucent highlight drawn behind notes (used by the explainer diagrams).
+// Per-string fret extents, so the outline can step to follow a shape that
+// shifts across the B string instead of being one broad box.
 export interface Region {
-  fromString: number;
-  toString: number;
-  fromFret: number;
-  toFret: number;
+  cells: { string: number; fromFret: number; toFret: number }[];
   fill: string;
   stroke: string;
 }
@@ -64,25 +63,31 @@ export function FretboardWindow({
   return (
     <div className="fretwrap" style={{ WebkitMaskImage: fade, maskImage: fade }}>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" preserveAspectRatio="xMidYMid meet">
-        {/* highlight regions (behind everything) */}
+        {/* highlight regions (behind everything) — a stepped outline that
+            follows each string's fret extent, so it tracks the B-string shift */}
         {regions.map((rg, i) => {
           const pad = NOTE_R + 6;
-          const xs = [cellX(rg.fromFret), cellX(rg.toFret)];
-          const ys = [stringY(rg.fromString), stringY(rg.toString)];
-          const x = Math.min(...xs) - pad;
-          const y = Math.min(...ys) - pad;
+          const cells = [...rg.cells].sort((a, b) => stringY(a.string) - stringY(b.string));
+          const n = cells.length;
+          const yc = cells.map((c) => stringY(c.string));
+          const xL = cells.map((c) => cellX(c.fromFret) - pad);
+          const xR = cells.map((c) => cellX(c.toFret) + pad);
+          const yTop = yc[0] - pad;
+          const yBot = yc[n - 1] + pad;
+          const yb = (k: number) => (k <= 0 ? yTop : k >= n ? yBot : (yc[k - 1] + yc[k]) / 2);
+          const pts: [number, number][] = [[xR[0], yTop]];
+          for (let k = 0; k < n; k++) {
+            pts.push([xR[k], yb(k + 1)]);
+            if (k < n - 1) pts.push([xR[k + 1], yb(k + 1)]);
+          }
+          pts.push([xL[n - 1], yBot]);
+          for (let k = n - 1; k >= 0; k--) {
+            pts.push([xL[k], yb(k)]);
+            if (k > 0) pts.push([xL[k - 1], yb(k)]);
+          }
+          const d = 'M' + pts.map((pt) => pt.join(' ')).join(' L') + ' Z';
           return (
-            <rect
-              key={`rg${i}`}
-              x={x}
-              y={y}
-              width={Math.abs(xs[1] - xs[0]) + 2 * pad}
-              height={Math.abs(ys[1] - ys[0]) + 2 * pad}
-              rx={16}
-              fill={rg.fill}
-              stroke={rg.stroke}
-              strokeWidth={1.5}
-            />
+            <path key={`rg${i}`} d={d} fill={rg.fill} stroke={rg.stroke} strokeWidth={1.5} strokeLinejoin="round" />
           );
         })}
 
