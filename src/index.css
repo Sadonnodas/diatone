@@ -819,6 +819,12 @@ button {
   color: var(--text-2);
   margin: 2px 0 2px 4px;
 }
+.diagram-note {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-3);
+  margin: 8px 4px 2px;
+}
 .legend {
   display: flex;
   gap: 18px;

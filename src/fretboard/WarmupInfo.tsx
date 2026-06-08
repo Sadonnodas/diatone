@@ -95,6 +95,10 @@ const BLOCKS: { q: 'major' | 'minor'; s: WarmupShape; label: string }[] = [
 
 const ALL_STRINGS = [1, 2, 3, 4, 5, 6];
 
+const SHAPE_NOTES: Partial<Record<ShapeKey, string>> = {
+  A: 'Here you can clearly recognise the stack — it’s just shifted up a fret across the B string.',
+};
+
 export function WarmupInfo({ onClose }: { onClose: () => void }) {
   return (
     <InfoModal title="How it works" onClose={onClose}>
@@ -103,6 +107,10 @@ export function WarmupInfo({ onClose }: { onClose: () => void }) {
         the <b>stack</b>. Inside each block the scale degrees always sit in the same spots: one
         layout for <b>major</b>, one for <b>minor</b>. Learn these and you can find any degree
         anywhere on the neck.
+      </p>
+      <p>
+        So if you already know your pentatonic shapes all over the fretboard, this method means
+        you now know your scale degrees there too.
       </p>
       <p>
         You're shown one block and told only whether it's a major or minor shape — the root is
@@ -125,6 +133,10 @@ export function WarmupInfo({ onClose }: { onClose: () => void }) {
           );
         })}
       </div>
+      <p className="info-dim">
+        Notice that every time you see a rectangle the degrees are in the same place — and the
+        same goes for every stack. That never changes.
+      </p>
 
       <div className="group-label" style={{ marginTop: 12 }}>The five boxes</div>
       <p className="info-dim" style={{ marginTop: -4 }}>
@@ -161,6 +173,7 @@ export function WarmupInfo({ onClose }: { onClose: () => void }) {
                 regions={d.regions}
                 onTap={() => {}}
               />
+              {SHAPE_NOTES[shape] && <div className="diagram-note">{SHAPE_NOTES[shape]}</div>}
             </div>
           );
         })}
