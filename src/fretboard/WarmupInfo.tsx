@@ -1,6 +1,6 @@
 import { FretboardWindow, type FretNote, type Region } from './FretboardWindow';
 import { InfoModal } from '../components/InfoModal';
-import { WARMUP_SHAPES, placeShape, type WarmupShape } from './scaleData';
+import { WARMUP_SHAPES, placeShape, type WarmupShape, type ShapeKey } from './scaleData';
 
 const STRINGS: Record<WarmupShape, number[]> = { rectangle: [3, 4], stack: [2, 3, 4] };
 
@@ -9,8 +9,10 @@ const RECT_STROKE = 'rgba(155,140,255,0.65)';
 const STACK_FILL = 'rgba(94,200,255,0.15)';
 const STACK_STROKE = 'rgba(94,200,255,0.6)';
 
+interface Placed { string: number; fret: number; degree: string; isRoot: boolean }
+
 // Map placed notes → drawable notes (root in accent, degree labels shown).
-function toNotes(placed: { string: number; fret: number; degree: string; isRoot: boolean }[]): FretNote[] {
+function toNotes(placed: Placed[]): FretNote[] {
   return placed.map((n) => ({
     string: n.string,
     fret: n.fret,
@@ -40,22 +42,34 @@ function block(shape: WarmupShape, quality: 'major' | 'minor') {
   };
 }
 
-// Full minor-pentatonic "E" box, with the rectangle (top 2 strings) and the
-// stack (next 3) highlighted. The low E just repeats the high E.
-function fullShape() {
+// A highlight box around the notes living on a given set of strings (its fret
+// extent auto-expands to include a B-string-shifted note).
+function regionFor(placed: Placed[], strings: number[], fill: string, stroke: string): Region {
+  const frets = placed.filter((n) => strings.includes(n.string)).map((n) => n.fret);
+  return {
+    fromString: Math.min(...strings),
+    toString: Math.max(...strings),
+    fromFret: Math.min(...frets),
+    toFret: Math.max(...frets),
+    fill,
+    stroke,
+  };
+}
+
+// Full minor-pentatonic box with its rectangle + stack highlighted.
+function fullShape(shape: ShapeKey, rectStrings: number[], stackStrings: number[]) {
   const base = 5;
-  const placed = placeShape('minorPentatonic', 'E', base)!;
+  const placed = placeShape('minorPentatonic', shape, base)!;
   const frets = placed.map((n) => n.fret);
-  const regions: Region[] = [
-    { fromString: 1, toString: 2, fromFret: base, toFret: base + 3, fill: RECT_FILL, stroke: RECT_STROKE },
-    { fromString: 3, toString: 5, fromFret: base, toFret: base + 2, fill: STACK_FILL, stroke: STACK_STROKE },
-  ];
   return {
     notes: toNotes(placed),
     strings: [1, 2, 3, 4, 5, 6],
     startFret: Math.max(0, Math.min(...frets) - 1),
     endFret: Math.max(...frets) + 1,
-    regions,
+    regions: [
+      regionFor(placed, rectStrings, RECT_FILL, RECT_STROKE),
+      regionFor(placed, stackStrings, STACK_FILL, STACK_STROKE),
+    ],
   };
 }
 
@@ -66,8 +80,25 @@ const BLOCKS: { q: 'major' | 'minor'; s: WarmupShape; label: string }[] = [
   { q: 'major', s: 'stack', label: 'Major stack' },
 ];
 
+function Legend() {
+  return (
+    <div className="legend">
+      <span className="legend-item">
+        <span className="legend-swatch" style={{ background: RECT_FILL, borderColor: RECT_STROKE }} />
+        rectangle
+      </span>
+      <span className="legend-item">
+        <span className="legend-swatch" style={{ background: STACK_FILL, borderColor: STACK_STROKE }} />
+        stack
+      </span>
+    </div>
+  );
+}
+
 export function WarmupInfo({ onClose }: { onClose: () => void }) {
-  const full = fullShape();
+  const eShape = fullShape('E', [1, 2], [3, 4, 5]);
+  const aShape = fullShape('A', [5, 6], [2, 3, 4]);
+
   return (
     <InfoModal title="How it works" onClose={onClose}>
       <p>
@@ -106,24 +137,20 @@ export function WarmupInfo({ onClose }: { onClose: () => void }) {
         the top.
       </p>
       <div className="diagram">
-        <FretboardWindow
-          notes={full.notes}
-          startFret={full.startFret}
-          endFret={full.endFret}
-          strings={full.strings}
-          regions={full.regions}
-          onTap={() => {}}
-        />
-        <div className="legend">
-          <span className="legend-item">
-            <span className="legend-swatch" style={{ background: RECT_FILL, borderColor: RECT_STROKE }} />
-            rectangle
-          </span>
-          <span className="legend-item">
-            <span className="legend-swatch" style={{ background: STACK_FILL, borderColor: STACK_STROKE }} />
-            stack
-          </span>
-        </div>
+        <div className="diagram-label">Minor pentatonic · “E” shape</div>
+        <FretboardWindow notes={eShape.notes} startFret={eShape.startFret} endFret={eShape.endFret} strings={eShape.strings} regions={eShape.regions} onTap={() => {}} />
+        <Legend />
+      </div>
+
+      <p className="info-dim">
+        The same two blocks make up every box. This is the “A” shape — notice the degree layout
+        inside each block is identical to above, even though crossing the B string nudges the
+        stack up a fret.
+      </p>
+      <div className="diagram">
+        <div className="diagram-label">Minor pentatonic · “A” shape</div>
+        <FretboardWindow notes={aShape.notes} startFret={aShape.startFret} endFret={aShape.endFret} strings={aShape.strings} regions={aShape.regions} onTap={() => {}} />
+        <Legend />
       </div>
     </InfoModal>
   );
