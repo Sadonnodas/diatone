@@ -53,13 +53,17 @@ export function usePwa(): PwaApi {
     setChecking(false);
   };
 
-  // Apply the waiting version. Don't rely on workbox-window's implicit
-  // controllerchange→reload (it can silently fail): activate the waiting worker
-  // ourselves, reload when it takes control, and hard-reload as a fallback so
-  // the banner can never get stuck.
+  // Apply the waiting version. Reload ONLY once the new worker is actually
+  // controlling the page (controllerchange) — a fixed short timer can fire
+  // before the new worker has taken over, so the reload would still be served
+  // the old cached assets. The timeout here is just a last-resort safety net,
+  // long enough not to pre-empt a normal handover.
   const updateNow = async () => {
     setUpdating(true);
+    let done = false;
     const reload = () => {
+      if (done) return;
+      done = true;
       window.location.reload();
     };
     try {
@@ -67,25 +71,30 @@ export function usePwa(): PwaApi {
 
       let r = regRef.current;
       if (!r && 'serviceWorker' in navigator) {
-        r = await navigator.serviceWorker.getRegistration();
+        r = (await navigator.serviceWorker.getRegistration()) ?? undefined;
       }
-      // Make sure we have the freshest waiting worker.
       try {
-        await r?.update();
+        await r?.update(); // make sure we have the freshest waiting worker
       } catch {
         /* ignore */
       }
 
-      const waiting = r?.waiting ?? r?.installing;
+      const waiting = r?.waiting;
       if (waiting) {
+        // New worker will skipWaiting + clientsClaim → controllerchange → reload.
         waiting.postMessage({ type: 'SKIP_WAITING' });
+      } else if (r?.installing) {
+        const w = r.installing;
+        w.addEventListener('statechange', () => {
+          if (w.state === 'installed') w.postMessage({ type: 'SKIP_WAITING' });
+        });
+      } else {
+        reload(); // nothing pending — just reload to whatever's current
       }
     } catch {
-      /* fall through to the fallback reload */
+      reload();
     }
-    // If controllerchange doesn't fire promptly (no waiting worker, or the SW
-    // doesn't hand over control), reload anyway to pick up the latest.
-    setTimeout(reload, 2000);
+    window.setTimeout(reload, 8000); // safety net only
   };
 
   return {
