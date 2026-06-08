@@ -98,6 +98,25 @@ export const pickSeed = (settings: Settings): Seed | null => {
   return seed;
 };
 
+// Identifies the question a player actually sees (so we can avoid repeats).
+export const questionSig = (q: Question): string =>
+  `${q.mode}|${q.prompt.keys.join(',')}|${q.prompt.content}`;
+
+// Roll a seed whose derived question differs from `avoidSig` (the previous
+// one). Falls back to whatever it has if it can't differ (e.g. only one
+// possible question), so it never loops forever.
+export const pickFreshSeed = (settings: Settings, avoidSig?: string): Seed | null => {
+  let seed = pickSeed(settings);
+  if (!seed || !avoidSig) return seed;
+  for (let i = 0; i < 25; i++) {
+    if (questionSig(buildQuestionFromSeed(seed, settings)) !== avoidSig) return seed;
+    const next = pickSeed(settings);
+    if (!next) return seed;
+    seed = next;
+  }
+  return seed;
+};
+
 export const isSeedValid = (seed: Seed | null, settings: Settings | null): boolean => {
   if (!seed || !settings) return false;
   if (!settings.selectedKeys.includes(seed.key)) return false;

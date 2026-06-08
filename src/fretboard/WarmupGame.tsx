@@ -71,6 +71,7 @@ export default function WarmupGame({ onBack }: { onBack: () => void }) {
   const [history, setHistory] = useState<WHistory[]>([]);
   const [reviewIndex, setReviewIndex] = useState<number | null>(null);
   const timer = useRef<number | null>(null);
+  const lastSig = useRef<string>('');
 
   useEffect(() => {
     try {
@@ -100,20 +101,30 @@ export default function WarmupGame({ onBack }: { onBack: () => void }) {
       setQuestion(null);
       return;
     }
-    const shape = enabledShapes[Math.floor(Math.random() * enabledShapes.length)];
-    const quality = enabledQualities[Math.floor(Math.random() * enabledQualities.length)];
+    // Pick a shape/quality/target that isn't a repeat of the previous question.
+    // Root is hidden, so finding the root is itself a fair question — include it.
+    let shape = enabledShapes[0];
+    let quality = enabledQualities[0];
+    let target = '1';
+    let sig = '';
+    for (let i = 0; i < 25; i++) {
+      shape = enabledShapes[Math.floor(Math.random() * enabledShapes.length)];
+      quality = enabledQualities[Math.floor(Math.random() * enabledQualities.length)];
+      const degs = Array.from(new Set(WARMUP_SHAPES[shape][quality].map((m) => m.degree)));
+      target = degs[Math.floor(Math.random() * degs.length)];
+      sig = `${shape}|${quality}|${target}`;
+      if (sig !== lastSig.current) break;
+    }
+    lastSig.current = sig;
+
     const strings = STRINGS[shape];
     const baseFret = Math.floor(Math.random() * 4) + 4; // 4..7
-    const mini = WARMUP_SHAPES[shape][quality];
-    const notes: PlacedMini[] = mini.map((m) => ({
+    const notes: PlacedMini[] = WARMUP_SHAPES[shape][quality].map((m) => ({
       string: strings[m.s],
       fret: baseFret + m.f,
       degree: m.degree,
       isRoot: !!m.root,
     }));
-    // Root is hidden, so finding the root is itself a fair question — include it.
-    const degrees = Array.from(new Set(notes.map((n) => n.degree)));
-    const target = degrees[Math.floor(Math.random() * degrees.length)];
     const correctKeys = notes.filter((n) => n.degree === target).map((n) => `${n.string}-${n.fret}`);
     const frets = notes.map((n) => n.fret);
     setQuestion({

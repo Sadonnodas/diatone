@@ -8,6 +8,8 @@ import {
   type Question,
   type PromptObj,
   pickSeed,
+  pickFreshSeed,
+  questionSig,
   isSeedValid,
   buildQuestionFromSeed,
 } from '../lib/engine';
@@ -100,9 +102,13 @@ export function trainerReducer(state: TrainerState, action: Action): TrainerStat
     }
 
     case 'NEXT': {
+      // Avoid serving the same question twice in a row.
+      const prevSig = state.seed
+        ? questionSig(buildQuestionFromSeed(state.seed, state.settings))
+        : undefined;
       return {
         ...state,
-        seed: pickSeed(state.settings),
+        seed: pickFreshSeed(state.settings, prevSig),
         userAnswer: '',
         feedback: null,
         tapCount: 0,

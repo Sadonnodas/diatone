@@ -1,7 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { normalize, answersMatch } from './normalize';
 import { chordToJazz, progressionToJazz, display7th, neutralizeNumeral } from './jazz';
-import { buildQuestionFromSeed, isSeedValid, type Settings, type Seed, DEGREE_KEYS } from './engine';
+import {
+  buildQuestionFromSeed,
+  isSeedValid,
+  pickFreshSeed,
+  questionSig,
+  type Settings,
+  type Seed,
+  DEGREE_KEYS,
+} from './engine';
 
 const baseSettings = (over: Partial<Settings> = {}): Settings => ({
   selectedKeys: ['C', 'G', 'F'],
@@ -186,6 +194,25 @@ describe('isSeedValid (§10)', () => {
   it('valid seed passes', () => {
     const seed: Seed = { key: 'C', mode: 1, degreeIndex: 0 };
     expect(isSeedValid(seed, baseSettings())).toBe(true);
+  });
+});
+
+describe('no immediate repeats (pickFreshSeed)', () => {
+  it('never serves the same question twice in a row when alternatives exist', () => {
+    const settings = baseSettings({
+      selectedKeys: ['C'],
+      selectedModes: [1],
+      generationMethod: 'random',
+      degreeToggles: { I: true, ii: true, iii: false, IV: false, V: false, vi: false, 'vii°': false },
+    });
+    let prev = pickFreshSeed(settings, undefined)!;
+    for (let i = 0; i < 50; i++) {
+      const prevSig = questionSig(buildQuestionFromSeed(prev, settings));
+      const seed = pickFreshSeed(settings, prevSig)!;
+      const sig = questionSig(buildQuestionFromSeed(seed, settings));
+      expect(sig).not.toBe(prevSig);
+      prev = seed;
+    }
   });
 });
 

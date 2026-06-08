@@ -58,6 +58,7 @@ export function useFretboardGame(settings: FretSettings) {
   const [history, setHistory] = useState<{ question: FretQuestion; selected: Set<string>; correct: boolean }[]>([]);
   const [reviewIndex, setReviewIndex] = useState<number | null>(null);
   const timer = useRef<number | null>(null);
+  const lastSig = useRef<string>('');
 
   const pool = useMemo(() => {
     const out: { scaleType: ScaleType; shape: ShapeKey }[] = [];
@@ -101,6 +102,12 @@ export function useFretboardGame(settings: FretSettings) {
       if (candidates.length === 0) continue;
 
       const target = candidates[Math.floor(Math.random() * candidates.length)];
+
+      // Don't repeat the same shape+target+mode as the previous question.
+      const sig = `${scaleType}|${shape}|${contextMode}|${target}`;
+      if (sig === lastSig.current && attempt < 180) continue;
+      lastSig.current = sig;
+
       const correctKeys = notes.filter((n) => n.degree === target).map(noteKey);
 
       const frets = notes.map((n) => n.fret);
