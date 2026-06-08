@@ -88,8 +88,8 @@ function fullShape(shape: ShapeKey) {
 
 const BLOCKS: { q: 'major' | 'minor'; s: WarmupShape; label: string }[] = [
   { q: 'minor', s: 'rectangle', label: 'Minor rectangle' },
-  { q: 'major', s: 'rectangle', label: 'Major rectangle' },
   { q: 'minor', s: 'stack', label: 'Minor stack' },
+  { q: 'major', s: 'rectangle', label: 'Major rectangle' },
   { q: 'major', s: 'stack', label: 'Major stack' },
 ];
 
@@ -128,9 +128,10 @@ export function WarmupInfo({ onClose }: { onClose: () => void }) {
 
       <div className="group-label" style={{ marginTop: 12 }}>The five boxes</div>
       <p className="info-dim" style={{ marginTop: -4 }}>
-        Each minor-pentatonic box is the same{' '}
-        <span style={{ color: RECT_STROKE }}>rectangle</span> /{' '}
-        <span style={{ color: STACK_STROKE }}>stack</span> pattern, windowed differently. Where a
+        Below are all the minor-pentatonic shapes. Each one is made of alternating{' '}
+        <span style={{ color: RECT_STROKE }}>rectangle</span> and{' '}
+        <span style={{ color: STACK_STROKE }}>stack</span> blocks — learning to recognise them
+        inside a full shape makes it easy to know every scale degree in the pattern. Where a
         block crosses the B string it nudges up a fret, but the degrees stay put. A block that
         runs off the edge is shown <b>dashed</b> — it finishes in the next box, and since the low
         E and high E strings are the same notes, the pattern just starts over top to bottom.
