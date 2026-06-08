@@ -81,7 +81,10 @@ function inTriangle(px, py, v) {
   return !(neg && pos);
 }
 const mix = (a, b, t) => a + (b - a) * t;
+const FRET = [0x92, 0x9a, 0xa7]; // faint fret/string lines
 
+// A triad of note-dots (an upward triangle) on a faint fret grid: the maj7 △
+// identity, now reading as scale degrees on a fretboard.
 function drawIcon(size, safeFraction) {
   const SS = 4; // supersample factor
   const S = size * SS;
@@ -89,66 +92,78 @@ function drawIcon(size, safeFraction) {
 
   const cx = S / 2;
   const cy = S / 2;
-  const round = S * 0.07; // corner radius of the rounded triangle
-  const R = (S / 2) * safeFraction - round; // core circumradius
-  // upward equilateral triangle, nudged down so the optical centre sits centred
-  const oy = cy + R * 0.16;
+  const dotR = S * 0.105;
+  const R = (S / 2) * safeFraction - dotR; // triangle circumradius (dots stay inside)
+  const oy = cy + R * 0.08; // nudge down for optical centre
   const v = [
     [cx, oy - R],
     [cx - R * 0.8660254, oy + R * 0.5],
     [cx + R * 0.8660254, oy + R * 0.5],
   ];
-  const topY = v[0][1];
-  const botY = v[1][1];
+  const gradTopY = oy - R - dotR;
+  const gradBotY = oy + R * 0.5 + dotR;
+  const edgeHalf = S * 0.016; // thin connecting lines between dots
+  const aa = SS * 0.6;
+
+  // Faint vertical fret lines spanning the mark's height.
+  const fretXs = [cx - R * 0.74, cx - R * 0.25, cx + R * 0.25, cx + R * 0.74];
+  const fretHalf = S * 0.006;
+  const fretTopY = oy - R - dotR * 0.7;
+  const fretBotY = oy + R * 0.5 + dotR * 0.7;
 
   // Background radial glow centred a touch above the mark.
   const glowR = S * 0.62;
   const glowCx = cx;
   const glowCy = oy - R * 0.15;
-  const glowMax = 0.42; // peak glow strength
-  const haloWidth = S * 0.06; // accent halo around the triangle
+  const glowMax = 0.4;
+
+  const grad = (py, ch) => {
+    const t = Math.max(0, Math.min(1, (py - gradTopY) / (gradBotY - gradTopY)));
+    return mix(GRAD_TOP[ch], GRAD_BOT[ch], t);
+  };
 
   for (let y = 0; y < S; y++) {
     for (let x = 0; x < S; x++) {
       const px = x + 0.5,
         py = y + 0.5;
 
-      // --- background + radial glow ---
+      // background + radial glow
       const gd = Math.hypot(px - glowCx, py - glowCy) / glowR;
       const glow = glowMax * Math.exp(-(gd * gd) * 1.6);
-      let r = mix(BG[0], ACCENT[0], glow);
-      let g = mix(BG[1], ACCENT[1], glow);
-      let b = mix(BG[2], ACCENT[2], glow);
+      const col = [mix(BG[0], ACCENT[0], glow), mix(BG[1], ACCENT[1], glow), mix(BG[2], ACCENT[2], glow)];
 
-      // --- triangle (rounded, gradient fill) + outer halo ---
+      // faint fret lines
+      if (py > fretTopY && py < fretBotY) {
+        for (const fx of fretXs) {
+          const cov = Math.max(0, Math.min(1, (fretHalf - Math.abs(px - fx)) / aa + 0.5));
+          if (cov > 0) for (let c = 0; c < 3; c++) col[c] = mix(col[c], FRET[c], 0.22 * cov);
+        }
+      }
+
+      // connecting triangle edges
       const edge = Math.min(
         distSeg(px, py, v[0][0], v[0][1], v[1][0], v[1][1]),
         distSeg(px, py, v[1][0], v[1][1], v[2][0], v[2][1]),
         distSeg(px, py, v[2][0], v[2][1], v[0][0], v[0][1]),
       );
-      const inside = inTriangle(px, py, v);
-      const distOut = inside ? -1 : edge - round; // <=0 means inside the rounded shape
+      const eCov = Math.max(0, Math.min(1, (edgeHalf - edge) / aa + 0.5));
+      if (eCov > 0) for (let c = 0; c < 3; c++) col[c] = mix(col[c], grad(py, c), eCov);
 
-      if (distOut <= 0) {
-        const ty = Math.max(0, Math.min(1, (py - topY) / (botY - topY)));
-        r = mix(GRAD_TOP[0], GRAD_BOT[0], ty);
-        g = mix(GRAD_TOP[1], GRAD_BOT[1], ty);
-        b = mix(GRAD_TOP[2], GRAD_BOT[2], ty);
-      } else {
-        // soft accent halo hugging the mark
-        const halo = 0.55 * Math.exp(-distOut / haloWidth);
-        r = mix(r, ACCENT[0], halo);
-        g = mix(g, ACCENT[1], halo);
-        b = mix(b, ACCENT[2], halo);
-      }
+      // note dots at the vertices
+      const dd = Math.min(
+        Math.hypot(px - v[0][0], py - v[0][1]),
+        Math.hypot(px - v[1][0], py - v[1][1]),
+        Math.hypot(px - v[2][0], py - v[2][1]),
+      );
+      const dCov = Math.max(0, Math.min(1, (dotR - dd) / aa + 0.5));
+      if (dCov > 0) for (let c = 0; c < 3; c++) col[c] = mix(col[c], grad(py, c), dCov);
 
-      // accumulate into the downsampled buffer
       const ox = (x / SS) | 0;
       const oyy = (y / SS) | 0;
       const oi = (oyy * size + ox) * 3;
-      acc[oi] += r;
-      acc[oi + 1] += g;
-      acc[oi + 2] += b;
+      acc[oi] += col[0];
+      acc[oi + 1] += col[1];
+      acc[oi + 2] += col[2];
     }
   }
 
