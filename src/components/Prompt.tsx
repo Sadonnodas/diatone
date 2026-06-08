@@ -53,7 +53,7 @@ export function Prompt({
         <Glyphs text={prompt.content} className="ask-recall" />
         <Glyphs text={feedback.correctAnswer} className="hero wrong" />
         <div className="guess">
-          you played <span className="g">{renderJazz(userAnswer || '—', 'ua')}</span>
+          your answer: <span className="g">{renderJazz(userAnswer || '—', 'ua')}</span>
         </div>
       </>
     );
