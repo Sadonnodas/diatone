@@ -12,6 +12,7 @@ import { useAnswerBuilder, Preview, Keypad } from './components/AnswerInput';
 import { SettingsSheet } from './components/SettingsSheet';
 import { Review } from './components/Review';
 import { InfoModal } from './components/InfoModal';
+import { KeyWheel } from './components/KeyWheel';
 import { haptic, TAP, CORRECT, WRONG } from './lib/haptics';
 
 const STORAGE_KEY = 'diatone.settings.v1';
@@ -50,6 +51,8 @@ export default function NumeralsGame({ onBack }: { onBack: () => void }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [flash, setFlash] = useState<'' | 'flash-ok' | 'flash-no'>('');
+  const [phase, setPhase] = useState<'setup' | 'play'>('setup');
+  const [setupKeys, setSetupKeys] = useState<string[]>(state.settings.selectedKeys);
   const advanceTimer = useRef<number | null>(null);
 
   const question = currentQuestion(state);
@@ -119,6 +122,43 @@ export default function NumeralsGame({ onBack }: { onBack: () => void }) {
 
   const reviewEntry =
     state.reviewIndex !== null ? (state.history[state.reviewIndex] ?? null) : null;
+
+  // Setup screen: pick the keys to train on before the drill starts.
+  if (phase === 'setup') {
+    const toggleSetupKey = (k: string) =>
+      setSetupKeys((prev) => (prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k]));
+    const start = () => {
+      updateSettings({ ...state.settings, selectedKeys: setupKeys });
+      setPhase('play');
+    };
+    return (
+      <div className="app">
+        <div className="top reveal" style={{ animationDelay: '.02s' }}>
+          <div className="top-left">
+            <button className="icon-btn" aria-label="Home" onClick={onBack}>
+              ←
+            </button>
+          </div>
+        </div>
+        <div className="stage setup-stage">
+          <div className="setup-title reveal" style={{ animationDelay: '.04s' }}>
+            Which keys?
+          </div>
+          <div className="reveal" style={{ animationDelay: '.08s' }}>
+            <KeyWheel selected={setupKeys} onToggle={toggleSetupKey} />
+          </div>
+          <div className="setup-note reveal" style={{ animationDelay: '.12s' }}>
+            You can change this anytime in settings.
+          </div>
+        </div>
+        <div className="fret-actions">
+          <button className="bigbtn" onClick={start} disabled={setupKeys.length === 0}>
+            Start
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`app ${flash}`} onClick={onAppClick}>

@@ -756,6 +756,25 @@ button {
   opacity: 0.75;
 }
 
+/* ---- Setup screen (choose keys) ---- */
+.setup-stage {
+  justify-content: center;
+  gap: clamp(18px, 4vh, 32px);
+}
+.setup-title {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(28px, 9vw, 38px);
+  color: var(--text);
+  text-align: center;
+}
+.setup-note {
+  font-size: 13px;
+  color: var(--text-3);
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
 /* ---- Info modal (warm-up explanation) ---- */
 .info-modal {
   position: fixed;

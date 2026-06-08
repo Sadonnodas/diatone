@@ -1,7 +1,6 @@
 import type { Settings } from '../lib/engine';
-import { ALL_KEYS, ENHARMONIC_KEYS } from '../lib/chordData';
 import { DEGREE_KEYS } from '../lib/engine';
-import { renderJazz } from './ChordDisplay';
+import { KeyWheel } from './KeyWheel';
 
 const MODES: { id: number; label: string }[] = [
   { id: 1, label: 'Name Chord' },
@@ -77,43 +76,7 @@ export function SettingsSheet({
           {/* Keys — circle of fifths */}
           <div>
             <div className="group-label">Keys — circle of fifths</div>
-            <div className="wheel-wrap">
-              <div className="wheel">
-                {ALL_KEYS.map((k, i) => {
-                  const angle = (-90 + i * 30) * (Math.PI / 180);
-                  const r = 105;
-                  const x = 128 + r * Math.cos(angle);
-                  const y = 128 + r * Math.sin(angle);
-                  const on = settings.selectedKeys.includes(k);
-                  return (
-                    <button
-                      key={k}
-                      className={`kbtn${on ? ' on' : ''}`}
-                      style={{ left: `${x}px`, top: `${y}px` }}
-                      onClick={() => toggleKey(k)}
-                    >
-                      {renderJazz(k, `w${k}`)}
-                    </button>
-                  );
-                })}
-                <div className="wheel-center">
-                  {settings.selectedKeys.length} key{settings.selectedKeys.length === 1 ? '' : 's'}{' '}
-                  selected
-                </div>
-              </div>
-              <div className="enh-row">
-                <span>Enharmonic:</span>
-                {ENHARMONIC_KEYS.map((k) => (
-                  <button
-                    key={k}
-                    className={`tog${settings.selectedKeys.includes(k) ? ' on' : ''}`}
-                    onClick={() => toggleKey(k)}
-                  >
-                    {renderJazz(k, `e${k}`)}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <KeyWheel selected={settings.selectedKeys} onToggle={toggleKey} />
           </div>
 
           {/* Modes */}
