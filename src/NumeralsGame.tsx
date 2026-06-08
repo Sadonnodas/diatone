@@ -141,8 +141,10 @@ export default function NumeralsGame({ onBack }: { onBack: () => void }) {
           </div>
         </div>
         <div className="stage setup-stage">
-          <div className="setup-title reveal" style={{ animationDelay: '.04s' }}>
-            Which keys?
+          <div className="setup-head reveal" style={{ animationDelay: '.04s' }}>
+            <div className="setup-title">Which keys?</div>
+            {/* Static for now; becomes a major/minor/mix selector later. */}
+            <div className="setup-mode">Major</div>
           </div>
           <div className="reveal" style={{ animationDelay: '.08s' }}>
             <KeyWheel selected={setupKeys} onToggle={toggleSetupKey} />
