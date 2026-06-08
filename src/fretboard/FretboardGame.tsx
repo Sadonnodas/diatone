@@ -25,10 +25,13 @@ export default function FretboardGame({ onBack }: { onBack: () => void }) {
   const [flash, setFlash] = useState<'' | 'flash-ok' | 'flash-no'>('');
   const [hintShown, setHintShown] = useState(false);
 
-  const { question, selected, answered, correct, streak, toggle, check, generate, scheduleAdvance } =
-    useFretboardGame(settings);
+  const {
+    question, selected, answered, correct, streak,
+    history, reviewIndex,
+    toggle, check, generate, scheduleAdvance,
+    enterReview, reviewNav, exitReview,
+  } = useFretboardGame(settings);
 
-  // Reset the per-question scale-type hint whenever a new question loads.
   useEffect(() => setHintShown(false), [question]);
 
   useEffect(() => {
@@ -39,7 +42,6 @@ export default function FretboardGame({ onBack }: { onBack: () => void }) {
     }
   }, [settings]);
 
-  // Feedback effects: haptic + flash + auto-advance on correct.
   useEffect(() => {
     if (!answered) {
       setFlash('');
@@ -52,34 +54,32 @@ export default function FretboardGame({ onBack }: { onBack: () => void }) {
     return () => window.clearTimeout(t);
   }, [answered, correct, settings.autoAdvance, scheduleAdvance]);
 
+  const reviewing = reviewIndex !== null;
+  const item = reviewing ? history[reviewIndex] : null;
+  // Displayed question/state: a history entry while reviewing, otherwise live.
+  const dq = reviewing ? item!.question : question;
+  const valid = !!dq && !dq.error;
+  const dSel = reviewing ? item!.selected : selected;
+  const dAns = reviewing ? true : answered;
+  const dCor = reviewing ? item!.correct : correct;
+
   const onTap = (string: number, fret: number) => {
+    if (reviewing) return;
     haptic(TAP);
     toggle(string, fret);
   };
 
-  const fretNotes =
-    question && !question.error
-      ? buildFretNotes(
-          question.notes,
-          question.target,
-          selected,
-          answered,
-          question.contextMode === 'rootGiven' ? 'low' : 'none',
-        )
-      : [];
+  const fretNotes = valid
+    ? buildFretNotes(dq!.notes, dq!.target, dSel, dAns, dq!.contextMode === 'rootGiven' ? 'low' : 'none')
+    : [];
 
-  // Root-given hides the scale type behind a Hint button (unless revealed); the
-  // quality-given mode always states the quality.
   const showScaleType =
-    !!question &&
-    !question.error &&
-    (question.contextMode === 'qualityGiven' || settings.revealScaleType || hintShown || answered);
-  const ctxLabel =
-    question && !question.error
-      ? question.contextMode === 'qualityGiven'
-        ? `${question.quality} pattern`
-        : SCALE_TYPE_INFO[question.scaleType].label
-      : '';
+    valid && (reviewing || dq!.contextMode === 'qualityGiven' || settings.revealScaleType || hintShown || answered);
+  const ctxLabel = valid
+    ? dq!.contextMode === 'qualityGiven'
+      ? `${dq!.quality} pattern`
+      : SCALE_TYPE_INFO[dq!.scaleType].label
+    : '';
 
   return (
     <div className={`app ${flash}`}>
@@ -91,9 +91,18 @@ export default function FretboardGame({ onBack }: { onBack: () => void }) {
           <div className="streak" aria-label={`Streak ${streak}`}>
             <span className="dot" />
             <span className="n">{streak}</span>
+            <span className="streak-word">streak</span>
           </div>
         </div>
         <div className="top-right">
+          <button
+            className="icon-btn"
+            aria-label="Review"
+            onClick={enterReview}
+            disabled={history.length === 0}
+          >
+            ↺
+          </button>
           <button className="icon-btn" aria-label="Settings" onClick={() => setSettingsOpen(true)}>
             ⚙
           </button>
@@ -101,7 +110,7 @@ export default function FretboardGame({ onBack }: { onBack: () => void }) {
       </div>
 
       <div className="stage fret-stage">
-        {question?.error ? (
+        {question?.error && !reviewing ? (
           <div className="empty">
             {question.error}
             <div style={{ marginTop: 16 }}>
@@ -110,7 +119,7 @@ export default function FretboardGame({ onBack }: { onBack: () => void }) {
               </button>
             </div>
           </div>
-        ) : question ? (
+        ) : valid ? (
           <>
             <div className="ctx reveal" style={{ animationDelay: '.04s' }}>
               {showScaleType ? (
@@ -123,20 +132,36 @@ export default function FretboardGame({ onBack }: { onBack: () => void }) {
             </div>
             <div className="fret-prompt reveal" style={{ animationDelay: '.08s' }}>
               <span className="lead">tap every</span>
-              <span className="t">{renderJazz(degreeGlyphs(degreeOrdinal(question.target)), 'tgt')}</span>
-              {!degreeIsRoot(question.target) && <span className="lead">degree</span>}
+              <span className="t">{renderJazz(degreeGlyphs(degreeOrdinal(dq!.target)), 'tgt')}</span>
+              {!degreeIsRoot(dq!.target) && <span className="lead">degree</span>}
             </div>
             <FretboardWindow
               notes={fretNotes}
-              startFret={question.startFret}
-              endFret={question.endFret}
+              startFret={dq!.startFret}
+              endFret={dq!.endFret}
               onTap={onTap}
             />
           </>
         ) : null}
       </div>
 
-      {question && !question.error && (
+      {reviewing ? (
+        <div className="fret-actions">
+          <div className={`fb ${dCor ? 'ok' : 'no'}`}>{dCor ? '✓ Correct' : '✗ Incorrect'}</div>
+          <div className="review-nav" style={{ width: '100%', maxWidth: 360 }}>
+            <button onClick={() => reviewNav(-1)} disabled={reviewIndex === 0}>
+              ← Older
+            </button>
+            <button onClick={exitReview}>Return</button>
+            <button onClick={() => reviewNav(1)} disabled={reviewIndex === history.length - 1}>
+              Newer →
+            </button>
+          </div>
+          <div className="review-count">
+            {(reviewIndex ?? 0) + 1} of {history.length}
+          </div>
+        </div>
+      ) : valid ? (
         <div className="fret-actions">
           {!answered ? (
             <button className="bigbtn" onClick={check} disabled={selected.size === 0}>
@@ -155,7 +180,7 @@ export default function FretboardGame({ onBack }: { onBack: () => void }) {
             </>
           )}
         </div>
-      )}
+      ) : null}
 
       {settingsOpen && (
         <FretboardSettings

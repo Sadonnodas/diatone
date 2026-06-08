@@ -129,6 +129,7 @@ export default function NumeralsGame({ onBack, pwa }: { onBack: () => void; pwa:
           <div className="streak" aria-label={`Streak ${state.streak}`}>
             <span className="dot" />
             <span className="n">{state.streak}</span>
+            <span className="streak-word">streak</span>
           </div>
         </div>
         <div className="top-right">

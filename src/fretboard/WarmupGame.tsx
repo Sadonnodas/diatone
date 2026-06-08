@@ -25,7 +25,6 @@ const defaults: WarmupSettings = {
   autoAdvance: true,
 };
 
-// Which strings each block sits on, and its fret span.
 const STRINGS: Record<WarmupShape, number[]> = { rectangle: [3, 4], stack: [2, 3, 4] };
 
 interface PlacedMini {
@@ -43,6 +42,11 @@ interface WQuestion {
   startFret: number;
   endFret: number;
   correctKeys: string[];
+}
+interface WHistory {
+  question: WQuestion;
+  selected: Set<string>;
+  correct: boolean;
 }
 
 function loadSettings(): WarmupSettings {
@@ -64,6 +68,8 @@ export default function WarmupGame({ onBack }: { onBack: () => void }) {
   const [correct, setCorrect] = useState<boolean | null>(null);
   const [streak, setStreak] = useState(0);
   const [flash, setFlash] = useState<'' | 'flash-ok' | 'flash-no'>('');
+  const [history, setHistory] = useState<WHistory[]>([]);
+  const [reviewIndex, setReviewIndex] = useState<number | null>(null);
   const timer = useRef<number | null>(null);
 
   useEffect(() => {
@@ -88,6 +94,7 @@ export default function WarmupGame({ onBack }: { onBack: () => void }) {
     setSelected(new Set());
     setAnswered(false);
     setCorrect(null);
+    setReviewIndex(null);
 
     if (enabledShapes.length === 0 || enabledQualities.length === 0) {
       setQuestion(null);
@@ -104,7 +111,8 @@ export default function WarmupGame({ onBack }: { onBack: () => void }) {
       degree: m.degree,
       isRoot: !!m.root,
     }));
-    const degrees = Array.from(new Set(notes.map((n) => n.degree))).filter((d) => d !== '1');
+    // Root is hidden, so finding the root is itself a fair question — include it.
+    const degrees = Array.from(new Set(notes.map((n) => n.degree)));
     const target = degrees[Math.floor(Math.random() * degrees.length)];
     const correctKeys = notes.filter((n) => n.degree === target).map((n) => `${n.string}-${n.fret}`);
     const frets = notes.map((n) => n.fret);
@@ -126,8 +134,15 @@ export default function WarmupGame({ onBack }: { onBack: () => void }) {
 
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
+  const reviewing = reviewIndex !== null;
+  const item = reviewing ? history[reviewIndex] : null;
+  const dq = reviewing ? item!.question : question;
+  const dSel = reviewing ? item!.selected : selected;
+  const dAns = reviewing ? true : answered;
+  const dCor = reviewing ? item!.correct : correct;
+
   const toggle = (string: number, fret: number) => {
-    if (answered) return;
+    if (answered || reviewing) return;
     haptic(TAP);
     const key = `${string}-${fret}`;
     setSelected((prev) => {
@@ -145,15 +160,23 @@ export default function WarmupGame({ onBack }: { onBack: () => void }) {
     setCorrect(isCorrect);
     setAnswered(true);
     setStreak((s) => (isCorrect ? s + 1 : 0));
+    setHistory((h) => [...h, { question, selected: new Set(selected), correct: isCorrect }]);
     haptic(isCorrect ? CORRECT : WRONG);
     setFlash(isCorrect ? 'flash-ok' : 'flash-no');
     window.setTimeout(() => setFlash(''), 500);
     if (isCorrect && settings.autoAdvance) timer.current = window.setTimeout(generate, 900);
   };
 
-  const fretNotes = question
-    ? buildFretNotes(question.notes, question.target, selected, answered, 'all')
-    : [];
+  const enterReview = () => {
+    if (history.length === 0) return;
+    if (timer.current) clearTimeout(timer.current);
+    setReviewIndex(history.length - 1);
+  };
+  const reviewNav = (dir: number) =>
+    setReviewIndex((i) => (i === null ? null : Math.max(0, Math.min(history.length - 1, i + dir))));
+  const exitReview = () => setReviewIndex(null);
+
+  const fretNotes = dq ? buildFretNotes(dq.notes, dq.target, dSel, dAns, 'none') : [];
 
   return (
     <div className={`app ${flash}`}>
@@ -165,9 +188,18 @@ export default function WarmupGame({ onBack }: { onBack: () => void }) {
           <div className="streak" aria-label={`Streak ${streak}`}>
             <span className="dot" />
             <span className="n">{streak}</span>
+            <span className="streak-word">streak</span>
           </div>
         </div>
         <div className="top-right">
+          <button
+            className="icon-btn"
+            aria-label="Review"
+            onClick={enterReview}
+            disabled={history.length === 0}
+          >
+            ↺
+          </button>
           <button className="icon-btn" aria-label="Settings" onClick={() => setSettingsOpen(true)}>
             ⚙
           </button>
@@ -175,7 +207,7 @@ export default function WarmupGame({ onBack }: { onBack: () => void }) {
       </div>
 
       <div className="stage fret-stage">
-        {!question ? (
+        {!dq ? (
           <div className="empty">
             Pick at least one shape and quality.
             <div style={{ marginTop: 16 }}>
@@ -187,27 +219,41 @@ export default function WarmupGame({ onBack }: { onBack: () => void }) {
         ) : (
           <>
             <div className="ctx reveal" style={{ animationDelay: '.04s' }}>
-              <span className="lead">
-                {question.quality} {question.shape}
-              </span>
+              <span className="lead">{dq.quality} shape</span>
             </div>
             <div className="fret-prompt reveal" style={{ animationDelay: '.08s' }}>
               <span className="lead">tap every</span>
-              <span className="t">{renderJazz(degreeGlyphs(degreeOrdinal(question.target)), 'tgt')}</span>
-              {!degreeIsRoot(question.target) && <span className="lead">degree</span>}
+              <span className="t">{renderJazz(degreeGlyphs(degreeOrdinal(dq.target)), 'tgt')}</span>
+              {!degreeIsRoot(dq.target) && <span className="lead">degree</span>}
             </div>
             <FretboardWindow
               notes={fretNotes}
-              startFret={question.startFret}
-              endFret={question.endFret}
-              strings={question.strings}
+              startFret={dq.startFret}
+              endFret={dq.endFret}
+              strings={dq.strings}
               onTap={toggle}
             />
           </>
         )}
       </div>
 
-      {question && (
+      {reviewing ? (
+        <div className="fret-actions">
+          <div className={`fb ${dCor ? 'ok' : 'no'}`}>{dCor ? '✓ Correct' : '✗ Incorrect'}</div>
+          <div className="review-nav" style={{ width: '100%', maxWidth: 360 }}>
+            <button onClick={() => reviewNav(-1)} disabled={reviewIndex === 0}>
+              ← Older
+            </button>
+            <button onClick={exitReview}>Return</button>
+            <button onClick={() => reviewNav(1)} disabled={reviewIndex === history.length - 1}>
+              Newer →
+            </button>
+          </div>
+          <div className="review-count">
+            {(reviewIndex ?? 0) + 1} of {history.length}
+          </div>
+        </div>
+      ) : dq ? (
         <div className="fret-actions">
           {!answered ? (
             <button className="bigbtn" onClick={check} disabled={selected.size === 0}>
@@ -226,7 +272,7 @@ export default function WarmupGame({ onBack }: { onBack: () => void }) {
             </>
           )}
         </div>
-      )}
+      ) : null}
 
       {settingsOpen && (
         <WarmupSettingsSheet

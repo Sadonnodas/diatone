@@ -55,6 +55,8 @@ export function useFretboardGame(settings: FretSettings) {
   const [correct, setCorrect] = useState<boolean | null>(null);
   const [streak, setStreak] = useState(0);
   const [totalAsked, setTotalAsked] = useState(0);
+  const [history, setHistory] = useState<{ question: FretQuestion; selected: Set<string>; correct: boolean }[]>([]);
+  const [reviewIndex, setReviewIndex] = useState<number | null>(null);
   const timer = useRef<number | null>(null);
 
   const pool = useMemo(() => {
@@ -79,6 +81,7 @@ export function useFretboardGame(settings: FretSettings) {
     setSelected(new Set());
     setAnswered(false);
     setCorrect(null);
+    setReviewIndex(null);
 
     if (pool.length === 0 || modes.length === 0) {
       setQuestion({ error: 'Pick at least one scale type, shape, and mode.' } as FretQuestion);
@@ -147,8 +150,20 @@ export function useFretboardGame(settings: FretSettings) {
     setAnswered(true);
     setStreak((s) => (isCorrect ? s + 1 : 0));
     setTotalAsked((t) => t + 1);
+    setHistory((h) => [...h, { question, selected: new Set(selected), correct: isCorrect }]);
     return isCorrect;
   }, [answered, question, selected]);
+
+  const enterReview = useCallback(() => {
+    if (history.length === 0) return;
+    if (timer.current) clearTimeout(timer.current);
+    setReviewIndex(history.length - 1);
+  }, [history.length]);
+  const reviewNav = useCallback(
+    (dir: number) => setReviewIndex((i) => (i === null ? null : Math.max(0, Math.min(history.length - 1, i + dir)))),
+    [history.length],
+  );
+  const exitReview = useCallback(() => setReviewIndex(null), []);
 
   const scheduleAdvance = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
@@ -164,9 +179,14 @@ export function useFretboardGame(settings: FretSettings) {
     correct,
     streak,
     totalAsked,
+    history,
+    reviewIndex,
     toggle,
     check,
     generate,
     scheduleAdvance,
+    enterReview,
+    reviewNav,
+    exitReview,
   };
 }
