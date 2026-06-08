@@ -9,6 +9,7 @@ import {
   type WarmupShape,
 } from './scaleData';
 import { renderJazz } from '../components/ChordDisplay';
+import { WarmupInfo } from './WarmupInfo';
 import { haptic, TAP, CORRECT, WRONG } from '../lib/haptics';
 
 const STORAGE_KEY = 'diatone.warmup.v1';
@@ -62,6 +63,7 @@ function loadSettings(): WarmupSettings {
 export default function WarmupGame({ onBack }: { onBack: () => void }) {
   const [settings, setSettings] = useState<WarmupSettings>(loadSettings);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
   const [question, setQuestion] = useState<WQuestion | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [answered, setAnswered] = useState(false);
@@ -203,6 +205,9 @@ export default function WarmupGame({ onBack }: { onBack: () => void }) {
           </div>
         </div>
         <div className="top-right">
+          <button className="icon-btn" aria-label="How it works" onClick={() => setInfoOpen(true)}>
+            ?
+          </button>
           <button
             className="icon-btn"
             aria-label="Review"
@@ -292,6 +297,8 @@ export default function WarmupGame({ onBack }: { onBack: () => void }) {
           onClose={() => setSettingsOpen(false)}
         />
       )}
+
+      {infoOpen && <WarmupInfo onClose={() => setInfoOpen(false)} />}
     </div>
   );
 }

@@ -1,4 +1,3 @@
-import { renderJazz } from '../components/ChordDisplay';
 import { degreeGlyphs } from './scaleData';
 
 // A note ready to draw: position + resolved colours/label.
@@ -109,9 +108,9 @@ export function FretboardWindow({
                   fontWeight={600}
                   textAnchor="middle"
                   dominantBaseline="central"
-                  fontFamily="var(--font-ui)"
+                  fontFamily="var(--font-ui), 'Apple Symbols', 'Segoe UI Symbol', sans-serif"
                 >
-                  {renderJazz(degreeGlyphs(n.label), `${n.string}-${n.fret}`)}
+                  {degreeGlyphs(n.label)}
                 </text>
               )}
               {n.tappable && (
