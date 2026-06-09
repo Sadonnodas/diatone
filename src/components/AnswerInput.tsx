@@ -4,13 +4,10 @@ import { DEGREE_KEYS } from '../lib/engine';
 import { display7th, progressionToJazz } from '../lib/jazz';
 import { renderJazz } from './ChordDisplay';
 
-// §17 — chromatic tap-to-build, refined so you never re-enter information the
-// prompt already gives you:
-//  - Name Numeral: tap the degree (quality implied by the chord shown).        → 'degree'
-//  - Chord modes, quality shown: tap the root [+accidental] then ✓ to answer
-//    (the quality is implied by the numeral and auto-applied).                  → 'submit'
-//  - Chord modes, Hide-quality on: tap the root [+accidental] + quality, which
-//    also submits (quality is the thing being tested, so you supply it).        → 'quality'
+// §17 — chromatic tap-to-build:
+//  - Name Numeral: tap the degree — you say "the six", not "six minor".  → 'degree'
+//  - Chord modes: tap the root [+accidental] + quality, which submits — naming a
+//    chord means root + quality ("E minor"), so you supply both.         → 'quality'
 
 interface Quality {
   ascii: string;
@@ -34,10 +31,8 @@ const CHORD_7TH: Quality[] = [
 const ROOTS = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
 const DEGREES = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
 const accG = (a: string) => (a === '#' ? '♯' : a === 'b' ? '♭' : '');
-const ROOT_RE = /^[A-G][#b]?/;
-const suffixOf = (chord: string) => chord.replace(ROOT_RE, ''); // quality part, jazz form
 
-export type InputMode = 'degree' | 'submit' | 'quality';
+export type InputMode = 'degree' | 'quality';
 
 export interface BuilderApi {
   inputMode: InputMode;
@@ -49,25 +44,23 @@ export interface BuilderApi {
   pickActive: (v: string) => void;
   toggleAcc: (v: 'b' | '#') => void;
   backspace: () => void;
-  commit: (q: Quality) => void; // quality mode
-  submit: () => void; // submit mode (quality implied)
-  commitDegree: (i: number) => void; // degree mode
+  commit: (q: Quality) => void; // chord modes (commit-on-quality)
+  commitDegree: (i: number) => void; // numeral mode
   inProgressDisplay: string | null;
 }
 
 export function useAnswerBuilder(opts: {
   question: Question | null;
   use7thChords: boolean;
-  hideQuality: boolean;
   disabled: boolean;
   onSubmit: (ascii: string, display: string) => void;
   onTap?: () => void;
 }): BuilderApi {
-  const { question, use7thChords, hideQuality, disabled, onSubmit, onTap } = opts;
+  const { question, use7thChords, disabled, onSubmit, onTap } = opts;
   const isNumeral = question?.mode === 4;
   const slots = question ? question.answer.split(' ').length : 1;
   const seventh = use7thChords;
-  const inputMode: InputMode = isNumeral ? 'degree' : hideQuality ? 'quality' : 'submit';
+  const inputMode: InputMode = isNumeral ? 'degree' : 'quality';
 
   const [active, setActive] = useState<string | null>(null);
   const [acc, setAcc] = useState('');
@@ -129,7 +122,7 @@ export function useAnswerBuilder(opts: {
     [committed, committedAscii, slots, onSubmit],
   );
 
-  // Hide-quality chord modes: quality tap supplies + commits.
+  // Chord modes: the quality tap supplies the quality and commits the chord.
   const commit = useCallback(
     (q: Quality) => {
       if (disabled || !active) return;
@@ -138,15 +131,6 @@ export function useAnswerBuilder(opts: {
     },
     [disabled, active, acc, push, onTap],
   );
-
-  // Quality-shown chord modes: ✓ commits the root with the implied quality.
-  const submit = useCallback(() => {
-    if (disabled || !active || !question) return;
-    onTap?.();
-    const slotIdx = committedAscii.length;
-    const suffix = suffixOf(question.answer.split(' ')[slotIdx] ?? '');
-    push(active + acc + suffix, active + accG(acc) + suffix);
-  }, [disabled, active, acc, question, committedAscii.length, push, onTap]);
 
   // Name Numeral: one tap. The degree fixes the full diatonic numeral.
   const commitDegree = useCallback(
@@ -172,7 +156,6 @@ export function useAnswerBuilder(opts: {
     toggleAcc,
     backspace,
     commit,
-    submit,
     commitDegree,
     inProgressDisplay,
   };
@@ -211,18 +194,8 @@ export function Preview({ builder }: { builder: BuilderApi }) {
 
 // ---- Keypad (bottom of screen) ----
 export function Keypad({ builder, disabled }: { builder: BuilderApi; disabled: boolean }) {
-  const {
-    inputMode,
-    active,
-    acc,
-    qualities,
-    pickActive,
-    toggleAcc,
-    backspace,
-    commit,
-    submit,
-    commitDegree,
-  } = builder;
+  const { inputMode, active, acc, qualities, pickActive, toggleAcc, backspace, commit, commitDegree } =
+    builder;
 
   // Name Numeral: just the degree — one tap answers.
   if (inputMode === 'degree') {
@@ -277,34 +250,20 @@ export function Keypad({ builder, disabled }: { builder: BuilderApi; disabled: b
         </button>
       </div>
 
-      {inputMode === 'submit' ? (
-        <>
-          <div className="cap">tap to answer</div>
-          <div className="row">
-            <button className="key submit" onClick={submit} disabled={disabled || !active}>
-              <span className="q-glyph">✓</span>
-              <small>answer</small>
-            </button>
-          </div>
-        </>
-      ) : (
-        <>
-          <div className="cap">quality — tap to answer</div>
-          <div className="row">
-            {qualities.map((q) => (
-              <button
-                key={q.sub + q.main}
-                className="key q"
-                onClick={() => commit(q)}
-                disabled={disabled || !active}
-              >
-                <span className="q-glyph">{q.main}</span>
-                <small>{q.sub}</small>
-              </button>
-            ))}
-          </div>
-        </>
-      )}
+      <div className="cap">quality — tap to answer</div>
+      <div className="row">
+        {qualities.map((q) => (
+          <button
+            key={q.sub + q.main}
+            className="key q"
+            onClick={() => commit(q)}
+            disabled={disabled || !active}
+          >
+            <span className="q-glyph">{q.main}</span>
+            <small>{q.sub}</small>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
