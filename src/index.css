@@ -185,6 +185,57 @@ button {
   gap: 6px;
   text-align: center;
   min-height: 0;
+  position: relative;
+}
+
+/* Fixed-height area under the hero: holds the answer as you build it, then your
+   answer + the verdict — reserved so nothing reflows on submit. */
+.subarea {
+  min-height: 68px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+.subarea .preview {
+  margin-top: 0;
+}
+.answer-line {
+  font-family: var(--font-display);
+  font-weight: 500;
+  line-height: 1;
+}
+.answer-line.single {
+  font-size: clamp(24px, 7vw, 34px);
+}
+.answer-line.multi {
+  font-size: clamp(18px, 6vw, 26px);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3em;
+  justify-content: center;
+}
+.answer-line.ok {
+  color: var(--correct);
+}
+.answer-line.no {
+  color: var(--wrong);
+}
+.correct-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 7px;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+}
+.correct-line .g {
+  font-family: var(--font-display);
+  font-size: 20px;
+  color: var(--correct);
 }
 .eyebrow {
   font-size: 12.5px;
@@ -749,10 +800,13 @@ button {
 }
 
 .next-hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
   font-size: 12.5px;
   color: var(--text-3);
   letter-spacing: 0.04em;
-  margin-top: 12px;
   opacity: 0.75;
 }
 
@@ -1264,7 +1318,6 @@ button {
   color: var(--correct);
   font-size: 20px;
   font-weight: 600;
-  margin-top: 8px;
   animation: tickin 0.25s ease;
 }
 @keyframes tickin {

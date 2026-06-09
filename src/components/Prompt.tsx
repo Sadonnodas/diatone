@@ -1,6 +1,7 @@
 import type { Question } from '../lib/engine';
 import type { Feedback } from '../state/trainerReducer';
 import { renderJazz } from './ChordDisplay';
+import { Preview, type BuilderApi } from './AnswerInput';
 
 // Render a content string (one or more space-separated jazz tokens).
 function Glyphs({ text, className }: { text: string; className: string }) {
@@ -13,8 +14,7 @@ function Glyphs({ text, className }: { text: string; className: string }) {
   );
 }
 
-// The key/transpose context — the only words on the play screen. Everything
-// else about the task (chord vs numeral, triad vs 7th) is implied by the keypad.
+// The key/transpose context — the only words on the play screen.
 function Context({ keys }: { keys: string[] }) {
   if (keys.length === 2) {
     return (
@@ -34,40 +34,52 @@ function Context({ keys }: { keys: string[] }) {
   );
 }
 
+// Stable skeleton: a constant context, the prompt held in a fixed hero slot, and
+// a fixed-height sub-area that shows the answer as you build it, then your
+// answer + the verdict — so nothing reflows on submit.
 export function Prompt({
   question,
   feedback,
   userAnswer,
+  builder,
+  autoAdvance,
 }: {
   question: Question;
   feedback: Feedback | null;
   userAnswer: string;
+  builder: BuilderApi;
+  autoAdvance: boolean;
 }) {
   const { prompt } = question;
 
-  // Miss: show the correct answer big; recall the question quietly above it.
-  if (feedback && !feedback.correct) {
-    return (
-      <>
-        <Context keys={prompt.keys} />
-        <Glyphs text={prompt.content} className="ask-recall" />
-        <Glyphs text={feedback.correctAnswer} className="hero wrong" />
-        <div className="guess">
-          your answer: <span className="g">{renderJazz(userAnswer || '—', 'ua')}</span>
-        </div>
-      </>
-    );
-  }
-
-  // Answering, or a correct answer (glyph pulses to the accent).
   return (
     <>
       <Context keys={prompt.keys} />
-      <Glyphs
-        text={prompt.content}
-        className={`hero${feedback?.correct ? ' correct' : ''}`}
-      />
-      {feedback?.correct && <div className="tick">✓</div>}
+      <Glyphs text={prompt.content} className="hero" />
+
+      <div className="subarea">
+        {!feedback ? (
+          <Preview builder={builder} />
+        ) : (
+          <>
+            <Glyphs
+              text={userAnswer || '—'}
+              className={`answer-line ${feedback.correct ? 'ok' : 'no'}`}
+            />
+            {feedback.correct ? (
+              <div className="tick">✓</div>
+            ) : (
+              <div className="correct-line">
+                answer <span className="g">{renderJazz(feedback.correctAnswer, 'ca')}</span>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {feedback && !(feedback.correct && autoAdvance) && (
+        <div className="next-hint">tap to continue →</div>
+      )}
     </>
   );
 }

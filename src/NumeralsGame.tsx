@@ -8,7 +8,7 @@ import {
 } from './state/trainerReducer';
 import { pickSeed, type Settings } from './lib/engine';
 import { Prompt } from './components/Prompt';
-import { useAnswerBuilder, Preview, Keypad } from './components/AnswerInput';
+import { useAnswerBuilder, Keypad } from './components/AnswerInput';
 import { SettingsSheet } from './components/SettingsSheet';
 import { Review } from './components/Review';
 import { InfoModal } from './components/InfoModal';
@@ -214,13 +214,13 @@ export default function NumeralsGame({ onBack }: { onBack: () => void }) {
 
       <div className="stage">
         {question ? (
-          <>
-            <Prompt question={question} feedback={state.feedback} userAnswer={state.userAnswer} />
-            {!state.feedback && <Preview builder={builder} />}
-            {state.feedback && !(state.feedback.correct && state.settings.autoAdvance) && (
-              <div className="next-hint">tap to continue →</div>
-            )}
-          </>
+          <Prompt
+            question={question}
+            feedback={state.feedback}
+            userAnswer={state.userAnswer}
+            builder={builder}
+            autoAdvance={state.settings.autoAdvance}
+          />
         ) : (
           <div className="empty">
             Select at least one key and one mode to start.
