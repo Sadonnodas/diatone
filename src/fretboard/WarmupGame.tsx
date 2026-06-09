@@ -235,7 +235,7 @@ export default function WarmupGame({ onBack }: { onBack: () => void }) {
         ) : (
           <>
             <div className="ctx reveal" style={{ animationDelay: '.04s' }}>
-              <span className="lead">{dq.quality} shape</span>
+              <span className={`quality-tag ${dq.quality}`}>{dq.quality} shape</span>
             </div>
             <div className="fret-prompt reveal" style={{ animationDelay: '.08s' }}>
               <span className="lead">tap every</span>

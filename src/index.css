@@ -37,6 +37,9 @@
   --correct-dim: rgba(95, 224, 160, 0.13);
   --wrong: #f2767f;
   --wrong-dim: rgba(242, 118, 127, 0.13);
+  /* quality colours — instant major/minor cue in the warm-up */
+  --major: #eab94e; /* warm gold */
+  --minor: #6bb6f0; /* cool blue */
   --radius: 14px;
   --font-display: 'Fraunces', Georgia, serif;
   --font-ui: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
@@ -814,6 +817,23 @@ button {
   color: var(--text-3);
   letter-spacing: 0.04em;
   opacity: 0.75;
+}
+
+/* Warm-up quality cue — bold colour-coded pill so major/minor reads instantly. */
+.quality-tag {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 7px 18px;
+  color: #0a0c10;
+}
+.quality-tag.major {
+  background: var(--major);
+}
+.quality-tag.minor {
+  background: var(--minor);
 }
 
 /* ---- Setup screen (choose keys) ---- */
