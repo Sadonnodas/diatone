@@ -576,9 +576,10 @@ button {
   transform: scale(0.96);
 }
 .tog.on {
-  color: var(--accent);
-  border-color: var(--accent-line);
-  background: var(--accent-dim);
+  color: #0a0c10;
+  background: var(--accent);
+  border-color: var(--accent);
+  font-weight: 600;
 }
 .setting-row {
   display: flex;
@@ -689,9 +690,9 @@ button {
   height: 46px;
   margin: -23px 0 0 -23px;
   border-radius: 50%;
-  border: 0.5px solid var(--line-strong);
-  background: var(--surface-2);
-  color: var(--text-2);
+  border: 1px solid var(--line-strong);
+  background: var(--surface-1);
+  color: var(--text-3);
   font-family: var(--font-display);
   font-size: 16px;
   font-weight: 500;
@@ -703,10 +704,15 @@ button {
 .wheel .kbtn:active {
   transform: scale(0.92);
 }
+/* Selected keys are clearly filled (solid accent, dark text, glow) and a touch
+   larger, so they're easy to tell apart from the empty unselected ones. */
 .wheel .kbtn.on {
-  color: var(--accent);
-  border-color: var(--accent-line);
-  background: var(--accent-dim);
+  color: #0a0c10;
+  background: var(--accent);
+  border-color: var(--accent);
+  font-weight: 700;
+  transform: scale(1.1);
+  box-shadow: 0 0 0 2px rgba(155, 140, 255, 0.3), 0 0 16px rgba(155, 140, 255, 0.55);
 }
 .wheel-center {
   position: absolute;
