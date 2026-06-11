@@ -194,7 +194,7 @@ button {
 /* Fixed-height area under the hero: holds the answer as you build it, then your
    answer + the verdict — reserved so nothing reflows on submit. */
 .subarea {
-  min-height: 68px;
+  min-height: clamp(64px, 8.5vh, 78px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -211,10 +211,10 @@ button {
   line-height: 1;
 }
 .answer-line.single {
-  font-size: clamp(24px, 7vw, 34px);
+  font-size: clamp(28px, 8.5vw, 42px);
 }
 .answer-line.multi {
-  font-size: clamp(18px, 6vw, 26px);
+  font-size: clamp(22px, 7vw, 32px);
   display: flex;
   flex-wrap: wrap;
   gap: 0.3em;
@@ -231,13 +231,13 @@ button {
   align-items: baseline;
   justify-content: center;
   gap: 7px;
-  font-size: 13px;
+  font-size: 15px;
   letter-spacing: 0.04em;
   color: var(--text-3);
 }
 .correct-line .g {
   font-family: var(--font-display);
-  font-size: 20px;
+  font-size: 25px;
   color: var(--correct);
 }
 .eyebrow {
@@ -307,13 +307,13 @@ button {
 }
 .chip {
   font-family: var(--font-display);
-  font-size: 30px;
+  font-size: 38px;
   font-weight: 500;
   color: var(--text);
 }
 .chip.ghost {
   color: var(--text-3);
-  font-size: 26px;
+  font-size: 30px;
 }
 .slotstrip {
   display: flex;
@@ -323,12 +323,12 @@ button {
   flex-wrap: wrap;
 }
 .slot {
-  min-width: 56px;
-  padding: 6px 10px;
+  min-width: 60px;
+  padding: 7px 11px;
   border: 0.5px solid var(--line);
   border-radius: 10px;
   font-family: var(--font-display);
-  font-size: 22px;
+  font-size: 27px;
   color: var(--text-3);
   background: var(--surface-1);
   transition: border-color 0.15s, color 0.15s, background 0.15s;
@@ -361,7 +361,7 @@ button {
   gap: 10px;
 }
 .cap {
-  font-size: 11px;
+  font-size: 12.5px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--text-3);
@@ -808,15 +808,32 @@ button {
   padding: 30px 0;
 }
 
+/* Reserve room at the bottom of the play stage for the floating hint, so the
+   centred answer never sits under it. */
+.play-stage {
+  padding-bottom: clamp(58px, 9.5vh, 74px);
+}
+
+/* "tap to continue" — a clear pill lifted off the keypad so it's obvious. */
 .next-hint {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  font-size: 12.5px;
-  color: var(--text-3);
-  letter-spacing: 0.04em;
-  opacity: 0.75;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: max(10px, 2vh);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  color: var(--text-2);
+  background: var(--surface-2);
+  border: 0.5px solid var(--line-strong);
+  border-radius: 999px;
+  padding: 9px 20px;
+  white-space: nowrap;
+  animation: hintpulse 1.9s ease-in-out infinite;
+}
+@keyframes hintpulse {
+  0%, 100% { opacity: 0.78; }
+  50% { opacity: 1; }
 }
 
 /* Warm-up quality cue — bold colour-coded pill so major/minor reads instantly. */
@@ -1026,10 +1043,10 @@ button {
   flex-wrap: wrap;
   gap: 9px;
   /* Lift the question text higher above the centred hero. */
-  margin-bottom: clamp(14px, 4.5vh, 40px);
+  margin-bottom: clamp(12px, 4vh, 40px);
 }
 .ctx .lead {
-  font-size: 15.5px;
+  font-size: 17.5px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--text-3);
@@ -1037,7 +1054,7 @@ button {
 .ctx .k {
   font-family: var(--font-display);
   font-weight: 500;
-  font-size: clamp(34px, 10.5vw, 48px);
+  font-size: clamp(36px, 11vw, 50px);
   line-height: 1;
   color: var(--accent);
 }
@@ -1223,7 +1240,7 @@ button {
   color: var(--text-2);
 }
 .fret-prompt .lead {
-  font-size: 15px;
+  font-size: 17px;
   letter-spacing: 0.04em;
   color: var(--text-2);
   text-transform: none;
@@ -1272,7 +1289,7 @@ button {
   background: var(--accent-deep);
   color: #fff;
   font-weight: 600;
-  font-size: 16px;
+  font-size: 17px;
   transition: transform 0.1s ease, opacity 0.15s ease;
 }
 .bigbtn:active {
@@ -1283,7 +1300,7 @@ button {
 }
 .fb {
   font-weight: 600;
-  font-size: 15px;
+  font-size: 16px;
 }
 .fb.ok {
   color: var(--correct);
@@ -1301,9 +1318,10 @@ button {
   padding-left: 0.02em;
 }
 
-/* Bigger hero now that the screen is decluttered. */
+/* Bigger hero now that the screen is decluttered. The vh cap keeps it from being
+   oversized on short screens (unchanged on normal/tall ones). */
 .hero.single {
-  font-size: clamp(96px, 33vw, 176px);
+  font-size: min(clamp(96px, 33vw, 176px), 17vh);
 }
 .hero.correct {
   color: var(--accent);

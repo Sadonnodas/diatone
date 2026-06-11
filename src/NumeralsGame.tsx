@@ -212,7 +212,7 @@ export default function NumeralsGame({ onBack }: { onBack: () => void }) {
         </div>
       </div>
 
-      <div className="stage">
+      <div className="stage play-stage">
         {question ? (
           <Prompt
             question={question}
