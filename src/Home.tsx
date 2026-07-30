@@ -1,6 +1,6 @@
 import type { PwaApi } from './pwa';
 
-export type Screen = 'home' | 'numerals' | 'fretboard' | 'warmup';
+export type Screen = 'home' | 'numerals' | 'fretboard' | 'intervals' | 'warmup';
 
 function formatBuild(iso: string): string {
   const d = new Date(iso);
@@ -31,6 +31,32 @@ function FretIcon() {
       <circle cx="13" cy="11" r="3.2" fill="currentColor" />
       <circle cx="19" cy="17" r="3.2" fill="currentColor" />
       <circle cx="7" cy="23" r="3.2" fill="currentColor" />
+    </svg>
+  );
+}
+
+// Two notes on different strings, joined — the interval drill.
+function IntervalIcon() {
+  return (
+    <svg width="34" height="26" viewBox="0 0 34 26" fill="none" aria-hidden="true">
+      {[5, 13, 21].map((y) => (
+        <line key={y} x1="2" y1={y} x2="32" y2={y} stroke="currentColor" strokeWidth="0.9" opacity="0.5" />
+      ))}
+      {[9, 25].map((x) => (
+        <line key={x} x1={x} y1="2" x2={x} y2="24" stroke="currentColor" strokeWidth="1.2" opacity="0.35" />
+      ))}
+      <line
+        x1="7"
+        y1="21"
+        x2="19"
+        y2="5"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        opacity="0.7"
+        strokeDasharray="3 2.5"
+      />
+      <circle cx="7" cy="21" r="3.4" fill="currentColor" />
+      <circle cx="19" cy="5" r="3.4" fill="none" stroke="currentColor" strokeWidth="1.6" />
     </svg>
   );
 }
@@ -77,6 +103,21 @@ export default function Home({ onPick, pwa }: { onPick: (g: Screen) => void; pwa
         <button
           className="gamecard reveal"
           style={{ animationDelay: '.22s' }}
+          onClick={() => onPick('intervals')}
+        >
+          <div className="gc-icon">
+            <IntervalIcon />
+          </div>
+          <div className="gc-text">
+            <div className="gc-title">Intervals</div>
+            <div className="gc-desc">Name the gap between two notes on the neck</div>
+          </div>
+          <div className="gc-arrow">→</div>
+        </button>
+
+        <button
+          className="gamecard reveal"
+          style={{ animationDelay: '.28s' }}
           onClick={() => onPick('warmup')}
         >
           <div className="gc-icon">
@@ -90,7 +131,7 @@ export default function Home({ onPick, pwa }: { onPick: (g: Screen) => void; pwa
         </button>
       </div>
 
-      <div className="home-foot reveal" style={{ animationDelay: '.28s' }}>
+      <div className="home-foot reveal" style={{ animationDelay: '.34s' }}>
         {pwa.needRefresh ? (
           <button className="update-link on" onClick={pwa.updateNow} disabled={pwa.updating}>
             {pwa.updating ? 'Updating…' : 'Update to latest'}

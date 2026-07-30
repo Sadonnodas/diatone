@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Home, { type Screen } from './Home';
 import NumeralsGame from './NumeralsGame';
 import FretboardGame from './fretboard/FretboardGame';
+import IntervalGame from './fretboard/IntervalGame';
 import WarmupGame from './fretboard/WarmupGame';
 import { usePwa } from './pwa';
 
@@ -30,6 +31,7 @@ export default function App() {
       {screen === 'home' && <Home onPick={setScreen} pwa={pwa} />}
       {screen === 'numerals' && <NumeralsGame onBack={() => setScreen('home')} />}
       {screen === 'fretboard' && <FretboardGame onBack={() => setScreen('home')} />}
+      {screen === 'intervals' && <IntervalGame onBack={() => setScreen('home')} />}
       {screen === 'warmup' && <WarmupGame onBack={() => setScreen('home')} />}
     </>
   );

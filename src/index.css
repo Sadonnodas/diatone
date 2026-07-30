@@ -1309,6 +1309,104 @@ button {
   color: var(--wrong);
 }
 
+/* ---- Intervals ---- */
+/* Room at the foot of the stage for the "tap to continue" pill. */
+.iv-stage {
+  padding-bottom: clamp(40px, 6vh, 56px);
+}
+/* Twelve keys instead of the Numerals keypad's rows of ~7, so they're shorter
+   and the fretboard above keeps its room. */
+.iv-pad .key {
+  height: clamp(46px, 6.4vh, 62px);
+  font-size: 17px;
+}
+.iv-pad .key small {
+  font-size: 9.5px;
+  letter-spacing: 0.02em;
+}
+/* Intervals the current level never asks — still tappable, just not expected. */
+.iv-pad .key.dim {
+  color: var(--text-3);
+  border-color: var(--line);
+}
+/* Answered: the pad recedes, only the verdict keys keep their colour. */
+.iv-pad .key.done {
+  opacity: 0.4;
+}
+.iv-pad .key.right,
+.iv-pad .key.wrong {
+  opacity: 1;
+}
+.iv-pad .key.right {
+  color: var(--correct);
+  border-color: var(--correct);
+  background: var(--correct-dim);
+}
+.iv-pad .key.right small {
+  color: var(--correct);
+  opacity: 0.75;
+}
+.iv-pad .key.wrong {
+  color: var(--wrong);
+  border-color: var(--wrong);
+  background: var(--wrong-dim);
+}
+.iv-pad .key.wrong small {
+  color: var(--wrong);
+  opacity: 0.75;
+}
+/* "root on the A string" — smaller than the Numerals context so the longest
+   name (low E) can't wrap and nudge the board. */
+.iv-stage .ctx {
+  gap: 7px;
+  margin-bottom: clamp(8px, 2vh, 20px);
+}
+.iv-stage .ctx .lead {
+  font-size: 13.5px;
+  letter-spacing: 0.12em;
+}
+.iv-str {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--accent);
+}
+/* Reserved so revealing the answer never moves the board. */
+.iv-result {
+  min-height: clamp(52px, 7.5vh, 64px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+.iv-line {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.iv-line.ok {
+  color: var(--correct);
+}
+.iv-line.no {
+  color: var(--wrong);
+}
+.iv-big {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 30px;
+  line-height: 1;
+}
+.iv-name {
+  font-size: 15px;
+  letter-spacing: 0.02em;
+}
+.iv-sub {
+  font-size: 12.5px;
+  color: var(--text-3);
+}
+
 /* Accidentals (♯ / ♭) — symbol font, set slightly smaller like real accidentals. */
 .acc {
   font-family: var(--font-ui), 'Apple Symbols', 'Segoe UI Symbol', sans-serif;
