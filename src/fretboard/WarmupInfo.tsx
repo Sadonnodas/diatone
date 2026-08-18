@@ -12,12 +12,13 @@ import {
 const STRINGS: Record<WarmupShape, number[]> = { rectangle: [3, 4], stack: [2, 3, 4] };
 const ALL_STRINGS = [1, 2, 3, 4, 5, 6];
 
-const RECT_FILL = 'rgba(155,140,255,0.18)';
-const RECT_STROKE = 'rgba(155,140,255,0.7)';
-const STACK_FILL = 'rgba(94,200,255,0.15)';
-const STACK_STROKE = 'rgba(94,200,255,0.65)';
-const ADDED_FILL = '#e0b35c';
-const ADDED_STROKE = '#e0b35c';
+// Themed in index.css so the diagrams hold up in daylight too.
+const RECT_FILL = 'var(--region-a-fill)';
+const RECT_STROKE = 'var(--region-a-line)';
+const STACK_FILL = 'var(--region-b-fill)';
+const STACK_STROKE = 'var(--region-b-line)';
+const ADDED_FILL = 'var(--major)';
+const ADDED_STROKE = 'var(--major)';
 
 interface Placed {
   string: number;
@@ -30,7 +31,7 @@ interface Placed {
 function toNotes(placed: Placed[]): FretNote[] {
   return placed.map((n) =>
     n.added
-      ? { string: n.string, fret: n.fret, fill: ADDED_FILL, stroke: ADDED_STROKE, text: '#0a0c10', label: n.degree, tappable: false }
+      ? { string: n.string, fret: n.fret, fill: ADDED_FILL, stroke: ADDED_STROKE, text: 'var(--on-quality)', label: n.degree, tappable: false }
       : {
           string: n.string,
           fret: n.fret,

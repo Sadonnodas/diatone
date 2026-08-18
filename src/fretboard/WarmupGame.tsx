@@ -10,6 +10,7 @@ import {
 } from './scaleData';
 import { renderJazz } from '../components/ChordDisplay';
 import { WarmupInfo } from './WarmupInfo';
+import { ThemeSettingRow } from '../components/ThemeSwitch';
 import { haptic, TAP, CORRECT, WRONG } from '../lib/haptics';
 
 const STORAGE_KEY = 'diatone.warmup.v1';
@@ -363,6 +364,7 @@ function WarmupSettingsSheet({
               ))}
             </div>
           </div>
+          <ThemeSettingRow />
           <div className="setting-row">
             <div>
               <div className="label">Auto-advance</div>

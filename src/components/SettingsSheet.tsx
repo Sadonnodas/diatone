@@ -1,6 +1,7 @@
 import type { Settings } from '../lib/engine';
 import { DEGREE_KEYS } from '../lib/engine';
 import { KeyWheel } from './KeyWheel';
+import { ThemeSettingRow } from './ThemeSwitch';
 
 const MODES: { id: number; label: string }[] = [
   { id: 1, label: 'Name Chord' },
@@ -122,6 +123,7 @@ export function SettingsSheet({
                 onClick={() => update({ hideQuality: !settings.hideQuality })}
               />
             </div>
+            <ThemeSettingRow />
             <div className="setting-row">
               <div>
                 <div className="label">Auto-advance</div>

@@ -11,6 +11,7 @@ import {
   type LevelKey,
 } from './intervalData';
 import { renderJazz } from '../components/ChordDisplay';
+import { ThemeSettingRow } from '../components/ThemeSwitch';
 
 const GAPS: { value: number; label: string }[] = [
   { value: 1, label: 'Adjacent' },
@@ -163,6 +164,8 @@ export function IntervalSettings({
               Dimmed intervals can't occur within the string/fret limits above.
             </div>
           </div>
+
+          <ThemeSettingRow />
 
           {/* Auto-advance */}
           <div className="setting-row">

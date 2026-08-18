@@ -17,7 +17,10 @@
   src: url('/diatone/fonts/hanken.woff2') format('woff2');
 }
 
-/* §1.5 — design tokens. Dark-only by intent. Depth via lightness + hairlines. */
+/* §1.5 — design tokens. Night is the default; [data-theme='light'] below is the
+   daylight palette for reading the screen in full sun. Depth via lightness +
+   hairlines. Anything painted on a solid --accent/--correct/--wrong fill uses
+   --on-fill, which flips with the theme. */
 :root {
   color-scheme: dark;
   --bg: #0a0c10;
@@ -40,9 +43,63 @@
   /* quality colours — instant major/minor cue in the warm-up */
   --major: #eab94e; /* warm gold */
   --minor: #6bb6f0; /* cool blue */
+  /* ink on a solid accent/correct/wrong fill */
+  --on-fill: #0a0c10;
+  /* ink on the gold/blue quality pills — dark in both themes */
+  --on-quality: #0a0c10;
+  --accent-halo: rgba(155, 140, 255, 0.3);
+  /* the two shape outlines in the warm-up explainer */
+  --region-a-fill: rgba(155, 140, 255, 0.18);
+  --region-a-line: rgba(155, 140, 255, 0.7);
+  --region-b-fill: rgba(94, 200, 255, 0.15);
+  --region-b-line: rgba(94, 200, 255, 0.65);
+  --scrim: rgba(0, 0, 0, 0.55);
+  --flash-ok-bg: #0c1512;
+  --flash-no-bg: #150d0f;
+  --shadow-modal: 0 16px 50px rgba(0, 0, 0, 0.5);
+  --shadow-banner: 0 8px 30px rgba(0, 0, 0, 0.45);
+  --grain: 0.04;
   --radius: 14px;
   --font-display: 'Fraunces', Georgia, serif;
   --font-ui: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+}
+
+/* Daylight. Tuned for direct sun rather than a dim room: near-white ground,
+   near-black ink, hairlines dark enough to survive glare, and deep accents that
+   stay legible as text and take white ink when filled. */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #eaeef4;
+  --surface-1: #ffffff; /* cards + sheets read as raised white */
+  --surface-2: #f6f8fb; /* keys, tiles, unplayed notes */
+  --surface-3: #dbe1ea; /* pressed */
+  --line: rgba(12, 17, 26, 0.13);
+  --line-strong: rgba(12, 17, 26, 0.34);
+  --text: #101419;
+  --text-2: #49525f;
+  --text-3: #5e6775;
+  --accent: #5533d6;
+  --accent-deep: #4527b8;
+  --accent-dim: rgba(85, 51, 214, 0.12);
+  --accent-line: rgba(85, 51, 214, 0.5);
+  --accent-halo: rgba(85, 51, 214, 0.25);
+  --correct: #06774a;
+  --correct-dim: rgba(6, 119, 74, 0.13);
+  --wrong: #c4212e;
+  --wrong-dim: rgba(196, 33, 46, 0.12);
+  --major: #c8891a;
+  --minor: #2b8ada;
+  --on-fill: #ffffff;
+  --region-a-fill: rgba(85, 51, 214, 0.13);
+  --region-a-line: rgba(85, 51, 214, 0.7);
+  --region-b-fill: rgba(8, 118, 186, 0.12);
+  --region-b-line: rgba(8, 118, 186, 0.65);
+  --scrim: rgba(12, 17, 26, 0.4);
+  --flash-ok-bg: #d6f3e4;
+  --flash-no-bg: #fbdfe2;
+  --shadow-modal: 0 16px 44px rgba(16, 22, 34, 0.18);
+  --shadow-banner: 0 8px 26px rgba(16, 22, 34, 0.16);
+  --grain: 0.02;
 }
 
 * {
@@ -87,7 +144,7 @@ body::after {
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.04;
+  opacity: var(--grain);
   mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
@@ -474,12 +531,12 @@ button {
 }
 @keyframes fok {
   0% { background: var(--bg); }
-  30% { background: #0c1512; }
+  30% { background: var(--flash-ok-bg); }
   100% { background: var(--bg); }
 }
 @keyframes fno {
   0% { background: var(--bg); }
-  30% { background: #150d0f; }
+  30% { background: var(--flash-no-bg); }
   100% { background: var(--bg); }
 }
 
@@ -488,7 +545,7 @@ button {
   position: fixed;
   inset: 0;
   z-index: 20;
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--scrim);
   animation: fade 0.2s ease;
 }
 @keyframes fade {
@@ -579,7 +636,7 @@ button {
   transform: scale(0.96);
 }
 .tog.on {
-  color: #0a0c10;
+  color: var(--on-fill);
   background: var(--accent);
   border-color: var(--accent);
   font-weight: 600;
@@ -627,6 +684,7 @@ button {
   transition: transform 0.18s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 .switch.on::after {
+  background: #fff;
   transform: translateX(18px);
 }
 
@@ -710,12 +768,12 @@ button {
 /* Selected keys are clearly filled (solid accent, dark text, glow) and a touch
    larger, so they're easy to tell apart from the empty unselected ones. */
 .wheel .kbtn.on {
-  color: #0a0c10;
+  color: var(--on-fill);
   background: var(--accent);
   border-color: var(--accent);
   font-weight: 700;
   transform: scale(1.1);
-  box-shadow: 0 0 0 2px rgba(155, 140, 255, 0.3), 0 0 16px rgba(155, 140, 255, 0.55);
+  box-shadow: 0 0 0 2px var(--accent-halo), 0 0 16px var(--accent-line);
 }
 .wheel-center {
   position: absolute;
@@ -844,7 +902,7 @@ button {
   text-transform: uppercase;
   border-radius: 999px;
   padding: 7px 18px;
-  color: #0a0c10;
+  color: var(--on-quality);
 }
 .quality-tag.major {
   background: var(--major);
@@ -904,7 +962,7 @@ button {
   border: 0.5px solid var(--line-strong);
   border-radius: 20px;
   padding: 12px 18px 18px;
-  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-modal);
   animation: modalIn 0.26s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 /* Keep the centering translate during the animation (a plain rise/opacity
@@ -1077,7 +1135,7 @@ button {
   border-radius: 999px;
   background: var(--surface-2);
   border: 0.5px solid var(--accent-line);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--shadow-banner);
   font-size: 13px;
   color: var(--text);
   animation: rise 0.4s cubic-bezier(0.2, 0.7, 0.2, 1);
@@ -1307,6 +1365,40 @@ button {
 }
 .fb.no {
   color: var(--wrong);
+}
+
+/* ---- Day / night switch ---- */
+/* Corner pill on the home screen; the same control also sits in every game's
+   settings sheet as a row, so you can flip it without leaving a drill. */
+.theme-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px 7px 11px;
+  border-radius: 999px;
+  border: 0.5px solid var(--line-strong);
+  background: var(--surface-1);
+  color: var(--text-2);
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  transition: transform 0.14s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.theme-btn:active {
+  transform: scale(0.96);
+}
+.theme-btn svg {
+  flex: none;
+  color: var(--accent);
+}
+:root[data-theme='light'] .theme-btn svg {
+  color: var(--major);
+}
+.home-theme {
+  position: absolute;
+  top: max(20px, env(safe-area-inset-top));
+  right: 22px;
+  z-index: 3;
 }
 
 /* ---- Intervals ---- */

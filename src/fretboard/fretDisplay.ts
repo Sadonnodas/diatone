@@ -28,11 +28,11 @@ export function buildFretNotes(
 
     if (answered) {
       if (isTarget && sel)
-        return { ...pos, fill: 'var(--correct)', stroke: 'var(--correct)', text: '#0a0c10', label: n.degree, tappable: false };
+        return { ...pos, fill: 'var(--correct)', stroke: 'var(--correct)', text: 'var(--on-fill)', label: n.degree, tappable: false };
       if (isTarget && !sel)
         return { ...pos, fill: 'transparent', stroke: 'var(--correct)', text: 'var(--correct)', label: n.degree, tappable: false };
       if (!isTarget && sel)
-        return { ...pos, fill: 'var(--wrong)', stroke: 'var(--wrong)', text: '#fff', label: n.degree, tappable: false };
+        return { ...pos, fill: 'var(--wrong)', stroke: 'var(--wrong)', text: 'var(--on-fill)', label: n.degree, tappable: false };
       return { ...pos, fill: 'var(--surface-1)', stroke: 'var(--line)', text: 'var(--text-3)', label: n.degree, tappable: false };
     }
 

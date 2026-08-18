@@ -1,4 +1,5 @@
 import type { PwaApi } from './pwa';
+import { ThemeToggleButton } from './components/ThemeSwitch';
 
 export type Screen = 'home' | 'numerals' | 'fretboard' | 'intervals' | 'warmup';
 
@@ -64,6 +65,8 @@ function IntervalIcon() {
 export default function Home({ onPick, pwa }: { onPick: (g: Screen) => void; pwa: PwaApi }) {
   return (
     <div className="app home">
+      <ThemeToggleButton className="home-theme reveal" />
+
       <div className="home-head reveal" style={{ animationDelay: '.04s' }}>
         <div className="mark">
           Dia<b>tone</b>

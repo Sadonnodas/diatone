@@ -5,13 +5,29 @@
     <link rel="icon" href="/diatone/favicon.ico" />
     <link rel="apple-touch-icon" href="/diatone/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#0A0C10" />
-    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0a0c10" />
+    <meta name="color-scheme" content="dark light" />
     <meta name="description" content="Roman-numeral ↔ chord drill in all 12 major keys." />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Diatone" />
     <title>Diatone</title>
+    <script>
+      // Set the theme before first paint, so a daylight user never sees a flash
+      // of the night palette. Night unless the switch says otherwise — mirrors
+      // storedTheme() in src/theme.tsx.
+      (function () {
+        var t = 'dark';
+        try {
+          if (localStorage.getItem('diatone.theme') === 'light') t = 'light';
+        } catch (e) {
+          /* storage blocked — stay on night */
+        }
+        document.documentElement.dataset.theme = t;
+        var m = document.querySelector('meta[name="theme-color"]');
+        if (m) m.setAttribute('content', t === 'light' ? '#eaeef4' : '#0a0c10');
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

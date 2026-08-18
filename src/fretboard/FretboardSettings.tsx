@@ -1,3 +1,4 @@
+import { ThemeSettingRow } from '../components/ThemeSwitch';
 import type { FretSettings, ContextMode } from './useFretboardGame';
 import { SCALE_TYPE_INFO, SHAPE_ORDER, type ScaleType, type ShapeKey } from './scaleData';
 
@@ -106,6 +107,8 @@ export function FretboardSettings({
               onClick={() => onChange({ ...settings, revealScaleType: !settings.revealScaleType })}
             />
           </div>
+
+          <ThemeSettingRow />
 
           {/* Auto-advance */}
           <div className="setting-row">

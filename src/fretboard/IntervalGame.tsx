@@ -60,7 +60,7 @@ function buildNotes(q: IntervalQuestion, answer: number | null, correct: boolean
     fret: q.noteFret,
     fill: answered ? (correct ? 'var(--correct)' : 'var(--wrong)') : 'var(--surface-3)',
     stroke: answered ? (correct ? 'var(--correct)' : 'var(--wrong)') : 'var(--text-2)',
-    text: answered ? '#0a0c10' : 'var(--text)',
+    text: answered ? 'var(--on-fill)' : 'var(--text)',
     label: answered ? INTERVALS[q.cls].short : '?',
     tappable: false,
   };
