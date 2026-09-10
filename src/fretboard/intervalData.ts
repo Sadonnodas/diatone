@@ -59,11 +59,13 @@ export interface IntervalSettings {
   fretSpan: number; // max |fret difference| between the two notes
   intervals: Record<number, boolean>; // enabled interval classes
   autoAdvance: boolean;
+  playback: boolean; // sound the two notes after answering
 }
 
-// The part of the settings that shapes the question pool — autoAdvance is only
-// a playback preference, so generation doesn't depend on it.
-export type IntervalLimits = Omit<IntervalSettings, 'autoAdvance'>;
+// The part of the settings that shapes the question pool. Auto-advance and
+// playback are preferences about the reveal, so generation doesn't depend on
+// them — flipping either mustn't throw away the question you're looking at.
+export type IntervalLimits = Omit<IntervalSettings, 'autoAdvance' | 'playback'>;
 
 const stringSet = (...on: number[]): Record<number, boolean> =>
   Object.fromEntries(ROOT_STRING_ORDER.map((s) => [s, on.includes(s)]));
@@ -127,10 +129,11 @@ export const levelSettings = (key: LevelKey): IntervalLimits => {
 export const defaultIntervalSettings: IntervalSettings = {
   ...levelSettings('l1'),
   autoAdvance: true,
+  playback: true,
 };
 
-// Which preset (if any) the current settings are exactly — autoAdvance is a
-// personal preference, not part of a level.
+// Which preset (if any) the current settings are exactly — the reveal
+// preferences are personal, not part of a level.
 export function matchLevel(s: IntervalLimits): LevelKey | null {
   for (const lv of LEVELS) {
     const p = lv.settings;

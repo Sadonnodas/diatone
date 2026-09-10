@@ -1,6 +1,7 @@
 import React from 'react';
 import type { HistoryEntry } from '../state/trainerReducer';
 import { renderJazz } from './ChordDisplay';
+import { progressionToMidi } from '../audio/harmony';
 
 const MODE_NAMES: Record<number, string> = {
   1: 'Name Chord',
@@ -31,6 +32,7 @@ export function Review({
   onPrev,
   onNext,
   onClose,
+  onHear,
 }: {
   entry: HistoryEntry | null;
   index: number;
@@ -38,7 +40,12 @@ export function Review({
   onPrev: () => void;
   onNext: () => void;
   onClose: () => void;
+  /** Sound an answer from this entry. Omitted when playback is off. */
+  onHear?: (text: string, key: string) => void;
 }) {
+  // Every past question is replayable, which is most of the point of keeping a
+  // history — but only for answers that can actually be sounded.
+  const playable = (text: string) => Boolean(onHear && entry && progressionToMidi(text));
   return (
     <>
       <div className="scrim" onClick={onClose} />
@@ -66,12 +73,32 @@ export function Review({
                   <span className={`val ${entry.correct ? 'ok' : 'no'}`}>
                     {entry.correct ? '✓ ' : '✕ '}
                     {renderJazz(entry.userAnswer || '—', 'ua')}
+                    {playable(entry.userAnswer) && (
+                      <button
+                        className="hear-mini"
+                        aria-label="Hear your answer"
+                        onClick={() => onHear!(entry.userAnswer, entry.key)}
+                      >
+                        ▶
+                      </button>
+                    )}
                   </span>
                 </div>
                 {!entry.correct && (
                   <div className="review-line">
                     <span className="lab">Correct</span>
-                    <span className="val ok">{renderJazz(entry.correctAnswer, 'ca')}</span>
+                    <span className="val ok">
+                      {renderJazz(entry.correctAnswer, 'ca')}
+                      {playable(entry.correctAnswer) && (
+                        <button
+                          className="hear-mini"
+                          aria-label="Hear the correct answer"
+                          onClick={() => onHear!(entry.correctAnswer, entry.key)}
+                        >
+                          ▶
+                        </button>
+                      )}
+                    </span>
                   </div>
                 )}
                 <div className="review-line">

@@ -12,6 +12,7 @@ import {
 } from './intervalData';
 import { renderJazz } from '../components/ChordDisplay';
 import { ThemeSettingRow } from '../components/ThemeSwitch';
+import { InstrumentRow } from '../components/InstrumentRow';
 
 const GAPS: { value: number; label: string }[] = [
   { value: 1, label: 'Adjacent' },
@@ -167,11 +168,30 @@ export function IntervalSettings({
 
           <ThemeSettingRow />
 
+          {/* Playback */}
+          <div className="setting-row">
+            <div>
+              <div className="label">Hear the interval</div>
+              <div className="desc">
+                Play the two notes once you've answered — apart, then together.
+              </div>
+            </div>
+            <Switch
+              on={settings.playback}
+              onClick={() => onChange({ ...settings, playback: !settings.playback })}
+            />
+          </div>
+
+          {settings.playback && <InstrumentRow />}
+
           {/* Auto-advance */}
           <div className="setting-row">
             <div>
               <div className="label">Auto-advance</div>
-              <div className="desc">Move on shortly after a correct answer.</div>
+              <div className="desc">
+                Move on shortly after a correct answer
+                {settings.playback ? ', once the notes have finished' : ''}.
+              </div>
             </div>
             <Switch
               on={settings.autoAdvance}

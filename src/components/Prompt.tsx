@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { Question } from '../lib/engine';
 import type { Feedback } from '../state/trainerReducer';
 import { renderJazz } from './ChordDisplay';
@@ -43,12 +44,16 @@ export function Prompt({
   userAnswer,
   builder,
   autoAdvance,
+  hear,
 }: {
   question: Question;
   feedback: Feedback | null;
   userAnswer: string;
   builder: BuilderApi;
   autoAdvance: boolean;
+  /** Playback controls, if playback is on. Rendered in a reserved slot so the
+      hero never shifts when the answer lands. */
+  hear?: ReactNode;
 }) {
   const { prompt } = question;
 
@@ -76,6 +81,8 @@ export function Prompt({
           </>
         )}
       </div>
+
+      {hear}
 
       {feedback && !(feedback.correct && autoAdvance) && (
         <div className="next-hint">tap to continue →</div>

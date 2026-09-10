@@ -2,6 +2,7 @@ import type { Settings } from '../lib/engine';
 import { DEGREE_KEYS } from '../lib/engine';
 import { KeyWheel } from './KeyWheel';
 import { ThemeSettingRow } from './ThemeSwitch';
+import { InstrumentRow } from './InstrumentRow';
 
 const MODES: { id: number; label: string }[] = [
   { id: 1, label: 'Name Chord' },
@@ -126,8 +127,24 @@ export function SettingsSheet({
             <ThemeSettingRow />
             <div className="setting-row">
               <div>
+                <div className="label">Hear the answer</div>
+                <div className="desc">
+                  Play the chord once you've answered, under the key's home chord.
+                </div>
+              </div>
+              <Switch
+                on={settings.playback}
+                onClick={() => update({ playback: !settings.playback })}
+              />
+            </div>
+            {settings.playback && <InstrumentRow />}
+            <div className="setting-row">
+              <div>
                 <div className="label">Auto-advance</div>
-                <div className="desc">Move on ~1.5s after a correct answer.</div>
+                <div className="desc">
+                  Move on shortly after a correct answer
+                  {settings.playback ? ', once the chord has finished' : ''}.
+                </div>
               </div>
               <Switch
                 on={settings.autoAdvance}

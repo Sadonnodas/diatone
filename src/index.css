@@ -1464,7 +1464,12 @@ button {
   line-height: 1;
   color: var(--accent);
 }
-/* Reserved so revealing the answer never moves the board. */
+/* Reserved so revealing the answer never moves the board. With playback on the
+   reserve also has to cover the play buttons — the setting doesn't change
+   mid-question, so the extra height is constant while you drill. */
+.iv-result.with-hear {
+  min-height: clamp(98px, 15vh, 118px);
+}
 .iv-result {
   min-height: clamp(52px, 7.5vh, 64px);
   display: flex;
@@ -1497,6 +1502,68 @@ button {
 .iv-sub {
   font-size: 12.5px;
   color: var(--text-3);
+}
+
+/* Playback controls under the reveal. The row is part of the reserved block
+   (see .iv-result.with-hear) so the board never shifts when it appears. */
+.hear-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 5px;
+}
+.hear {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 36px;
+  padding: 7px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+.hear:active {
+  transform: scale(0.97);
+}
+.hear.ok {
+  color: var(--correct);
+  border-color: var(--correct);
+  background: var(--correct-dim);
+}
+.hear.no {
+  color: var(--wrong);
+  border-color: var(--wrong);
+  background: var(--wrong-dim);
+}
+/* Numerals reserves the row's height whether or not the buttons are showing,
+   so the hero doesn't jump when an answer lands. */
+.hear-slot {
+  min-height: 46px;
+  align-items: center;
+  margin-top: 8px;
+}
+/* The inline ▶ beside an answer in the review sheet. */
+.hear-mini {
+  margin-left: 9px;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 10px;
+  line-height: 1;
+  vertical-align: middle;
+}
+.hear-mini:active {
+  transform: scale(0.94);
 }
 
 /* Accidentals (♯ / ♭) — symbol font, set slightly smaller like real accidentals. */

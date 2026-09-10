@@ -18,7 +18,7 @@ export default defineConfig({
       // 'prompt' so we control when the new version is applied (manual button +
       // an "update available" banner) instead of a silent reload mid-drill.
       registerType: 'prompt',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'fonts/*.woff2'],
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'fonts/*.woff2', 'samples/**/*.mp3'],
       manifest: {
         name: 'Diatone',
         short_name: 'Diatone',
@@ -36,7 +36,9 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+        // mp3 is load-bearing: the sample banks are part of the shell, so
+        // playback has to survive airplane mode like everything else (§0.2).
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2,mp3}'],
         navigateFallback: `/${REPO}/index.html`,
         // Once the waiting worker is told to skipWaiting (via the Update button),
         // claim open pages so control hands over and the reload actually fires.

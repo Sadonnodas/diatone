@@ -21,6 +21,7 @@ import {
 const settings = (over: Partial<IntervalSettings> = {}): IntervalSettings => ({
   ...levelSettings('l3'),
   autoAdvance: true,
+  playback: true,
   ...over,
 });
 
@@ -141,8 +142,12 @@ describe('levels', () => {
   it('recognises each preset and nothing in between', () => {
     for (const lv of LEVELS) {
       expect(matchLevel(levelSettings(lv.key))).toBe(lv.key);
-      // autoAdvance is a preference, not part of the level.
-      const full: IntervalSettings = { ...levelSettings(lv.key), autoAdvance: false };
+      // Auto-advance and playback are preferences, not part of the level.
+      const full: IntervalSettings = {
+        ...levelSettings(lv.key),
+        autoAdvance: false,
+        playback: false,
+      };
       expect(matchLevel(full)).toBe(lv.key);
     }
     expect(matchLevel(settings({ fretSpan: 4 }))).toBeNull();

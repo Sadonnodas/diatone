@@ -18,15 +18,21 @@ The name comes from *diatonic* harmony — which is the whole app.
   parser also accepts textbook forms (`Am7`, `Cmaj7`, `Bm7b5`).
 - **Weighted or equal** degree selection, per-degree weight sliders, hide-quality
   mode, auto-advance, streak counter, and a backward review of every answer.
+- **Hear the answer** — after you answer, the chord (or progression) sounds in
+  the right key, under the key's home chord so the numeral has a reference. Get
+  it wrong and you can A/B what you played against what it was. Piano or guitar,
+  and switchable off. The Intervals drill does the same with its two notes.
 - **Installable PWA** — works fully offline after the first load (self-hosted
-  fonts, precached app shell).
+  fonts, precached samples and app shell).
 - **Dark, editorial design** — high-contrast serif for the chord/numeral, clean
   grotesque for controls.
 
 ## Tech
 
 Vite + React + TypeScript, Tailwind v4, `vite-plugin-pwa` (Workbox). All logic
-(chord data, parser, seed engine) is pure and unit-tested with Vitest.
+(chord data, parser, seed engine, chord→pitch) is pure and unit-tested with
+Vitest. Playback is plain Web Audio over ~1.9 MB of mono samples — no Tone.js;
+a drill fires one-shot notes and needs no transport.
 
 ## Develop
 

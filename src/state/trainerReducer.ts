@@ -50,6 +50,7 @@ export const initialSettings: Settings = {
   degreeToggles: { I: true, ii: true, iii: true, IV: true, V: true, vi: true, 'vii°': true },
   autoAdvance: true,
   hideQuality: false,
+  playback: true,
 };
 
 export const initialState: TrainerState = {

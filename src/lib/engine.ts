@@ -17,6 +17,7 @@ export interface Settings {
   degreeToggles: Record<string, boolean>;
   autoAdvance: boolean;
   hideQuality: boolean;
+  playback: boolean; // sound the answer once you've answered
 }
 
 export interface Seed {

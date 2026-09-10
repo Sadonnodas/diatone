@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import {
   trainerReducer,
   initialState,
@@ -14,6 +14,10 @@ import { Review } from './components/Review';
 import { InfoModal } from './components/InfoModal';
 import { KeyWheel } from './components/KeyWheel';
 import { haptic, TAP, CORRECT, WRONG } from './lib/haptics';
+import { armUnlock, stopAll } from './audio/engine';
+import { useInstrument } from './audio/instrument';
+import { playChord, playProgression, prefetchChords } from './audio/phrases';
+import { progressionToMidi, tonicTriad } from './audio/harmony';
 
 const STORAGE_KEY = 'diatone.settings.v1';
 const CORRECT_ADVANCE_MS = 700; // snappy when drilling
@@ -54,6 +58,12 @@ export default function NumeralsGame({ onBack }: { onBack: () => void }) {
   const [phase, setPhase] = useState<'setup' | 'play'>('setup');
   const [setupKeys, setSetupKeys] = useState<string[]>(state.settings.selectedKeys);
   const advanceTimer = useRef<number | null>(null);
+  // Bumped whenever playback starts. A phrase you tapped past mustn't advance
+  // the question it no longer belongs to.
+  const playToken = useRef(0);
+  const { instrument } = useInstrument();
+
+  useEffect(armUnlock, []);
 
   const question = currentQuestion(state);
   const reviewing = state.reviewIndex !== null;
@@ -67,6 +77,31 @@ export default function NumeralsGame({ onBack }: { onBack: () => void }) {
       /* ignore */
     }
   }, [state.settings]);
+
+  // Sound an answer string. A single chord gets the key's tonic underneath
+  // first — a numeral only means something against a home chord. A progression
+  // establishes its own key, so it plays alone.
+  const playAnswer = useCallback(
+    (text: string, key: string): Promise<number> => {
+      const chords = progressionToMidi(text);
+      if (!chords) return Promise.resolve(0);
+      return chords.length === 1
+        ? playChord(instrument, chords[0], tonicTriad(key))
+        : playProgression(instrument, chords);
+    },
+    [instrument],
+  );
+
+  // Warm this question's samples (answer + tonic) before it's answered.
+  const answerText = question?.answer ?? '';
+  const answerKey = state.seed?.key ?? '';
+  useEffect(() => {
+    if (!state.settings.playback || !answerText) return;
+    const chords = progressionToMidi(answerText);
+    if (!chords) return;
+    const tonic = chords.length === 1 ? tonicTriad(answerKey) : null;
+    prefetchChords(instrument, tonic ? [...chords, tonic] : chords);
+  }, [answerText, answerKey, instrument, state.settings.playback]);
 
   const builder = useAnswerBuilder({
     question,
@@ -87,19 +122,32 @@ export default function NumeralsGame({ onBack }: { onBack: () => void }) {
     }
     if (!state.feedback) {
       setFlash('');
+      stopAll(); // a new question — don't let the last phrase bleed into it
       return;
     }
     haptic(state.feedback.correct ? CORRECT : WRONG);
     setFlash(state.feedback.correct ? 'flash-ok' : 'flash-no');
     const t = window.setTimeout(() => setFlash(''), 500);
-    if (state.feedback.correct && state.settings.autoAdvance) {
+
+    const advanceAfter = state.feedback.correct && state.settings.autoAdvance;
+    if (state.settings.playback) {
+      // Move on only once the chord has finished — never cut it off mid-ring.
+      const mine = ++playToken.current;
+      void playAnswer(state.feedback.correctAnswer, answerKey).then(() => {
+        if (advanceAfter && playToken.current === mine) dispatch({ type: 'NEXT' });
+      });
+    } else if (advanceAfter) {
       advanceTimer.current = window.setTimeout(() => dispatch({ type: 'NEXT' }), CORRECT_ADVANCE_MS);
     }
+
     return () => {
       window.clearTimeout(t);
       if (advanceTimer.current) clearTimeout(advanceTimer.current);
     };
-  }, [state.feedback, state.settings.autoAdvance]);
+  }, [state.feedback, state.settings.autoAdvance, state.settings.playback, answerKey, playAnswer]);
+
+  // Leaving the screen mid-phrase shouldn't keep playing.
+  useEffect(() => () => stopAll(), []);
 
   // Enter advances when feedback is showing (§18).
   useEffect(() => {
@@ -116,6 +164,15 @@ export default function NumeralsGame({ onBack }: { onBack: () => void }) {
   };
 
   const stop = (e: React.MouseEvent) => e.stopPropagation();
+
+  const hearCorrect = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (state.feedback) void playAnswer(state.feedback.correctAnswer, answerKey);
+  };
+  const hearYours = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    void playAnswer(state.userAnswer, answerKey);
+  };
 
   const updateSettings = (s: Settings) => dispatch({ type: 'UPDATE_SETTINGS', settings: s });
 
@@ -220,6 +277,31 @@ export default function NumeralsGame({ onBack }: { onBack: () => void }) {
             userAnswer={state.userAnswer}
             builder={builder}
             autoAdvance={state.settings.autoAdvance}
+            hear={
+              state.settings.playback ? (
+                <div className="hear-slot hear-row" onClick={stop}>
+                  {state.feedback &&
+                    (state.feedback.correct ? (
+                      <button className="hear" onClick={hearCorrect}>
+                        ▶ hear it again
+                      </button>
+                    ) : (
+                      <>
+                        {/* Only offered when what you built is actually playable —
+                            a half-finished progression isn't. */}
+                        {progressionToMidi(state.userAnswer) && (
+                          <button className="hear no" onClick={hearYours}>
+                            ▶ yours
+                          </button>
+                        )}
+                        <button className="hear ok" onClick={hearCorrect}>
+                          ▶ answer
+                        </button>
+                      </>
+                    ))}
+                </div>
+              ) : null
+            }
           />
         ) : (
           <div className="empty">
@@ -286,6 +368,7 @@ export default function NumeralsGame({ onBack }: { onBack: () => void }) {
             onPrev={() => dispatch({ type: 'REVIEW_PREV' })}
             onNext={() => dispatch({ type: 'REVIEW_NEXT' })}
             onClose={() => dispatch({ type: 'REVIEW_EXIT' })}
+            onHear={state.settings.playback ? (text, key) => void playAnswer(text, key) : undefined}
           />
         </div>
       )}

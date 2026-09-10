@@ -14,6 +14,9 @@ import {
   type IntervalSettings as Settings,
 } from './intervalData';
 import { haptic, TAP, CORRECT, WRONG } from '../lib/haptics';
+import { armUnlock, stopAll } from '../audio/engine';
+import { useInstrument } from '../audio/instrument';
+import { playFrettedInterval, playIntervalClass, prefetchFretted } from '../audio/phrases';
 
 const STORAGE_KEY = 'diatone.intervals.v1';
 const ADVANCE_MS = 900;
@@ -80,6 +83,12 @@ export default function IntervalGame({ onBack }: { onBack: () => void }) {
   const [reviewIndex, setReviewIndex] = useState<number | null>(null);
   const timer = useRef<number | null>(null);
   const lastCls = useRef<number | undefined>(undefined);
+  // Bumped on every new question. Playback that outlives its question (you
+  // tapped on before the notes finished) checks this before advancing.
+  const runId = useRef(0);
+  const { instrument } = useInstrument();
+
+  useEffect(armUnlock, []);
 
   useEffect(() => {
     try {
@@ -89,11 +98,13 @@ export default function IntervalGame({ onBack }: { onBack: () => void }) {
     }
   }, [settings]);
 
-  // Only the limits drive generation — flipping auto-advance mustn't throw away
-  // the question you're looking at.
+  // Only the limits drive generation — flipping a reveal preference (or the
+  // instrument) mustn't throw away the question you're looking at.
   const { rootStrings, stringGap, fretSpan, intervals } = settings;
   const generate = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
+    stopAll();
+    runId.current += 1;
     setAnswer(null);
     setCorrect(null);
     setReviewIndex(null);
@@ -106,7 +117,21 @@ export default function IntervalGame({ onBack }: { onBack: () => void }) {
     generate();
   }, [generate]);
 
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+  // Warm this question's samples so answering sounds instant — also on an
+  // instrument switch, which needs a different pair of recordings.
+  useEffect(() => {
+    if (question) {
+      prefetchFretted(instrument, [
+        [question.rootString, question.rootFret],
+        [question.noteString, question.noteFret],
+      ]);
+    }
+  }, [question, instrument]);
+
+  useEffect(() => () => {
+    if (timer.current) clearTimeout(timer.current);
+    stopAll();
+  }, []);
 
   const reviewing = reviewIndex !== null;
   const entry = reviewing ? history[reviewIndex] : null;
@@ -125,7 +150,39 @@ export default function IntervalGame({ onBack }: { onBack: () => void }) {
     setHistory((h) => [...h, { question, answer: cls, correct: isCorrect }]);
     setFlash(isCorrect ? 'flash-ok' : 'flash-no');
     window.setTimeout(() => setFlash(''), 500);
-    if (isCorrect && settings.autoAdvance) timer.current = window.setTimeout(generate, ADVANCE_MS);
+
+    const advanceAfter = isCorrect && settings.autoAdvance;
+    if (!settings.playback) {
+      if (advanceAfter) timer.current = window.setTimeout(generate, ADVANCE_MS);
+      return;
+    }
+
+    // Sound the pair as drawn on the board, then move on — never mid-note.
+    const mine = runId.current;
+    void playFrettedInterval(
+      instrument,
+      question.rootString,
+      question.rootFret,
+      question.noteString,
+      question.noteFret,
+    )
+      .then(() => {
+        if (advanceAfter && runId.current === mine) generate();
+      });
+  };
+
+  // The comparison pair. Both sides start from the question's root and stay
+  // inside one octave, so the only thing that differs is the interval itself.
+  const hearClass = (cls: number) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!dq) return;
+    void playIntervalClass(instrument, dq.rootString, dq.rootFret, cls);
+  };
+
+  const hearBoard = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!dq) return;
+    void playFrettedInterval(instrument, dq.rootString, dq.rootFret, dq.noteString, dq.noteFret);
   };
 
   const enterReview = () => {
@@ -204,7 +261,7 @@ export default function IntervalGame({ onBack }: { onBack: () => void }) {
               onTap={() => {}}
             />
             {/* Reserved height so the reveal never pushes the board around. */}
-            <div className="iv-result">
+            <div className={`iv-result${settings.playback ? ' with-hear' : ''}`}>
               {answered && (
                 <>
                   <div className={`iv-line ${dCorrect ? 'ok' : 'no'}`}>
@@ -217,6 +274,24 @@ export default function IntervalGame({ onBack }: { onBack: () => void }) {
                       <> · you said {renderJazz(INTERVALS[dAnswer!].short, 'gs')}</>
                     )}
                   </div>
+                  {settings.playback && (
+                    <div className="hear-row" onClick={stop}>
+                      {dCorrect ? (
+                        <button className="hear" onClick={hearBoard}>
+                          ▶ hear it again
+                        </button>
+                      ) : (
+                        <>
+                          <button className="hear no" onClick={hearClass(dAnswer!)}>
+                            ▶ yours · {renderJazz(INTERVALS[dAnswer!].short, 'hy')}
+                          </button>
+                          <button className="hear ok" onClick={hearClass(dq.cls)}>
+                            ▶ answer · {renderJazz(INTERVALS[dq.cls].short, 'ha')}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </>
               )}
             </div>

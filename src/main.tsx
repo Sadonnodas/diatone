@@ -2,12 +2,15 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import { ThemeProvider } from './theme';
+import { InstrumentProvider } from './audio/instrument';
 import './index.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider>
-      <App />
+      <InstrumentProvider>
+        <App />
+      </InstrumentProvider>
     </ThemeProvider>
   </StrictMode>,
 );

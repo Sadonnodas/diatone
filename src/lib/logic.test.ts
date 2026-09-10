@@ -20,6 +20,7 @@ const baseSettings = (over: Partial<Settings> = {}): Settings => ({
   degreeToggles: { I: true, ii: true, iii: true, IV: true, V: true, vi: true, 'vii°': true },
   autoAdvance: true,
   hideQuality: false,
+  playback: true,
   ...over,
 });
 
