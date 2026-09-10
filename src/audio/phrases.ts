@@ -2,12 +2,18 @@
 // the same app, and so the timings are tunable from a single file.
 
 import { playPhrase, prefetch, type Voice } from './engine';
-import { guitarAt, pianoMidi, OPEN_MIDI, type SampleRef } from './samples';
+import { bassMidi, guitarAt, pianoMidi, OPEN_MIDI, type SampleRef } from './samples';
 import { sampleFor, type Instrument } from './instrument';
 
 // A chord isn't struck dead flat — a few milliseconds of spread reads as
 // played rather than triggered.
 const ROLL = 0.016;
+// The bass doubles the root an octave down — the same rule Guided Ear
+// Training uses, and it keeps the bass clear of the voicing above it.
+const BASS_DROP = 12;
+const BASS_GAIN = 0.9;
+const BASS_LEAD = 0.012; // a hair early, so the bottom arrives first
+const BASS_EXTRA_HOLD = 0.2; // rings just past the chord
 const CHORD_HOLD = 1.5;
 const ANCHOR_HOLD = 0.65;
 const ANCHOR_GAIN = 0.45; // clearly context, not the answer
@@ -20,7 +26,15 @@ const chordVoices = (
   at: number,
   dur: number,
   gain = 1,
-): Voice[] => notes.map((midi, i) => ({ ref: sampleFor(inst, midi), at: at + i * ROLL, dur, gain }));
+): Voice[] => [
+  {
+    ref: bassMidi(notes[0] - BASS_DROP),
+    at: Math.max(0, at - BASS_LEAD),
+    dur: dur + BASS_EXTRA_HOLD,
+    gain: gain * BASS_GAIN,
+  },
+  ...notes.map((midi, i) => ({ ref: sampleFor(inst, midi), at: at + i * ROLL, dur, gain })),
+];
 
 /** One chord. With `tonic`, the key's home chord sounds first, underneath. */
 export function playChord(
@@ -102,7 +116,10 @@ export function playIntervalClass(
 
 /** Warm the samples a question will need, so the first tap is instant. */
 export function prefetchChords(inst: Instrument, chords: number[][]): void {
-  prefetch(chords.flat().map((m) => sampleFor(inst, m)));
+  prefetch([
+    ...chords.flat().map((m) => sampleFor(inst, m)),
+    ...chords.map((notes) => bassMidi(notes[0] - BASS_DROP)),
+  ]);
 }
 
 export function prefetchFretted(inst: Instrument, pairs: [number, number][]): void {

@@ -19,7 +19,8 @@ The name comes from *diatonic* harmony — which is the whole app.
 - **Weighted or equal** degree selection, per-degree weight sliders, hide-quality
   mode, auto-advance, streak counter, and a backward review of every answer.
 - **Hear the answer** — after you answer, the chord (or progression) sounds in
-  the right key, under the key's home chord so the numeral has a reference. Get
+  the right key over a bass root, under the key's home chord so the numeral has
+  a reference. Get
   it wrong and you can A/B what you played against what it was. Piano or guitar,
   and switchable off. The Intervals drill does the same with its two notes.
 - **Installable PWA** — works fully offline after the first load (self-hosted

@@ -18,6 +18,10 @@ const GUITAR_MAX_FRET = 12;
 // interval drill can produce, so choosing piano never means a shifted sample.
 const PIANO_LOW = 40;
 const PIANO_HIGH = 79;
+// Only the octave that sits under the chord band — a bass note is always
+// root − 12, so 36..47 covers every key.
+const BASS_LOW = 34;
+const BASS_HIGH = 48;
 
 /** A sample plus the playback rate that lands it on the wanted pitch. */
 export interface SampleRef {
@@ -56,4 +60,14 @@ export function guitarMidi(midi: number): SampleRef {
 export function pianoMidi(midi: number): SampleRef {
   const nearest = Math.min(Math.max(Math.round(midi), PIANO_LOW), PIANO_HIGH);
   return { url: `${BASE}samples/piano/P_${nearest}.mp3`, rate: rateFor(midi - nearest) };
+}
+
+/**
+ * A pitch, on bass. Its own instrument rather than a low piano note: the
+ * chord band starts at C3 and a triad on its own reads as thin and high, so
+ * the bottom octave is a real bass doubling the root.
+ */
+export function bassMidi(midi: number): SampleRef {
+  const nearest = Math.min(Math.max(Math.round(midi), BASS_LOW), BASS_HIGH);
+  return { url: `${BASE}samples/bass/B_${nearest}.mp3`, rate: rateFor(midi - nearest) };
 }
