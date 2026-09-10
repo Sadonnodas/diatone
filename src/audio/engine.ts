@@ -24,16 +24,92 @@ function ensureCtx(): AudioContext | null {
 }
 
 /**
+ * iOS mutes Web Audio when the ringer switch is off — but only because a page
+ * counts as *ambient* sound by default. Declaring the session as `playback`
+ * (the same category a video or a music app uses) means the switch no longer
+ * applies. Safari 16.4+ exposes this directly; older iOS needs the silent-media
+ * element trick below.
+ *
+ * The trade-off is the one every media app makes: `playback` also means we may
+ * interrupt or duck whatever else the phone is playing.
+ */
+function claimPlaybackSession(): void {
+  const nav = navigator as Navigator & { audioSession?: { type: string } };
+  if (nav.audioSession) {
+    try {
+      nav.audioSession.type = 'playback';
+      return;
+    } catch {
+      // fall through to the element trick
+    }
+  }
+  primeSilentTrack();
+}
+
+// Pre-16.4 fallback: an <audio> element that is actually playing flips the
+// session category to playback for the whole page, Web Audio included. It has
+// to be real, looping, unmuted media — silence qualifies. Only iOS needs this,
+// and only iOS pays for it: everywhere else a permanently looping element
+// would be waste for no benefit.
+let silentTrack: HTMLAudioElement | null = null;
+
+const isIOS = (): boolean =>
+  /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  // iPadOS 13+ reports itself as a Mac; touch points give it away.
+  (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+
+function silentWavUrl(): string {
+  const rate = 8000;
+  const frames = 800; // 100ms, looped
+  const buf = new ArrayBuffer(44 + frames);
+  const view = new DataView(buf);
+  const tag = (offset: number, text: string) => {
+    for (let i = 0; i < text.length; i++) view.setUint8(offset + i, text.charCodeAt(i));
+  };
+  tag(0, 'RIFF');
+  view.setUint32(4, 36 + frames, true);
+  tag(8, 'WAVE');
+  tag(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // PCM
+  view.setUint16(22, 1, true); // mono
+  view.setUint32(24, rate, true);
+  view.setUint32(28, rate, true); // byte rate
+  view.setUint16(32, 1, true); // block align
+  view.setUint16(34, 8, true); // bits per sample
+  tag(36, 'data');
+  view.setUint32(40, frames, true);
+  new Uint8Array(buf, 44).fill(128); // 0x80 is silence for unsigned 8-bit
+  return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+}
+
+function primeSilentTrack(): void {
+  if (!isIOS()) return;
+  if (silentTrack) {
+    if (silentTrack.paused) void silentTrack.play().catch(() => {});
+    return;
+  }
+  try {
+    const el = document.createElement('audio');
+    el.src = silentWavUrl();
+    el.loop = true;
+    el.setAttribute('playsinline', ''); // not typed on HTMLAudioElement
+    el.setAttribute('aria-hidden', 'true');
+    silentTrack = el;
+    void el.play().catch(() => {});
+  } catch {
+    silentTrack = null;
+  }
+}
+
+/**
  * Bring the context up. Safari/iOS start it suspended unless it's created or
  * resumed inside a user gesture, so this hangs off the first tap and off
  * every play call (which is always tap-driven anyway).
- *
- * Note the ringer switch still wins on iOS: with the phone on silent, a Web
- * Audio context plays nothing. That's an OS decision, not something the page
- * can override.
  */
 export function unlockAudio(): void {
   const c = ensureCtx();
+  claimPlaybackSession();
   if (c && c.state !== 'running') void c.resume();
 }
 
