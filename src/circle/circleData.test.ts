@@ -1,9 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import {
   POSITIONS,
-  MIN_GAPS,
+  RING_ORDER,
   defaultCircleSettings,
-  generateCircle,
+  generateLayout,
+  generateWedge,
+  layoutAnswerMatches,
+  segmentRoot,
+  wedgeToken,
   keyAt,
   keyChord,
   ringChord,
@@ -19,9 +23,8 @@ import { DEGREE_KEYS } from '../lib/engine';
 
 const settings = (over: Partial<CircleSettings> = {}): CircleSettings => ({
   ...defaultCircleSettings,
-  rings: { ...defaultCircleSettings.rings, ...(over.rings ?? {}) },
-  degrees: { ...defaultCircleSettings.degrees, ...(over.degrees ?? {}) },
   ...over,
+  rings: { ...defaultCircleSettings.rings, ...(over.rings ?? {}) },
 });
 
 // Deterministic "random" so a generated question can be asserted on.
@@ -119,74 +122,113 @@ describe('the wedge', () => {
   });
 });
 
-describe('generateCircle', () => {
-  it('blanks the requested number of segments', () => {
-    const q = generateCircle(settings({ gaps: 4 }), seeded(7));
-    expect(q.error).toBeUndefined();
-    expect(q.blanks).toHaveLength(4);
-    expect(q.queue).toHaveLength(4);
+describe('ring order', () => {
+  it('matches the printed wheel: majors inside, minors outside them, vii° on the rim', () => {
+    // Drawing order is outside in, so the last one is the innermost ring.
+    expect(RING_ORDER).toEqual(['dim', 'minor', 'major']);
+  });
+});
+
+describe('segmentRoot', () => {
+  it('drops the quality — the ring already says what it is', () => {
+    expect(segmentRoot({ ring: 'major', pos: 0 })).toBe('C');
+    expect(segmentRoot({ ring: 'minor', pos: 0 })).toBe('A');
+    expect(segmentRoot({ ring: 'dim', pos: 0 })).toBe('B');
+    expect(segmentRoot({ ring: 'minor', pos: ALL_KEYS.indexOf('Db') })).toBe('Bb');
+  });
+});
+
+describe('layoutAnswerMatches', () => {
+  it('accepts the name of the segment', () => {
+    expect(layoutAnswerMatches('C', { ring: 'major', pos: 0 })).toBe(true);
+    expect(layoutAnswerMatches('A', { ring: 'minor', pos: 0 })).toBe(true);
   });
 
-  it('never asks a single gap — there’d be nowhere else to tap', () => {
-    const q = generateCircle(settings({ gaps: 1 }), seeded(3));
-    expect(q.blanks.length).toBeGreaterThanOrEqual(MIN_GAPS);
+  it('accepts either side of the enharmonic seam — same place either way', () => {
+    const fSharp = { ring: 'major' as const, pos: ALL_KEYS.indexOf('F#') };
+    expect(layoutAnswerMatches('F#', fSharp)).toBe(true);
+    expect(layoutAnswerMatches('Gb', fSharp)).toBe(true);
+    const db = { ring: 'minor' as const, pos: ALL_KEYS.indexOf('Db') };
+    expect(layoutAnswerMatches('Bb', db)).toBe(true);
+    expect(layoutAnswerMatches('A#', db)).toBe(true);
   });
 
-  it('blanks everything when asked for all', () => {
-    const q = generateCircle(settings({ scope: 'key', gaps: 0 }), seeded(11));
-    expect(q.blanks).toHaveLength(DEGREE_KEYS.length);
+  it('rejects the wrong note and the unparseable', () => {
+    expect(layoutAnswerMatches('D', { ring: 'major', pos: 0 })).toBe(false);
+    expect(layoutAnswerMatches('', { ring: 'major', pos: 0 })).toBe(false);
+    expect(layoutAnswerMatches('H', { ring: 'major', pos: 0 })).toBe(false);
+  });
+});
+
+describe('generateLayout', () => {
+  it('blanks the number of segments asked for, one included', () => {
+    expect(generateLayout(settings({ gaps: 1 }), seeded(7)).blanks).toHaveLength(1);
+    expect(generateLayout(settings({ gaps: 4 }), seeded(7)).blanks).toHaveLength(4);
   });
 
-  it('labels every blank and asks for each exactly once', () => {
-    const q = generateCircle(settings({ gaps: 4 }), seeded(5));
-    const keys = q.blanks.map(slotKey).sort();
-    expect(Object.keys(q.labels).sort()).toEqual(keys);
-    expect([...q.queue].sort()).toEqual(keys);
+  it('only blanks rings that are on', () => {
+    const major = generateLayout(settings({ gaps: 12, rings: { major: true, minor: false } }), seeded(2));
+    expect(major.blanks.every((b) => b.ring === 'major')).toBe(true);
+    const minor = generateLayout(settings({ gaps: 12, rings: { major: false, minor: true } }), seeded(2));
+    expect(minor.blanks.every((b) => b.ring === 'minor')).toBe(true);
   });
 
-  it('only blanks rings that are switched on', () => {
-    const q = generateCircle(
-      settings({ gaps: 0, rings: { major: true, minor: false, dim: false } }),
-      seeded(2),
-    );
-    expect(q.blanks.every((b) => b.ring === 'major')).toBe(true);
-    expect(q.blanks).toHaveLength(POSITIONS);
+  it('never blanks the same segment twice', () => {
+    const q = generateLayout(settings({ gaps: 24, rings: { major: true, minor: true } }), seeded(5));
+    expect(new Set(q.blanks.map(slotKey)).size).toBe(q.blanks.length);
   });
 
-  it('only blanks degrees that are switched on, in key scope', () => {
-    const only = Object.fromEntries(DEGREE_KEYS.map((d) => [d, d === 'I' || d === 'IV' || d === 'V']));
-    const q = generateCircle(settings({ scope: 'key', gaps: 0, degrees: only }), seeded(9));
-    expect(q.blanks).toHaveLength(3);
-    expect(q.blanks.every((b) => b.ring === 'major')).toBe(true);
+  it('says so instead of producing an empty question', () => {
+    const q = generateLayout(settings({ rings: { major: false, minor: false } }), seeded(1));
+    expect(q.error).toBeTruthy();
+  });
+});
+
+describe('generateWedge', () => {
+  it('lays out all seven degrees of the key', () => {
+    const q = generateWedge(settings({ drill: 'wedge' }), seeded(3));
+    expect(q.slots).toHaveLength(7);
+    expect(q.slots.map((w) => w.degree).sort()).toEqual([...DEGREE_KEYS].sort());
   });
 
-  it('names numerals in key scope and chords on the whole circle', () => {
-    const byNumeral = generateCircle(settings({ scope: 'key', label: 'numerals', gaps: 0 }), seeded(4));
-    expect(Object.values(byNumeral.labels).sort()).toEqual([...DEGREE_KEYS].sort());
+  it('spells every chord the way the key spells it', () => {
+    const q = generateWedge(settings({ drill: 'wedge', keys: ['F#'] }), seeded(3));
+    const byDegree = Object.fromEntries(q.slots.map((w) => [w.degree, w.chord]));
+    expect(byDegree['iii']).toBe('A#m'); // not the Bbm its segment is printed with
+    expect(byDegree['vii°']).toBe('E#dim');
+  });
 
-    const byChord = generateCircle(settings({ scope: 'circle', label: 'numerals' }), seeded(4));
-    // A numeral means nothing without a key, so the whole circle names chords.
-    for (const [key, label] of Object.entries(byChord.labels)) {
-      const [ring, pos] = key.split(':');
-      expect(label).toBe(ringChord(ring as 'major', Number(pos)));
+  it('keeps the wedge to three spokes, IV left and V right', () => {
+    const q = generateWedge(settings({ drill: 'wedge', keys: ['C'] }), seeded(3));
+    const byDegree = Object.fromEntries(q.slots.map((w) => [w.degree, w]));
+    expect(byDegree['IV'].offset).toBe(-1);
+    expect(byDegree['I'].offset).toBe(0);
+    expect(byDegree['V'].offset).toBe(1);
+    // Relative minors sit directly outside their major.
+    expect(byDegree['ii'].offset).toBe(-1);
+    expect(byDegree['vi'].offset).toBe(0);
+    expect(byDegree['iii'].offset).toBe(1);
+    expect(byDegree['vii°'].offset).toBe(0);
+  });
+
+  it('hands over exactly the tokens the slots need, shuffled', () => {
+    for (const place of ['chords', 'numerals'] as const) {
+      const q = generateWedge(settings({ drill: 'wedge', place }), seeded(8));
+      const wanted = q.slots.map((w) => wedgeToken(w, place)).sort();
+      expect([...q.tokens].sort()).toEqual(wanted);
     }
   });
 
-  it('turns the wheel only when asked, and only when there’s a key', () => {
-    expect(generateCircle(settings({ scope: 'key', keyAtTop: false }), seeded(6)).rotate).toBe(0);
-    expect(generateCircle(settings({ scope: 'circle', keyAtTop: true }), seeded(6)).rotate).toBe(0);
-    const turned = generateCircle(settings({ scope: 'key', keyAtTop: true }), seeded(6));
-    expect(turned.rotate).toBe(-turned.keyPos!);
+  it('draws only from the keys you picked, and avoids repeating one', () => {
+    const q = generateWedge(settings({ drill: 'wedge', keys: ['G'] }), seeded(4));
+    expect(q.key).toBe('G');
+    const two = settings({ drill: 'wedge', keys: ['G', 'D'] });
+    expect(generateWedge(two, seeded(4), 'G').key).toBe('D');
+    // With only one key to choose from, repeating it is the only option.
+    expect(generateWedge(settings({ drill: 'wedge', keys: ['G'] }), seeded(4), 'G').key).toBe('G');
   });
 
-  it('explains itself instead of producing an impossible question', () => {
-    const noRings = generateCircle(
-      settings({ rings: { major: false, minor: false, dim: false } }),
-      seeded(1),
-    );
-    expect(noRings.error).toBeTruthy();
-    const oneDegree = Object.fromEntries(DEGREE_KEYS.map((d) => [d, d === 'I']));
-    const tooFew = generateCircle(settings({ scope: 'key', degrees: oneDegree }), seeded(1));
-    expect(tooFew.error).toBeTruthy();
+  it('says so when no key is picked', () => {
+    expect(generateWedge(settings({ drill: 'wedge', keys: [] }), seeded(1)).error).toBeTruthy();
   });
 });

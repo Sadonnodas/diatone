@@ -1,26 +1,32 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CircleWheel, prettyChord, type Mark } from './CircleWheel';
+import { WedgeBoard } from './WedgeBoard';
+import { NameKeypad } from './NameKeypad';
 import { CircleSettingsSheet } from './CircleSettings';
 import { InfoModal } from '../components/InfoModal';
 import { renderJazz } from '../components/ChordDisplay';
+import { ThemeIconButton } from '../components/ThemeSwitch';
 import {
   defaultCircleSettings,
-  generateCircle,
+  generateLayout,
+  generateWedge,
+  layoutAnswerMatches,
   ringChord,
+  segmentRoot,
   slotKey,
-  type CircleQuestion,
+  wedgeToken,
   type CircleSettings,
-  type Slot,
+  type LayoutQuestion,
+  type WedgeQuestion,
 } from './circleData';
-import { haptic, CORRECT, WRONG } from '../lib/haptics';
+import { haptic, TAP, CORRECT, WRONG } from '../lib/haptics';
 import { armUnlock, stopAll } from '../audio/engine';
 import { useInstrument } from '../audio/instrument';
 import { playChord, prefetchChords } from '../audio/phrases';
 import { chordToMidi } from '../audio/harmony';
-import { ThemeIconButton } from '../components/ThemeSwitch';
 
-const STORAGE_KEY = 'diatone.circle.v1';
-const ADVANCE_MS = 800;
+const STORAGE_KEY = 'diatone.circle.v2';
+const ADVANCE_MS = 850;
 
 function loadSettings(): CircleSettings {
   try {
@@ -31,7 +37,7 @@ function loadSettings(): CircleSettings {
         ...defaultCircleSettings,
         ...saved,
         rings: { ...defaultCircleSettings.rings, ...(saved.rings ?? {}) },
-        degrees: { ...defaultCircleSettings.degrees, ...(saved.degrees ?? {}) },
+        keys: saved.keys?.length ? saved.keys : defaultCircleSettings.keys,
       };
     }
   } catch {
@@ -40,21 +46,31 @@ function loadSettings(): CircleSettings {
   return defaultCircleSettings;
 }
 
-/** What a segment sounds, whatever the prompt happens to be naming it. The
-    two spellings at the seam are the same pitches, so the segment decides. */
-const chordFor = (slot: Slot): string => ringChord(slot.ring, slot.pos);
-
 export default function CircleGame({ onBack }: { onBack: () => void }) {
   const [settings, setSettings] = useState<CircleSettings>(loadSettings);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
-  const [question, setQuestion] = useState<CircleQuestion | null>(null);
-  const [marks, setMarks] = useState<Record<string, Mark>>({});
-  const [step, setStep] = useState(0);
   const [streak, setStreak] = useState(0);
   const [flash, setFlash] = useState<'' | 'flash-ok' | 'flash-no'>('');
+
+  // Layout drill
+  const [layout, setLayout] = useState<LayoutQuestion | null>(null);
+  const [step, setStep] = useState(0);
+  const [marks, setMarks] = useState<Record<string, Mark>>({});
+  const [revealed, setRevealed] = useState<Record<string, string>>({});
+  const [letter, setLetter] = useState<string | null>(null);
+  const [acc, setAcc] = useState<'' | 'b' | '#'>('');
+
+  // Wedge drill
+  const [wedge, setWedge] = useState<WedgeQuestion | null>(null);
+  const [placed, setPlaced] = useState<Record<string, string>>({});
+  const [wedgeMarks, setWedgeMarks] = useState<Record<string, Mark>>({});
+  const [selected, setSelected] = useState<string | null>(null);
+  const [used, setUsed] = useState<string[]>([]);
+
   const timer = useRef<number | null>(null);
   const runId = useRef(0);
+  const lastKey = useRef<string | undefined>(undefined);
   const { instrument } = useInstrument();
 
   useEffect(armUnlock, []);
@@ -67,13 +83,29 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
     }
   }, [settings]);
 
+  const isWedge = settings.drill === 'wedge';
+
   const generate = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
     stopAll();
     runId.current += 1;
-    setMarks({});
-    setStep(0);
-    setQuestion(generateCircle(settings));
+    setFlash('');
+    if (settings.drill === 'wedge') {
+      const q = generateWedge(settings, Math.random, lastKey.current);
+      lastKey.current = q.key || undefined;
+      setWedge(q);
+      setPlaced({});
+      setWedgeMarks({});
+      setSelected(null);
+      setUsed([]);
+    } else {
+      setLayout(generateLayout(settings));
+      setStep(0);
+      setMarks({});
+      setRevealed({});
+      setLetter(null);
+      setAcc('');
+    }
   }, [settings]);
 
   useEffect(() => {
@@ -88,55 +120,108 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
     [],
   );
 
-  // Warm the chords this question can ask for.
+  // Warm whatever this question can sound.
   useEffect(() => {
-    if (!question || !settings.playback) return;
-    const chords = question.blanks
-      .map((s) => chordToMidi(chordFor(s)))
-      .filter((c): c is number[] => c !== null);
+    if (!settings.playback) return;
+    const names = isWedge
+      ? (wedge?.slots ?? []).map((w) => w.chord)
+      : (layout?.blanks ?? []).map((s) => ringChord(s.ring, s.pos));
+    const chords = names.map(chordToMidi).filter((c): c is number[] => c !== null);
     if (chords.length) prefetchChords(instrument, chords);
-  }, [question, instrument, settings.playback]);
+  }, [wedge, layout, isWedge, instrument, settings.playback]);
 
-  const done = question ? step >= question.queue.length : false;
-  const currentKey = question && !done ? question.queue[step] : null;
-  const currentLabel = currentKey && question ? question.labels[currentKey] : null;
+  const sound = (chord: string) => {
+    if (!settings.playback) return;
+    const notes = chordToMidi(chord);
+    if (notes) void playChord(instrument, notes);
+  };
 
-  const tap = (slot: Slot) => {
-    if (!question || done || question.error) return;
-    const key = slotKey(slot);
-    if (marks[key]) return;
+  const finish = (allDone: boolean) => {
+    if (!allDone || !settings.autoAdvance) return;
+    const mine = runId.current;
+    timer.current = window.setTimeout(() => {
+      if (runId.current === mine) generate();
+    }, ADVANCE_MS);
+  };
 
-    const right = key === currentKey;
+  // ── Layout drill ──────────────────────────────────────────────────────────
+  const layoutDone = layout ? step >= layout.blanks.length : false;
+  const asked = layout && !layoutDone ? layout.blanks[step] : null;
+
+  const answerName = () => {
+    if (!asked || !letter || !layout) return;
+    const typed = letter + (acc === 'b' ? 'b' : acc === '#' ? '#' : '');
+    const right = layoutAnswerMatches(typed, asked);
     haptic(right ? CORRECT : WRONG);
     setStreak((s) => (right ? s + 1 : 0));
     setFlash(right ? 'flash-ok' : 'flash-no');
-    window.setTimeout(() => setFlash(''), 420);
+    window.setTimeout(() => setFlash(''), 460);
 
-    // Either way the answer ends up on the board: a wrong tap fills the
-    // segment it should have gone in, so you see the miss in place rather
-    // than being told about it.
-    setMarks((m) => ({ ...m, [currentKey as string]: right ? 'ok' : 'no' }));
+    const key = slotKey(asked);
+    setMarks((m) => ({ ...m, [key]: right ? 'ok' : 'no' }));
+    // A miss fills the segment in with its real name, so the correction lands
+    // in the place you got wrong rather than in a message.
+    setRevealed((r) => ({ ...r, [key]: right ? typed : segmentRoot(asked) }));
+    setLetter(null);
+    setAcc('');
+    sound(ringChord(asked.ring, asked.pos));
     const next = step + 1;
     setStep(next);
-
-    if (settings.playback) {
-      const notes = chordToMidi(chordFor(slot));
-      if (notes) void playChord(instrument, notes);
-    }
-
-    if (next >= question.queue.length && settings.autoAdvance) {
-      const mine = runId.current;
-      timer.current = window.setTimeout(() => {
-        if (runId.current === mine) generate();
-      }, ADVANCE_MS);
-    }
+    finish(next >= layout.blanks.length);
   };
 
+  // ── Wedge drill ───────────────────────────────────────────────────────────
+  const wedgeDone = wedge ? Object.keys(placed).length >= wedge.slots.length : false;
+
+  const tapToken = (token: string) => {
+    if (used.includes(token) || wedgeDone) return;
+    haptic(TAP);
+    setSelected((s) => (s === token ? null : token));
+  };
+
+  const tapSlot = (degree: string) => {
+    if (!wedge || !selected || placed[degree]) return;
+    const slot = wedge.slots.find((w) => w.degree === degree);
+    if (!slot) return;
+    const right = wedgeToken(slot, settings.place) === selected;
+    haptic(right ? CORRECT : WRONG);
+    setStreak((s) => (right ? s + 1 : 0));
+    setFlash(right ? 'flash-ok' : 'flash-no');
+    window.setTimeout(() => setFlash(''), 460);
+
+    // Either way it lands where it belongs — a wrong drop shows you the slot
+    // it should have gone in, marked as a miss.
+    const target = right
+      ? degree
+      : (wedge.slots.find((w) => wedgeToken(w, settings.place) === selected)?.degree ?? degree);
+    setPlaced((p) => ({ ...p, [target]: selected }));
+    setWedgeMarks((m) => ({ ...m, [target]: right ? 'ok' : 'no' }));
+    setUsed((u) => [...u, selected]);
+    setSelected(null);
+    sound(wedge.slots.find((w) => w.degree === target)?.chord ?? slot.chord);
+    finish(Object.keys(placed).length + 1 >= wedge.slots.length);
+  };
+
+  // What each slot already shows. Placing chords, that's the numeral guide (if
+  // it's on); placing numerals, it's always the chord — which is the whole
+  // point of the reverse drill.
+  const hints = useMemo(() => {
+    const out: Record<string, string> = {};
+    if (!wedge) return out;
+    for (const w of wedge.slots) {
+      if (settings.place === 'numerals') out[w.degree] = prettyChord(w.chord);
+      else if (settings.guide) out[w.degree] = w.degree;
+    }
+    return out;
+  }, [wedge, settings.place, settings.guide]);
+
+  const done = isWedge ? wedgeDone : layoutDone;
   const advance = () => {
     if (done) generate();
   };
   const stop = (e: React.MouseEvent) => e.stopPropagation();
   const waitingToAdvance = done && !settings.autoAdvance;
+  const error = isWedge ? wedge?.error : layout?.error;
 
   return (
     <div className={`app ${flash}`} onClick={advance}>
@@ -162,64 +247,104 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
         </div>
       </div>
 
-      <div className="stage cof-stage">
-        {!question || question.error ? (
+      <div className={`stage ${isWedge ? 'wedge-stage' : 'cof-stage'}`}>
+        {error ? (
           <div className="empty">
-            {question?.error ?? 'Loading…'}
+            {error}
             <div style={{ marginTop: 16 }}>
               <button className="pill on" onClick={() => setSettingsOpen(true)}>
                 Open settings
               </button>
             </div>
           </div>
-        ) : (
+        ) : isWedge && wedge ? (
           <>
             <div className="ctx reveal" style={{ animationDelay: '.04s' }}>
-              {question.key ? (
-                <>
-                  <span className="lead">in the key of</span>
-                  <span className="k">{renderJazz(question.key, 'ck')}</span>
-                </>
-              ) : (
-                <span className="lead">where does it go?</span>
-              )}
+              <span className="lead">in the key of</span>
+              <span className="k">{renderJazz(wedge.key, 'wk')}</span>
             </div>
 
-            <div className="cof-wheel reveal" style={{ animationDelay: '.08s' }}>
-              <CircleWheel
-                blanks={question.blanks}
-                marks={marks}
-                keyPos={question.keyPos}
-                rotate={question.rotate}
-                onTap={tap}
-                disabled={done}
-              />
-              <div className="cof-hub">
-                {done ? (
-                  <div className="cof-done">✓</div>
-                ) : (
-                  <>
-                    <div className="cof-ask">place</div>
-                    <div className="cof-target">{renderJazz(prettyChord(currentLabel ?? ''), 'ct')}</div>
-                  </>
-                )}
-              </div>
-            </div>
-
-            <div className="cof-progress">
-              {question.queue.map((k, i) => (
-                <span
-                  key={k}
-                  className={`dotp${i < step ? (marks[k] === 'ok' ? ' ok' : ' no') : ''}${
-                    i === step ? ' live' : ''
+            <div className="token-row reveal" onClick={stop} style={{ animationDelay: '.06s' }}>
+              {wedge.tokens.map((t) => (
+                <button
+                  key={t}
+                  className={`token${selected === t ? ' sel' : ''}${
+                    used.includes(t) ? ' spent' : ''
                   }`}
-                />
+                  onClick={() => tapToken(t)}
+                  disabled={used.includes(t)}
+                >
+                  {renderJazz(settings.place === 'chords' ? prettyChord(t) : t, `t${t}`)}
+                </button>
               ))}
+            </div>
+
+            <div className="wedge-wrap reveal" onClick={stop} style={{ animationDelay: '.08s' }}>
+              <WedgeBoard
+                slots={wedge.slots}
+                placed={placed}
+                marks={wedgeMarks}
+                hints={hints}
+                armed={selected !== null}
+                onTapSlot={tapSlot}
+              />
             </div>
             {waitingToAdvance && <div className="next-hint">tap to continue →</div>}
           </>
-        )}
+        ) : layout ? (
+          <>
+            <div className="ctx reveal" style={{ animationDelay: '.04s' }}>
+              <span className="lead">{layoutDone ? 'filled in' : 'name the gap'}</span>
+            </div>
+            <div className="cof-wheel reveal" style={{ animationDelay: '.08s' }}>
+              <CircleWheel
+                blanks={layout.blanks}
+                marks={marks}
+                highlight={asked ? slotKey(asked) : null}
+                revealed={revealed}
+              />
+            </div>
+            <div className="cof-progress">
+              {layout.blanks.map((b, i) => {
+                const k = slotKey(b);
+                return (
+                  <span
+                    key={k}
+                    className={`dotp${i < step ? (marks[k] === 'ok' ? ' ok' : ' no') : ''}${
+                      i === step ? ' live' : ''
+                    }`}
+                  />
+                );
+              })}
+            </div>
+            {waitingToAdvance && <div className="next-hint">tap to continue →</div>}
+          </>
+        ) : null}
       </div>
+
+      {!isWedge && !error && (
+        <div onClick={stop}>
+          <NameKeypad
+            letter={letter}
+            acc={acc}
+            onLetter={(l) => {
+              haptic(TAP);
+              setLetter(l);
+              setAcc('');
+            }}
+            onAcc={(a) => {
+              haptic(TAP);
+              setAcc((cur) => (cur === a ? '' : a));
+            }}
+            onClear={() => {
+              setLetter(null);
+              setAcc('');
+            }}
+            onAnswer={answerName}
+            disabled={layoutDone}
+          />
+        </div>
+      )}
 
       {settingsOpen && (
         <div onClick={stop}>
@@ -235,21 +360,21 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
         <div onClick={stop}>
           <InfoModal title="Circle of fifths" onClose={() => setInfoOpen(false)}>
             <p>
-              Some segments are empty. The middle names a chord — tap the gap it belongs in.
+              Two drills, picked in settings. <b>Layout</b> blanks segments of the wheel and you
+              name them. <b>Key wedge</b> zooms in on one key and you place its chords.
             </p>
             <p>
-              Majors sit on the middle ring, their relative minors directly inside, and each
-              key's <b>vii°</b> on the thin outer ring.
+              The wheel is laid out like the printed one: majors nearest the centre, each
+              relative minor immediately outside its major, and the <b>vii°</b> tabs on the rim.
             </p>
             <p>
-              The point is the shape. A key's seven chords are one wedge: <b>IV</b> is one step
-              anticlockwise, <b>V</b> one step clockwise, and <b>ii</b>, <b>vi</b>, <b>iii</b>{' '}
-              sit under those three. Learn the wedge and you can read a numeral off the wheel
-              instead of working it out.
+              A key's seven chords are always the same shape — <b>IV</b> one step anticlockwise,{' '}
+              <b>V</b> one step clockwise, the minors directly outside. The wedge drill turns
+              that shape to the top every time, so what you learn is the shape rather than twelve
+              separate pictures.
             </p>
             <p className="info-dim">
-              Two segments carry two names (B♭m/A♯m, F♯/G♭) — twelve spokes can't hold both
-              sides of the enharmonic seam. Either name is the same place.
+              Either spelling of a seam segment is accepted — F♯ and G♭ are the same place.
             </p>
           </InfoModal>
         </div>

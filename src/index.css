@@ -1885,3 +1885,136 @@ text.cof-label {
 .dotp.no {
   background: var(--wrong);
 }
+
+/* The gap being asked about. Safe to point at: naming it is the question. */
+.cof-seg.asked {
+  fill: var(--accent-dim);
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-dasharray: none;
+}
+.cof-ask-mark {
+  fill: var(--accent);
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  pointer-events: none;
+  user-select: none;
+}
+/* One wide answer key, where the chord keypad has three quality keys. */
+.key.wide {
+  flex: 1;
+}
+
+/* ── Key wedge ─────────────────────────────────────────────────────────────
+   The zoomed slice: chord buttons above, the fan below. */
+.wedge-stage {
+  justify-content: center;
+  gap: clamp(14px, 3vh, 26px);
+  padding-bottom: clamp(24px, 4vh, 40px);
+}
+.token-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+.token {
+  min-width: 62px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 0.5px solid var(--line-strong);
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 500;
+  transition:
+    transform 0.1s ease,
+    background 0.15s ease,
+    border-color 0.15s ease,
+    opacity 0.15s ease;
+}
+.token:active {
+  transform: scale(0.95);
+}
+.token.sel {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-fill);
+}
+.token.spent {
+  opacity: 0.22;
+  border-style: dashed;
+}
+/* Bleed past the app's side padding — a 90°-wide fan is inherently wider
+   than it is tall, so width is the only thing that makes it bigger. */
+.wedge-wrap {
+  width: calc(100% + 36px);
+  margin: 0 -18px;
+}
+.wedge {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.wedge-seg {
+  stroke: var(--bg);
+  stroke-width: 1.4;
+  transition: fill 0.16s ease;
+}
+.wedge-major {
+  fill: var(--cof-major);
+}
+.wedge-minor {
+  fill: var(--cof-minor);
+}
+.wedge-dim {
+  fill: var(--cof-dim);
+}
+.wedge-seg.empty {
+  fill: var(--cof-gap);
+  stroke-dasharray: 3 3;
+  stroke: var(--line-strong);
+}
+/* Something is picked up — show where it can go. */
+.wedge-seg.armed {
+  fill: var(--accent-dim);
+  stroke: var(--accent-line);
+  stroke-dasharray: none;
+}
+.wedge-seg.ok {
+  fill: color-mix(in srgb, var(--correct) 26%, var(--cof-major));
+  stroke: var(--correct);
+  stroke-dasharray: none;
+}
+.wedge-seg.no {
+  fill: color-mix(in srgb, var(--wrong) 26%, var(--cof-major));
+  stroke: var(--wrong);
+  stroke-dasharray: none;
+}
+.wedge-seg.ghost {
+  opacity: 0.4;
+}
+.wedge-label {
+  font-family: var(--font-ui);
+  pointer-events: none;
+  user-select: none;
+}
+.wedge-token {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 500;
+  fill: var(--text);
+}
+.wedge-label.no .wedge-token {
+  fill: var(--wrong);
+}
+.wedge-guide {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  fill: var(--text-3);
+}

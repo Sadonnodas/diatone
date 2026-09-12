@@ -1,8 +1,9 @@
-// The chord wheel: three rings of twelve, in circle-of-fifths order.
+// The chord wheel: three rings of twelve, in circle-of-fifths order, laid out
+// like the printed one (Jim Fleser's Chord Wheel):
 //
-//   outer  — vii° of the major beneath it
-//   middle — the major key / I
-//   inner  — its relative minor / vi
+//   inner  — the major key / I
+//   middle — its relative minor / vi
+//   outer  — the vii° tab
 //
 // Nothing here is a second copy of the theory. Every label is read out of
 // chordData, which is the app's authoritative (and deliberately enharmonic)
@@ -11,11 +12,14 @@
 
 import { ALL_KEYS, chordData } from '../lib/chordData';
 import { DEGREE_KEYS } from '../lib/engine';
+import { rootPitchClass } from '../audio/harmony';
 
 export type Ring = 'dim' | 'major' | 'minor';
 
-/** Outside in — also the drawing order. */
-export const RING_ORDER: Ring[] = ['dim', 'major', 'minor'];
+/** Outside in — also the drawing order. Matches the printed Chord Wheel:
+    majors closest to the centre, their relative minors immediately outside,
+    and the diminished tabs on the rim. */
+export const RING_ORDER: Ring[] = ['dim', 'minor', 'major'];
 
 export const POSITIONS = 12;
 
@@ -105,55 +109,40 @@ export const segmentLabel = (slot: Slot): string => segmentSpellings(slot).join(
 
 // ── Settings ────────────────────────────────────────────────────────────────
 
-export type Scope = 'circle' | 'key';
-export type LabelMode = 'chords' | 'numerals';
+/** Two drills. Layout teaches the wheel; Wedge teaches a key's place on it. */
+export type Drill = 'layout' | 'wedge';
+
+/** What the wedge drill hands you to place. */
+export type WedgePlace = 'chords' | 'numerals';
 
 export interface CircleSettings {
-  scope: Scope;
-  /** What the prompt names — numerals only mean something inside a key. */
-  label: LabelMode;
-  /** Which rings can be blanked, in whole-circle scope. */
-  rings: Record<Ring, boolean>;
-  /** Which degrees can be blanked, in key scope. */
-  degrees: Record<string, boolean>;
-  /** How many gaps at once. 0 means every eligible segment. */
+  drill: Drill;
+  /** Layout drill: which rings can be blanked. */
+  rings: { major: boolean; minor: boolean };
+  /** Layout drill: how many blanks at once. */
   gaps: number;
-  /** Turn the wheel so the asked key sits at the top. */
-  keyAtTop: boolean;
+  /** Wedge drill: place chord buttons, or numeral buttons. */
+  place: WedgePlace;
+  /** Wedge drill: print each slot's numeral as a guide. */
+  guide: boolean;
+  /** Wedge drill: which keys come up. */
+  keys: string[];
   autoAdvance: boolean;
   playback: boolean;
 }
 
-export const GAP_CHOICES = [2, 4, 0];
+export const GAP_CHOICES = [1, 2, 4];
 
 export const defaultCircleSettings: CircleSettings = {
-  scope: 'circle',
-  label: 'chords',
-  rings: { major: true, minor: true, dim: false },
-  degrees: Object.fromEntries(DEGREE_KEYS.map((d) => [d, true])),
-  gaps: 4,
-  keyAtTop: false,
+  drill: 'layout',
+  rings: { major: true, minor: false },
+  gaps: 2,
+  place: 'chords',
+  guide: true,
+  keys: [...ALL_KEYS],
   autoAdvance: true,
   playback: true,
 };
-
-// ── Questions ───────────────────────────────────────────────────────────────
-
-export interface CircleQuestion {
-  scope: Scope;
-  /** Key scope only: the spoke being asked about. */
-  keyPos: number | null;
-  key: string | null;
-  /** The segments left empty. */
-  blanks: Slot[];
-  /** slotKey → what the prompt shows when it's that segment's turn. */
-  labels: Record<string, string>;
-  /** The order they're asked in. */
-  queue: string[];
-  /** Positions the wheel is turned by, so the asked key can sit on top. */
-  rotate: number;
-  error?: string;
-}
 
 const shuffle = <T,>(items: T[], rand: () => number): T[] => {
   const out = [...items];
@@ -164,68 +153,96 @@ const shuffle = <T,>(items: T[], rand: () => number): T[] => {
   return out;
 };
 
-/**
- * A gap is only a question if there's more than one place it could go — with a
- * single hole you'd just tap the only hole. Two is the floor.
- */
-export const MIN_GAPS = 2;
+// ── Drill 1: the layout of the wheel ────────────────────────────────────────
 
-export function generateCircle(
+/**
+ * The root of a segment's chord, without its quality — 'Am' → 'A'. The ring
+ * says whether it's major or minor, so naming a segment only ever means
+ * naming its root.
+ */
+export const segmentRoot = (slot: Slot): string =>
+  ringChord(slot.ring, slot.pos).replace(/(m|dim)$/, '');
+
+export interface LayoutQuestion {
+  /** Segments left empty, in the order they're asked. */
+  blanks: Slot[];
+  error?: string;
+}
+
+export function generateLayout(
   s: CircleSettings,
   rand: () => number = Math.random,
-): CircleQuestion {
-  const blank = (error: string): CircleQuestion => ({
-    scope: s.scope,
-    keyPos: null,
-    key: null,
-    blanks: [],
-    labels: {},
-    queue: [],
-    rotate: 0,
-    error,
-  });
+): LayoutQuestion {
+  const rings: Ring[] = [];
+  if (s.rings.major) rings.push('major');
+  if (s.rings.minor) rings.push('minor');
+  if (rings.length === 0) return { blanks: [], error: 'Turn on the major ring, the minor ring, or both.' };
 
-  let candidates: { slot: Slot; label: string }[];
-  let keyPos: number | null = null;
+  const all = rings.flatMap((ring) =>
+    Array.from({ length: POSITIONS }, (_, pos) => ({ ring, pos }) as Slot),
+  );
+  return { blanks: shuffle(all, rand).slice(0, Math.max(1, Math.min(s.gaps, all.length))) };
+}
 
-  if (s.scope === 'key') {
-    keyPos = Math.floor(rand() * POSITIONS);
-    candidates = wedgeSlots(keyPos)
-      .filter((w) => s.degrees[w.degree])
-      .map((w) => ({
-        slot: w.slot,
-        // Chords are named the way *this key* spells them — ask for A#m in F#
-        // major, not the Bbm its segment happens to be printed with.
-        label: s.label === 'numerals' ? w.degree : keyChord(keyPos as number, w.degree),
-      }));
-    if (candidates.length < MIN_GAPS) return blank('Turn on at least two degrees.');
-  } else {
-    const rings = RING_ORDER.filter((r) => s.rings[r]);
-    if (rings.length === 0) return blank('Turn on at least one ring.');
-    candidates = rings.flatMap((ring) =>
-      Array.from({ length: POSITIONS }, (_, pos) => ({
-        slot: { ring, pos },
-        // Numerals need a key to be relative to, so whole-circle always names
-        // the chord itself.
-        label: ringChord(ring, pos),
-      })),
-    );
+/**
+ * Is `typed` the right name for this segment? Compared by pitch, not spelling:
+ * the wheel prints both sides of the enharmonic seam (F#/Gb), and either is
+ * the same place on it.
+ */
+export function layoutAnswerMatches(typed: string, slot: Slot): boolean {
+  const want = rootPitchClass(segmentRoot(slot));
+  const got = rootPitchClass(typed);
+  return want !== null && got !== null && want === got;
+}
+
+// ── Drill 2: one key's wedge ────────────────────────────────────────────────
+
+export interface WedgeSlot {
+  degree: string;
+  slot: Slot;
+  /** The chord, spelled the way this key spells it. */
+  chord: string;
+  /** Offset from the key's spoke: -1, 0 or +1. */
+  offset: number;
+}
+
+export interface WedgeQuestion {
+  key: string;
+  keyPos: number;
+  slots: WedgeSlot[];
+  /** The buttons, shuffled so their order can't give the answer away. */
+  tokens: string[];
+  error?: string;
+}
+
+/** What goes in a slot, given what the player is placing. */
+export const wedgeToken = (w: WedgeSlot, place: WedgePlace): string =>
+  place === 'numerals' ? w.degree : w.chord;
+
+export function generateWedge(
+  s: CircleSettings,
+  rand: () => number = Math.random,
+  avoidKey?: string,
+): WedgeQuestion {
+  const pool = s.keys.filter((k) => ALL_KEYS.includes(k));
+  if (pool.length === 0) {
+    return { key: '', keyPos: 0, slots: [], tokens: [], error: 'Pick at least one key.' };
   }
+  const fresh = pool.length > 1 ? pool.filter((k) => k !== avoidKey) : pool;
+  const key = fresh[Math.floor(rand() * fresh.length)];
+  const keyPos = ALL_KEYS.indexOf(key);
 
-  const wanted = s.gaps === 0 ? candidates.length : Math.max(MIN_GAPS, s.gaps);
-  const picked = shuffle(candidates, rand).slice(0, Math.min(wanted, candidates.length));
-  if (picked.length < MIN_GAPS) return blank('Not enough segments to make a question.');
-
-  const labels: Record<string, string> = {};
-  for (const c of picked) labels[slotKey(c.slot)] = c.label;
+  const slots: WedgeSlot[] = WEDGE.map((w) => ({
+    degree: w.degree,
+    slot: { ring: w.ring, pos: wrap(keyPos + w.offset) },
+    chord: keyChord(keyPos, w.degree),
+    offset: w.offset,
+  }));
 
   return {
-    scope: s.scope,
+    key,
     keyPos,
-    key: keyPos === null ? null : keyAt(keyPos),
-    blanks: picked.map((c) => c.slot),
-    labels,
-    queue: shuffle(Object.keys(labels), rand),
-    rotate: s.keyAtTop && keyPos !== null ? -keyPos : 0,
+    slots,
+    tokens: shuffle(slots.map((w) => wedgeToken(w, s.place)), rand),
   };
 }

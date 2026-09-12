@@ -8,14 +8,14 @@ import {
   type Slot,
 } from './circleData';
 
-// Geometry, outside in. The dim ring is deliberately thin — it carries one
-// chord per key and shouldn't compete with the majors for attention.
+// Geometry, matching the printed wheel: majors innermost, their relative
+// minors immediately outside, and the vii° tabs thin on the rim.
 const SIZE = 340;
 const C = SIZE / 2;
 const RADII: Record<Ring, [number, number]> = {
-  dim: [147, 168],
-  major: [99, 147],
-  minor: [56, 99],
+  dim: [152, 172],
+  minor: [107, 152],
+  major: [58, 107],
 };
 const STEP = 360 / POSITIONS;
 
@@ -44,24 +44,25 @@ export function prettyChord(name: string): string {
 export type Mark = 'ok' | 'no';
 
 export interface WheelProps {
-  /** Segments left empty for the player to fill. */
+  /** Segments left empty for the player to name. */
   blanks: Slot[];
   /** How each filled-in blank turned out. */
   marks: Record<string, Mark>;
-  /** The key's spoke, highlighted so you can see what you're working from. */
-  keyPos: number | null;
-  rotate: number;
-  onTap: (slot: Slot) => void;
-  disabled?: boolean;
+  /** The blank being asked for. Safe to show: naming it is the question. */
+  highlight?: string | null;
+  /** Names revealed on the blanks once they're answered. */
+  revealed?: Record<string, string>;
+  keyPos?: number | null;
+  rotate?: number;
 }
 
 export function CircleWheel({
   blanks,
   marks,
-  keyPos,
-  rotate,
-  onTap,
-  disabled,
+  highlight,
+  revealed,
+  keyPos = null,
+  rotate = 0,
 }: WheelProps) {
   const blankKeys = new Set(blanks.map(slotKey));
 
@@ -82,7 +83,8 @@ export function CircleWheel({
           const blank = blankKeys.has(key);
           const mark = marks[key];
           const open = blank && !mark;
-          const lines = segmentLabel(slot).split('/');
+          const shown = mark && revealed?.[key] ? revealed[key] : segmentLabel(slot);
+          const lines = shown.split('/');
           const [lx, ly] = pt((ri + ro) / 2, (pos + rotate) * STEP);
           const fontSize = ring === 'dim' ? 9.5 : lines.length > 1 ? 10 : 13;
 
@@ -91,12 +93,21 @@ export function CircleWheel({
               <path
                 d={segmentPath(ri, ro, a0, a1)}
                 data-slot={key}
-                // Every gap looks the same. Marking the one being asked for
-                // would just be the answer, drawn in a different colour.
-                className={`cof-seg cof-${ring}${open ? ' open' : ''}${mark ? ` ${mark}` : ''}`}
-                onClick={open && !disabled ? () => onTap(slot) : undefined}
-                style={{ cursor: open && !disabled ? 'pointer' : 'default' }}
+                className={`cof-seg cof-${ring}${open ? ' open' : ''}${mark ? ` ${mark}` : ''}${
+                  open && highlight === key ? ' asked' : ''
+                }`}
               />
+              {open && highlight === key && (
+                <text
+                  className="cof-ask-mark"
+                  x={lx}
+                  y={ly}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                >
+                  ?
+                </text>
+              )}
               {!open && (
                 <text
                   className={`cof-label${mark ? ` ${mark}` : ''}`}
