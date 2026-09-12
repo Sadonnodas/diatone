@@ -1,15 +1,10 @@
 import type { Settings } from '../lib/engine';
 import { DEGREE_KEYS } from '../lib/engine';
+import { MODES, transposeStranded } from '../lib/modes';
 import { KeyWheel } from './KeyWheel';
 import { ThemeSettingRow } from './ThemeSwitch';
 import { InstrumentRow } from './InstrumentRow';
 
-const MODES: { id: number; label: string }[] = [
-  { id: 1, label: 'Name Chord' },
-  { id: 4, label: 'Name Numeral' },
-  { id: 2, label: 'Progression' },
-  { id: 3, label: 'Transpose' },
-];
 
 // §9 — degree labels relabel in 7-chord mode.
 const scaleDegreeNames = {
@@ -95,7 +90,7 @@ export function SettingsSheet({
                 </button>
               ))}
             </div>
-            {settings.selectedModes.includes(3) && settings.selectedKeys.length < 2 && (
+            {transposeStranded(settings.selectedModes, settings.selectedKeys) && (
               <div className="desc" style={{ marginTop: 8 }}>
                 Transpose needs at least 2 keys — it's skipped until you add another.
               </div>

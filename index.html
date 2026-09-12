@@ -14,14 +14,17 @@
     <title>Diatone</title>
     <script>
       // Set the theme before first paint, so a daylight user never sees a flash
-      // of the night palette. Night unless the switch says otherwise — mirrors
-      // storedTheme() in src/theme.tsx.
+      // of the night palette. Night unless the stored choice says otherwise —
+      // mirrors storedPref()/resolve() in src/theme.tsx.
       (function () {
         var t = 'dark';
         try {
-          if (localStorage.getItem('diatone.theme') === 'light') t = 'light';
+          var p = localStorage.getItem('diatone.theme');
+          if (p === 'light') t = 'light';
+          else if (p === 'auto')
+            t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
         } catch (e) {
-          /* storage blocked — stay on night */
+          /* storage or matchMedia blocked — stay on night */
         }
         document.documentElement.dataset.theme = t;
         var m = document.querySelector('meta[name="theme-color"]');

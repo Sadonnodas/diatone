@@ -13,6 +13,7 @@ import { SettingsSheet } from './components/SettingsSheet';
 import { Review } from './components/Review';
 import { InfoModal } from './components/InfoModal';
 import { KeyWheel } from './components/KeyWheel';
+import { MODES, transposeStranded } from './lib/modes';
 import { haptic, TAP, CORRECT, WRONG } from './lib/haptics';
 import { armUnlock, stopAll } from './audio/engine';
 import { useInstrument } from './audio/instrument';
@@ -57,6 +58,7 @@ export default function NumeralsGame({ onBack }: { onBack: () => void }) {
   const [flash, setFlash] = useState<'' | 'flash-ok' | 'flash-no'>('');
   const [phase, setPhase] = useState<'setup' | 'play'>('setup');
   const [setupKeys, setSetupKeys] = useState<string[]>(state.settings.selectedKeys);
+  const [setupModes, setSetupModes] = useState<number[]>(state.settings.selectedModes);
   const advanceTimer = useRef<number | null>(null);
   // Bumped whenever playback starts. A phrase you tapped past mustn't advance
   // the question it no longer belongs to.
@@ -183,8 +185,10 @@ export default function NumeralsGame({ onBack }: { onBack: () => void }) {
   if (phase === 'setup') {
     const toggleSetupKey = (k: string) =>
       setSetupKeys((prev) => (prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k]));
+    const toggleSetupMode = (id: number) =>
+      setSetupModes((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
     const start = () => {
-      updateSettings({ ...state.settings, selectedKeys: setupKeys });
+      updateSettings({ ...state.settings, selectedKeys: setupKeys, selectedModes: setupModes });
       setPhase('play');
     };
     return (
@@ -205,12 +209,33 @@ export default function NumeralsGame({ onBack }: { onBack: () => void }) {
           <div className="reveal" style={{ animationDelay: '.08s' }}>
             <KeyWheel selected={setupKeys} onToggle={toggleSetupKey} />
           </div>
-          <div className="setup-note reveal" style={{ animationDelay: '.12s' }}>
-            You can change this anytime in settings.
+          <div className="setup-modes reveal" style={{ animationDelay: '.12s' }}>
+            <div className="setup-label">Which drills?</div>
+            <div className="chiprow setup-chiprow">
+              {MODES.map((m) => (
+                <button
+                  key={m.id}
+                  className={`tog${setupModes.includes(m.id) ? ' on' : ''}`}
+                  aria-pressed={setupModes.includes(m.id)}
+                  onClick={() => toggleSetupMode(m.id)}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="setup-note reveal" style={{ animationDelay: '.16s' }}>
+            {transposeStranded(setupModes, setupKeys)
+              ? 'Transpose needs at least 2 keys — it’s skipped until you add another.'
+              : 'You can change all of this anytime in settings.'}
           </div>
         </div>
         <div className="fret-actions">
-          <button className="bigbtn" onClick={start} disabled={setupKeys.length === 0}>
+          <button
+            className="bigbtn"
+            onClick={start}
+            disabled={setupKeys.length === 0 || setupModes.length === 0}
+          >
             Start
           </button>
         </div>

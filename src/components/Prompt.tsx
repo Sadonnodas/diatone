@@ -59,30 +59,36 @@ export function Prompt({
 
   return (
     <>
-      <Context keys={prompt.keys} />
-      <Glyphs text={prompt.content} className="hero" />
-
-      <div className="subarea">
-        {!feedback ? (
-          <Preview builder={builder} />
-        ) : (
-          <>
-            <Glyphs
-              text={userAnswer || '—'}
-              className={`answer-line ${feedback.correct ? 'ok' : 'no'}`}
-            />
-            {feedback.correct ? (
-              <div className="tick">✓</div>
-            ) : (
-              <div className="correct-line">
-                answer <span className="g">{renderJazz(feedback.correctAnswer, 'ca')}</span>
-              </div>
-            )}
-          </>
-        )}
+      {/* The question centres in the space above the answer band. Grouping it
+          means the reserved (and usually empty) answer boxes below can't push
+          it up the screen. */}
+      <div className="question-block">
+        <Context keys={prompt.keys} />
+        <Glyphs text={prompt.content} className="hero" />
       </div>
 
-      {hear}
+      <div className="answer-area">
+        <div className="subarea">
+          {!feedback ? (
+            <Preview builder={builder} />
+          ) : (
+            <>
+              <Glyphs
+                text={userAnswer || '—'}
+                className={`answer-line ${feedback.correct ? 'ok' : 'no'}`}
+              />
+              {feedback.correct ? (
+                <div className="tick">✓</div>
+              ) : (
+                <div className="correct-line">
+                  answer <span className="g">{renderJazz(feedback.correctAnswer, 'ca')}</span>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+        {hear}
+      </div>
 
       {feedback && !(feedback.correct && autoAdvance) && (
         <div className="next-hint">tap to continue →</div>

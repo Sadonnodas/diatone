@@ -320,6 +320,13 @@ button {
   letter-spacing: -0.01em;
   color: var(--text);
   transition: color 0.25s ease;
+  /* One numeral and a four-chord progression are wildly different type sizes;
+     reserving the taller of the two keeps the question in the same place as
+     you move between drills instead of jumping on every mode change. */
+  min-height: min(clamp(96px, 33vw, 176px), 17vh);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .hero.single {
   font-size: clamp(72px, 26vw, 128px);
@@ -869,7 +876,27 @@ button {
 /* Reserve room at the bottom of the play stage for the floating hint, so the
    centred answer never sits under it. */
 .play-stage {
-  padding-bottom: clamp(58px, 9.5vh, 74px);
+  /* The answer band is taken out of the flow and pinned above the keypad, so
+     the question centres against the whole stage. In the flow its reserved
+     height (usually showing nothing) sat in the centred column and rode the
+     question roughly half that reserve up the screen. The padding keeps the
+     hero clear of the band on short screens. */
+  padding-bottom: clamp(96px, 15vh, 132px);
+}
+.question-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.answer-area {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: clamp(44px, 6.5vh, 60px); /* clear of the tap-to-continue hint */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 /* "tap to continue" — a clear pill lifted off the keypad so it's obvious. */
@@ -944,6 +971,33 @@ button {
   color: var(--text-3);
   text-align: center;
   letter-spacing: 0.02em;
+  /* Two lines' worth, so swapping in the Transpose warning doesn't shove the
+     wheel up the screen. */
+  min-height: 2.6em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18px;
+}
+
+/* Drill picker on the setup screen — the space under the wheel. */
+.setup-modes {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+.setup-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.setup-chiprow {
+  justify-content: center;
+  padding: 0 14px;
 }
 
 /* ---- Info modal (warm-up explanation) ---- */

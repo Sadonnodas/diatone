@@ -1,4 +1,4 @@
-import { useTheme } from '../theme';
+import { useTheme, type ThemePref } from '../theme';
 
 function SunIcon() {
   return (
@@ -42,39 +42,66 @@ function MoonIcon() {
   );
 }
 
-// Corner control on the home screen — shows the palette you're in, tap to swap.
+// Half a moon, half a sun — the OS is deciding, so show both.
+function AutoIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M12 4a8 8 0 000 16z" fill="currentColor" />
+    </svg>
+  );
+}
+
+const LABEL: Record<ThemePref, string> = { dark: 'Night', light: 'Daylight', auto: 'Auto' };
+
+function PrefIcon({ pref, day }: { pref: ThemePref; day: boolean }) {
+  if (pref === 'auto') return <AutoIcon />;
+  return day ? <SunIcon /> : <MoonIcon />;
+}
+
+// Corner control on the home screen — shows what's driving the palette, tap to
+// move through night → daylight → auto.
 export function ThemeToggleButton({ className = '' }: { className?: string }) {
-  const { day, toggle } = useTheme();
+  const { pref, day, cycle } = useTheme();
   return (
     <button
       className={`theme-btn ${className}`}
-      role="switch"
-      aria-checked={day}
-      aria-label="Daylight mode"
-      onClick={toggle}
+      aria-label={`Palette: ${LABEL[pref]}. Tap to change.`}
+      onClick={cycle}
     >
-      {day ? <SunIcon /> : <MoonIcon />}
-      <span>{day ? 'Daylight' : 'Night'}</span>
+      <PrefIcon pref={pref} day={day} />
+      <span>{LABEL[pref]}</span>
     </button>
   );
 }
 
-// The same switch as a settings row, so you can flip it mid-drill.
+const CHOICES: ThemePref[] = ['dark', 'light', 'auto'];
+
+// The same choice as a settings row, so you can change it mid-drill.
 export function ThemeSettingRow() {
-  const { day, toggle } = useTheme();
+  const { pref, theme, set } = useTheme();
   return (
-    <div className="setting-row">
-      <div>
-        <div className="label">Daylight mode</div>
-        <div className="desc">High-contrast light palette for bright sun.</div>
+    <div>
+      <div className="group-label">Palette</div>
+      <div className="seg">
+        {CHOICES.map((c) => (
+          <button
+            key={c}
+            className={pref === c ? 'on' : ''}
+            aria-pressed={pref === c}
+            onClick={() => set(c)}
+          >
+            {LABEL[c]}
+          </button>
+        ))}
       </div>
-      <button
-        className={`switch${day ? ' on' : ''}`}
-        role="switch"
-        aria-checked={day}
-        aria-label="Daylight mode"
-        onClick={toggle}
-      />
+      <div className="desc" style={{ marginTop: 8 }}>
+        {pref === 'auto'
+          ? `Following your phone — ${theme === 'light' ? 'daylight' : 'night'} right now.`
+          : pref === 'light'
+            ? 'High-contrast light palette for bright sun.'
+            : 'The night palette, whatever your phone is set to.'}
+      </div>
     </div>
   );
 }
