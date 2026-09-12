@@ -1,11 +1,22 @@
 import type { PwaApi } from './pwa';
 import { ThemeToggleButton } from './components/ThemeSwitch';
 
-export type Screen = 'home' | 'numerals' | 'fretboard' | 'intervals' | 'warmup';
+export type Screen = 'home' | 'numerals' | 'fretboard' | 'intervals' | 'warmup' | 'circle';
 
 function formatBuild(iso: string): string {
   const d = new Date(iso);
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString();
+}
+
+// Two rings and a wedge — the circle drill at a glance.
+function CircleIcon() {
+  return (
+    <svg width="34" height="26" viewBox="0 0 34 26" fill="none" aria-hidden="true">
+      <circle cx="17" cy="13" r="11" stroke="currentColor" strokeWidth="1.5" opacity="0.55" />
+      <circle cx="17" cy="13" r="5.5" stroke="currentColor" strokeWidth="1.3" opacity="0.4" />
+      <path d="M17 2a11 11 0 019.5 5.5L17 13z" fill="currentColor" opacity="0.85" />
+    </svg>
+  );
 }
 
 function RectStackIcon() {
@@ -121,6 +132,21 @@ export default function Home({ onPick, pwa }: { onPick: (g: Screen) => void; pwa
         <button
           className="gamecard reveal"
           style={{ animationDelay: '.28s' }}
+          onClick={() => onPick('circle')}
+        >
+          <div className="gc-icon">
+            <CircleIcon />
+          </div>
+          <div className="gc-text">
+            <div className="gc-title">Circle</div>
+            <div className="gc-desc">Fill the gaps in the circle of fifths</div>
+          </div>
+          <div className="gc-arrow">→</div>
+        </button>
+
+        <button
+          className="gamecard reveal"
+          style={{ animationDelay: '.34s' }}
           onClick={() => onPick('warmup')}
         >
           <div className="gc-icon">
@@ -134,7 +160,7 @@ export default function Home({ onPick, pwa }: { onPick: (g: Screen) => void; pwa
         </button>
       </div>
 
-      <div className="home-foot reveal" style={{ animationDelay: '.34s' }}>
+      <div className="home-foot reveal" style={{ animationDelay: '.4s' }}>
         {pwa.needRefresh ? (
           <button className="update-link on" onClick={pwa.updateNow} disabled={pwa.updating}>
             {pwa.updating ? 'Updating…' : 'Update to latest'}

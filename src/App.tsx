@@ -4,6 +4,7 @@ import NumeralsGame from './NumeralsGame';
 import FretboardGame from './fretboard/FretboardGame';
 import IntervalGame from './fretboard/IntervalGame';
 import WarmupGame from './fretboard/WarmupGame';
+import CircleGame from './circle/CircleGame';
 import { usePwa } from './pwa';
 
 export default function App() {
@@ -33,6 +34,7 @@ export default function App() {
       {screen === 'fretboard' && <FretboardGame onBack={() => setScreen('home')} />}
       {screen === 'intervals' && <IntervalGame onBack={() => setScreen('home')} />}
       {screen === 'warmup' && <WarmupGame onBack={() => setScreen('home')} />}
+      {screen === 'circle' && <CircleGame onBack={() => setScreen('home')} />}
     </>
   );
 }

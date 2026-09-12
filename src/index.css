@@ -1685,3 +1685,147 @@ button {
     transform: none;
   }
 }
+
+/* ── Circle of fifths ──────────────────────────────────────────────────────
+   Three rings of twelve. Majors carry the gold/blue quality colours the
+   warm-up already uses, so "major ring / minor ring" reads without a legend. */
+.cof-stage {
+  justify-content: center;
+  gap: clamp(10px, 2.5vh, 20px);
+  padding-bottom: clamp(28px, 5vh, 44px);
+}
+.wheel-stage {
+  position: relative;
+  width: min(100%, 380px);
+  aspect-ratio: 1;
+}
+.cof {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.cof-seg {
+  fill: var(--surface-2);
+  stroke: var(--bg);
+  stroke-width: 1.5;
+  transition:
+    fill 0.16s ease,
+    stroke 0.16s ease;
+}
+.cof-major {
+  fill: color-mix(in srgb, var(--major) 17%, var(--surface-2));
+}
+.cof-minor {
+  fill: color-mix(in srgb, var(--minor) 17%, var(--surface-2));
+}
+.cof-dim {
+  fill: var(--surface-1);
+}
+/* An empty segment: the thing you can actually tap. */
+.cof-seg.open {
+  fill: var(--surface-1);
+  stroke: var(--line-strong);
+  stroke-dasharray: 3 3;
+}
+.cof-seg.open.live {
+  fill: var(--accent-dim);
+  stroke: var(--accent-line);
+  stroke-dasharray: none;
+}
+.cof-seg.open:active {
+  fill: var(--accent-dim);
+}
+.cof-seg.ok {
+  fill: color-mix(in srgb, var(--correct) 30%, var(--surface-2));
+  stroke: var(--correct);
+  stroke-dasharray: none;
+}
+.cof-seg.no {
+  fill: color-mix(in srgb, var(--wrong) 30%, var(--surface-2));
+  stroke: var(--wrong);
+  stroke-dasharray: none;
+}
+.cof-label {
+  fill: var(--text-2);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  pointer-events: none;
+  user-select: none;
+}
+.cof-label.ok {
+  fill: var(--text);
+}
+.cof-label.no {
+  fill: var(--wrong);
+}
+/* The key's wedge, outlined over the top — the shape worth learning. */
+.cof-wedge {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+/* The hub: what to place next. */
+.wheel-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 31%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 0.5px solid var(--line-strong);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  text-align: center;
+}
+.cof-ask {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.cof-target {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(22px, 7.5vw, 30px);
+  line-height: 1;
+  color: var(--accent);
+}
+.cof-done {
+  font-size: 30px;
+  color: var(--correct);
+}
+
+/* One pip per gap, so you can see how much of the question is left. */
+.cof-progress {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+  min-height: 10px;
+}
+.dotp {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--surface-3);
+}
+.dotp.live {
+  background: var(--accent);
+}
+.dotp.ok {
+  background: var(--correct);
+}
+.dotp.no {
+  background: var(--wrong);
+}

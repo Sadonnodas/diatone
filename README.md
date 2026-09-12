@@ -10,7 +10,13 @@ The name comes from *diatonic* harmony — which is the whole app.
 
 ## Features
 
-- **Four modes** — Name Chord, Name Numeral, Progression, Transpose.
+- **Five drills** — Numerals (Name Chord, Name Numeral, Progression, Transpose),
+  Fretboard, Intervals, Circle of fifths, Warm-up.
+- **Circle of fifths** — the chord wheel with majors on the middle ring, their
+  relative minors inside and each key's vii° outside. Segments are blanked and
+  you tap where a chord (or numeral) belongs, so you learn the *shape*: a key's
+  seven chords are one wedge, IV one step anticlockwise and V one step
+  clockwise.
 - **Chromatic tap-to-build input** — compose any answer from ~13 buttons; the OS
   keyboard never opens. Roots are always fully chromatic, so you produce the
   correct enharmonic spelling from recall (E♯ in F♯, C♭ in G♭, …).
