@@ -54,12 +54,23 @@
   --region-b-fill: rgba(94, 200, 255, 0.15);
   --region-b-line: rgba(94, 200, 255, 0.65);
   --scrim: rgba(0, 0, 0, 0.55);
+  /* Circle-of-fifths rings. Separated by value, not hue: the labels already
+     say which ring is which, and tinting three concentric bands turns the
+     wheel pastel. Brightest where you read most (the majors), receding in
+     both directions; a gap reads as a hole punched out of the ground. */
+  --cof-major: #212836;
+  --cof-minor: #181e28;
+  --cof-dim: #11151c;
+  --cof-gap: #0b0e13;
   --flash-ok-bg: #0c1512;
   --flash-no-bg: #150d0f;
   --shadow-modal: 0 16px 50px rgba(0, 0, 0, 0.5);
   --shadow-banner: 0 8px 30px rgba(0, 0, 0, 0.45);
   --grain: 0.04;
   --radius: 14px;
+  /* One key's height, shared so the keypad's reserved height can be derived
+     from it rather than guessed. */
+  --key-h: clamp(58px, 8.2vh, 80px);
   --font-display: 'Fraunces', Georgia, serif;
   --font-ui: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
 }
@@ -95,6 +106,10 @@
   --region-b-fill: rgba(8, 118, 186, 0.12);
   --region-b-line: rgba(8, 118, 186, 0.65);
   --scrim: rgba(12, 17, 26, 0.4);
+  --cof-major: #ffffff;
+  --cof-minor: #eef2f8;
+  --cof-dim: #e2e8f1;
+  --cof-gap: #d2d9e4;
   --flash-ok-bg: #d6f3e4;
   --flash-no-bg: #fbdfe2;
   --shadow-modal: 0 16px 44px rgba(16, 22, 34, 0.18);
@@ -209,6 +224,14 @@ button {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--text-3);
+}
+/* The palette button makes six controls in the Numerals bar, which is one too
+   many for a narrow phone. The word "streak" is the most expendable thing
+   there — the dot and the number still say what it is. */
+@media (max-width: 389px) {
+  .streak-word {
+    display: none;
+  }
 }
 .dot {
   width: 6px;
@@ -422,10 +445,20 @@ button {
 .pad {
   display: flex;
   flex-direction: column;
+  justify-content: flex-end;
   gap: 10px;
+  /* Reserve the tallest keypad — the chord one: three rows, plus two captions
+     (12.5px at 1.2 = 15px each) and the four 10px gaps between them = 70px. Name Numeral needs only a caption and a row,
+     and without this reserve its shorter keypad gave the stage ~180px more to
+     centre in, so the question jumped up the screen every time the mode
+     changed. Keys stay bottom-aligned in the reserved space, in thumb reach. */
+  min-height: calc(3 * var(--key-h) + 70px);
 }
 .cap {
   font-size: 12.5px;
+  /* Pinned so .pad's reserved height below is exact arithmetic rather than a
+     number tuned to whatever line-height the font happens to default to. */
+  line-height: 1.2;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--text-3);
@@ -438,7 +471,7 @@ button {
 .key {
   flex: 1;
   min-width: 0;
-  height: clamp(58px, 8.2vh, 80px);
+  height: var(--key-h);
   border: 0.5px solid var(--line-strong);
   background: var(--surface-2);
   border-radius: var(--radius);
@@ -1711,7 +1744,7 @@ button {
   gap: clamp(10px, 2.5vh, 20px);
   padding-bottom: clamp(28px, 5vh, 44px);
 }
-.wheel-stage {
+.cof-wheel {
   position: relative;
   width: min(100%, 380px);
   aspect-ratio: 1;
@@ -1722,46 +1755,43 @@ button {
   display: block;
 }
 .cof-seg {
-  fill: var(--surface-2);
+  fill: var(--cof-minor);
   stroke: var(--bg);
-  stroke-width: 1.5;
+  stroke-width: 1.2;
   transition:
     fill 0.16s ease,
     stroke 0.16s ease;
 }
 .cof-major {
-  fill: color-mix(in srgb, var(--major) 17%, var(--surface-2));
+  fill: var(--cof-major);
 }
 .cof-minor {
-  fill: color-mix(in srgb, var(--minor) 17%, var(--surface-2));
+  fill: var(--cof-minor);
 }
 .cof-dim {
-  fill: var(--surface-1);
+  fill: var(--cof-dim);
 }
-/* An empty segment: the thing you can actually tap. */
+/* An empty segment: the thing you can actually tap. Every gap looks alike —
+   singling out the one being asked for would just be the answer. */
 .cof-seg.open {
-  fill: var(--surface-1);
+  fill: var(--cof-gap);
   stroke: var(--line-strong);
   stroke-dasharray: 3 3;
-}
-.cof-seg.open.live {
-  fill: var(--accent-dim);
-  stroke: var(--accent-line);
-  stroke-dasharray: none;
 }
 .cof-seg.open:active {
   fill: var(--accent-dim);
 }
 .cof-seg.ok {
-  fill: color-mix(in srgb, var(--correct) 30%, var(--surface-2));
+  fill: color-mix(in srgb, var(--correct) 26%, var(--cof-major));
   stroke: var(--correct);
   stroke-dasharray: none;
 }
 .cof-seg.no {
-  fill: color-mix(in srgb, var(--wrong) 30%, var(--surface-2));
+  fill: color-mix(in srgb, var(--wrong) 26%, var(--cof-major));
   stroke: var(--wrong);
   stroke-dasharray: none;
 }
+/* Label weight follows the same hierarchy as the fills. */
 .cof-label {
   fill: var(--text-2);
   font-family: var(--font-ui);
@@ -1769,6 +1799,15 @@ button {
   letter-spacing: 0.01em;
   pointer-events: none;
   user-select: none;
+}
+text.cof-label {
+  fill: var(--text-2);
+}
+.cof-major + text.cof-label {
+  fill: var(--text);
+}
+.cof-dim + text.cof-label {
+  fill: var(--text-3);
 }
 .cof-label.ok {
   fill: var(--text);
@@ -1787,7 +1826,7 @@ button {
 }
 
 /* The hub: what to place next. */
-.wheel-center {
+.cof-hub {
   position: absolute;
   left: 50%;
   top: 50%;

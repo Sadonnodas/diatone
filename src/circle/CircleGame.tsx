@@ -17,6 +17,7 @@ import { armUnlock, stopAll } from '../audio/engine';
 import { useInstrument } from '../audio/instrument';
 import { playChord, prefetchChords } from '../audio/phrases';
 import { chordToMidi } from '../audio/harmony';
+import { ThemeIconButton } from '../components/ThemeSwitch';
 
 const STORAGE_KEY = 'diatone.circle.v1';
 const ADVANCE_MS = 800;
@@ -154,6 +155,7 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
           <button className="icon-btn" aria-label="How it works" onClick={() => setInfoOpen(true)}>
             ?
           </button>
+          <ThemeIconButton />
           <button className="icon-btn" aria-label="Settings" onClick={() => setSettingsOpen(true)}>
             ⚙
           </button>
@@ -183,17 +185,16 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
               )}
             </div>
 
-            <div className="wheel-stage reveal" style={{ animationDelay: '.08s' }}>
+            <div className="cof-wheel reveal" style={{ animationDelay: '.08s' }}>
               <CircleWheel
                 blanks={question.blanks}
                 marks={marks}
-                activeKeys={currentKey ? [currentKey] : []}
                 keyPos={question.keyPos}
                 rotate={question.rotate}
                 onTap={tap}
                 disabled={done}
               />
-              <div className="wheel-center">
+              <div className="cof-hub">
                 {done ? (
                   <div className="cof-done">✓</div>
                 ) : (

@@ -48,3 +48,23 @@ export const display7th = (numeral: string, use7thChords: boolean): string => {
 // §11 — used when hideQuality is ON: strip quality, bare degree only (I…VII).
 export const neutralizeNumeral = (numeral: string): string =>
   numeral.toUpperCase().replace('°', '').replace('ø', '');
+
+// The seven roman numerals, lowercased, longest-first so 'iv' isn't read as
+// 'i' and 'vii' isn't read as 'v'.
+const ROMAN_ORDER = ['iv', 'iii', 'ii', 'i', 'vii', 'vi', 'v'];
+const ROMAN_INDEX: Record<string, number> = {
+  i: 0, ii: 1, iii: 2, iv: 3, v: 4, vi: 5, vii: 6,
+};
+
+/**
+ * Which degree a numeral names, ignoring whatever quality is hung off it —
+ * 'V7', 'iiø7' and 'IV' all reduce to a degree index. Returns -1 for anything
+ * that isn't a numeral (a chord name, say).
+ */
+export function numeralDegreeIndex(numeral: string): number {
+  const text = numeral.toLowerCase().replace(/[^a-z]/g, '');
+  for (const roman of ROMAN_ORDER) {
+    if (text.startsWith(roman)) return ROMAN_INDEX[roman];
+  }
+  return -1;
+}

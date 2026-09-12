@@ -18,7 +18,10 @@ import { haptic, TAP, CORRECT, WRONG } from './lib/haptics';
 import { armUnlock, stopAll } from './audio/engine';
 import { useInstrument } from './audio/instrument';
 import { playChord, playProgression, prefetchChords } from './audio/phrases';
-import { progressionToMidi, tonicTriad } from './audio/harmony';
+import { chordToMidi, progressionToMidi, tonicTriad } from './audio/harmony';
+import { numeralDegreeIndex } from './lib/jazz';
+import { chordData } from './lib/chordData';
+import { ThemeIconButton } from './components/ThemeSwitch';
 
 const STORAGE_KEY = 'diatone.settings.v1';
 const CORRECT_ADVANCE_MS = 700; // snappy when drilling
@@ -80,18 +83,41 @@ export default function NumeralsGame({ onBack }: { onBack: () => void }) {
     }
   }, [state.settings]);
 
+  // Chords for anything the drill can show: a chord name, or a roman numeral
+  // resolved against its key. Name Numeral's answers *are* numerals, so
+  // without this that whole mode is silent — and silent playback used to
+  // collapse the pause after a correct answer to nothing.
+  const use7ths = state.settings.use7thChords;
+  const soundable = useCallback(
+    (text: string, key: string): number[][] | null => {
+      const direct = progressionToMidi(text);
+      if (direct) return direct;
+      const form = chordData[key]?.[use7ths ? 'sevenths' : 'triads'];
+      if (!form) return null;
+      const out: number[][] = [];
+      for (const part of text.split(' ').filter(Boolean)) {
+        const degree = numeralDegreeIndex(part);
+        const notes = degree < 0 ? null : chordToMidi(form.chords[degree]);
+        if (!notes) return null;
+        out.push(notes);
+      }
+      return out.length ? out : null;
+    },
+    [use7ths],
+  );
+
   // Sound an answer string. A single chord gets the key's tonic underneath
   // first — a numeral only means something against a home chord. A progression
   // establishes its own key, so it plays alone.
   const playAnswer = useCallback(
     (text: string, key: string): Promise<number> => {
-      const chords = progressionToMidi(text);
+      const chords = soundable(text, key);
       if (!chords) return Promise.resolve(0);
       return chords.length === 1
         ? playChord(instrument, chords[0], tonicTriad(key))
         : playProgression(instrument, chords);
     },
-    [instrument],
+    [instrument, soundable],
   );
 
   // Warm this question's samples (answer + tonic) before it's answered.
@@ -99,11 +125,11 @@ export default function NumeralsGame({ onBack }: { onBack: () => void }) {
   const answerKey = state.seed?.key ?? '';
   useEffect(() => {
     if (!state.settings.playback || !answerText) return;
-    const chords = progressionToMidi(answerText);
+    const chords = soundable(answerText, answerKey);
     if (!chords) return;
     const tonic = chords.length === 1 ? tonicTriad(answerKey) : null;
     prefetchChords(instrument, tonic ? [...chords, tonic] : chords);
-  }, [answerText, answerKey, instrument, state.settings.playback]);
+  }, [answerText, answerKey, instrument, state.settings.playback, soundable]);
 
   const builder = useAnswerBuilder({
     question,
@@ -135,8 +161,13 @@ export default function NumeralsGame({ onBack }: { onBack: () => void }) {
     if (state.settings.playback) {
       // Move on only once the chord has finished — never cut it off mid-ring.
       const mine = ++playToken.current;
-      void playAnswer(state.feedback.correctAnswer, answerKey).then(() => {
-        if (advanceAfter && playToken.current === mine) dispatch({ type: 'NEXT' });
+      void playAnswer(state.feedback.correctAnswer, answerKey).then((seconds) => {
+        if (!advanceAfter || playToken.current !== mine) return;
+        // Nothing sounded (samples missing, or an answer we can't voice): fall
+        // back to the normal pause instead of advancing the instant the empty
+        // promise resolves, which would flick the verdict off screen.
+        if (seconds > 0) dispatch({ type: 'NEXT' });
+        else advanceTimer.current = window.setTimeout(() => dispatch({ type: 'NEXT' }), CORRECT_ADVANCE_MS);
       });
     } else if (advanceAfter) {
       advanceTimer.current = window.setTimeout(() => dispatch({ type: 'NEXT' }), CORRECT_ADVANCE_MS);
@@ -288,6 +319,7 @@ export default function NumeralsGame({ onBack }: { onBack: () => void }) {
           >
             ↺
           </button>
+          <ThemeIconButton />
           <button className="icon-btn" aria-label="Settings" onClick={() => setSettingsOpen(true)}>
             ⚙
           </button>
@@ -314,7 +346,7 @@ export default function NumeralsGame({ onBack }: { onBack: () => void }) {
                       <>
                         {/* Only offered when what you built is actually playable —
                             a half-finished progression isn't. */}
-                        {progressionToMidi(state.userAnswer) && (
+                        {soundable(state.userAnswer, answerKey) && (
                           <button className="hear no" onClick={hearYours}>
                             ▶ yours
                           </button>

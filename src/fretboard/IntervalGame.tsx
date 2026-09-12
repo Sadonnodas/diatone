@@ -17,6 +17,7 @@ import { haptic, TAP, CORRECT, WRONG } from '../lib/haptics';
 import { armUnlock, stopAll } from '../audio/engine';
 import { useInstrument } from '../audio/instrument';
 import { playFrettedInterval, playIntervalClass, prefetchFretted } from '../audio/phrases';
+import { ThemeIconButton } from '../components/ThemeSwitch';
 
 const STORAGE_KEY = 'diatone.intervals.v1';
 const ADVANCE_MS = 900;
@@ -228,6 +229,7 @@ export default function IntervalGame({ onBack }: { onBack: () => void }) {
           >
             ↺
           </button>
+          <ThemeIconButton />
           <button className="icon-btn" aria-label="Settings" onClick={() => setSettingsOpen(true)}>
             ⚙
           </button>

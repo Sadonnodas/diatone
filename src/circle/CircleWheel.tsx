@@ -48,8 +48,6 @@ export interface WheelProps {
   blanks: Slot[];
   /** How each filled-in blank turned out. */
   marks: Record<string, Mark>;
-  /** The gap being asked for right now — only used to nudge attention. */
-  activeKeys: string[];
   /** The key's spoke, highlighted so you can see what you're working from. */
   keyPos: number | null;
   rotate: number;
@@ -60,7 +58,6 @@ export interface WheelProps {
 export function CircleWheel({
   blanks,
   marks,
-  activeKeys,
   keyPos,
   rotate,
   onTap,
@@ -94,9 +91,9 @@ export function CircleWheel({
               <path
                 d={segmentPath(ri, ro, a0, a1)}
                 data-slot={key}
-                className={`cof-seg cof-${ring}${open ? ' open' : ''}${
-                  mark ? ` ${mark}` : ''
-                }${open && activeKeys.includes(key) ? ' live' : ''}`}
+                // Every gap looks the same. Marking the one being asked for
+                // would just be the answer, drawn in a different colour.
+                className={`cof-seg cof-${ring}${open ? ' open' : ''}${mark ? ` ${mark}` : ''}`}
                 onClick={open && !disabled ? () => onTap(slot) : undefined}
                 style={{ cursor: open && !disabled ? 'pointer' : 'default' }}
               />

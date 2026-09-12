@@ -75,33 +75,38 @@ export function ThemeToggleButton({ className = '' }: { className?: string }) {
   );
 }
 
-const CHOICES: ThemePref[] = ['dark', 'light', 'auto'];
-
-// The same choice as a settings row, so you can change it mid-drill.
-export function ThemeSettingRow() {
-  const { pref, theme, set } = useTheme();
+/** Icon-only, for a game's top bar — same cycle as the home screen button. */
+export function ThemeIconButton() {
+  const { pref, day, cycle } = useTheme();
   return (
-    <div>
-      <div className="group-label">Palette</div>
-      <div className="seg">
-        {CHOICES.map((c) => (
-          <button
-            key={c}
-            className={pref === c ? 'on' : ''}
-            aria-pressed={pref === c}
-            onClick={() => set(c)}
-          >
-            {LABEL[c]}
-          </button>
-        ))}
+    <button
+      className="icon-btn"
+      aria-label={`Palette: ${LABEL[pref]}. Tap to change.`}
+      title={LABEL[pref]}
+      onClick={cycle}
+    >
+      <PrefIcon pref={pref} day={day} />
+    </button>
+  );
+}
+
+// The same control as the home screen — one button, cycling night → daylight
+// → auto — so the palette is changed the same way everywhere.
+export function ThemeSettingRow() {
+  const { pref, theme } = useTheme();
+  return (
+    <div className="setting-row">
+      <div>
+        <div className="label">Palette</div>
+        <div className="desc">
+          {pref === 'auto'
+            ? `Following your phone — ${theme === 'light' ? 'daylight' : 'night'} right now.`
+            : pref === 'light'
+              ? 'High-contrast light palette for bright sun.'
+              : 'The night palette, whatever your phone is set to.'}
+        </div>
       </div>
-      <div className="desc" style={{ marginTop: 8 }}>
-        {pref === 'auto'
-          ? `Following your phone — ${theme === 'light' ? 'daylight' : 'night'} right now.`
-          : pref === 'light'
-            ? 'High-contrast light palette for bright sun.'
-            : 'The night palette, whatever your phone is set to.'}
-      </div>
+      <ThemeToggleButton />
     </div>
   );
 }

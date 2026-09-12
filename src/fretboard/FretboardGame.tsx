@@ -7,6 +7,7 @@ import { SCALE_TYPE_INFO, degreeGlyphs, degreeOrdinal, degreeIsRoot } from './sc
 import { buildFretNotes } from './fretDisplay';
 import { renderJazz } from '../components/ChordDisplay';
 import { haptic, TAP, CORRECT, WRONG } from '../lib/haptics';
+import { ThemeIconButton } from '../components/ThemeSwitch';
 
 const STORAGE_KEY = 'diatone.fret.v1';
 
@@ -108,6 +109,7 @@ export default function FretboardGame({ onBack }: { onBack: () => void }) {
           >
             ↺
           </button>
+          <ThemeIconButton />
           <button className="icon-btn" aria-label="Settings" onClick={() => setSettingsOpen(true)}>
             ⚙
           </button>

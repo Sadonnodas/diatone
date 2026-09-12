@@ -12,6 +12,7 @@ import { renderJazz } from '../components/ChordDisplay';
 import { WarmupInfo } from './WarmupInfo';
 import { ThemeSettingRow } from '../components/ThemeSwitch';
 import { haptic, TAP, CORRECT, WRONG } from '../lib/haptics';
+import { ThemeIconButton } from '../components/ThemeSwitch';
 
 const STORAGE_KEY = 'diatone.warmup.v1';
 type Quality = 'major' | 'minor';
@@ -217,6 +218,7 @@ export default function WarmupGame({ onBack }: { onBack: () => void }) {
           >
             ↺
           </button>
+          <ThemeIconButton />
           <button className="icon-btn" aria-label="Settings" onClick={() => setSettingsOpen(true)}>
             ⚙
           </button>
