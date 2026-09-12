@@ -1219,11 +1219,26 @@ button {
 
 /* ---- Home / launcher ---- */
 .home {
-  justify-content: center;
-  gap: clamp(28px, 7vh, 56px);
+  /* Centred while it fits, scrolled when it doesn't. `justify-content: center`
+     alone can't do that: once the content is taller than the screen it centres
+     the overflow too, pushing the title up under the status bar where no
+     amount of scrolling reaches it. Auto margins on the first and last child
+     share out spare room the same way, but collapse to zero when there isn't
+     any — so a fifth card starts scrolling instead of eating the header. */
+  justify-content: flex-start;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  gap: clamp(20px, 4.5vh, 44px);
+}
+.home-head {
+  margin-top: auto;
+}
+.home-foot {
+  margin-bottom: auto;
 }
 .home-head {
   text-align: center;
+  flex-shrink: 0;
 }
 .home-head .mark {
   font-size: 40px;
@@ -1238,14 +1253,15 @@ button {
 .home-cards {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
+  flex-shrink: 0;
 }
 .gamecard {
   display: flex;
   align-items: center;
   gap: 16px;
   text-align: left;
-  padding: 18px 18px;
+  padding: clamp(14px, 2vh, 18px) 18px;
   border-radius: var(--radius);
   border: 0.5px solid var(--line-strong);
   background: var(--surface-1);
@@ -1298,6 +1314,7 @@ button {
   align-items: center;
   gap: 8px;
   margin-top: 8px;
+  flex-shrink: 0;
 }
 .update-link {
   font-size: 13px;
