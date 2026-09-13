@@ -18,7 +18,17 @@ function ensureCtx(): AudioContext | null {
     ctx = new Impl();
     master = ctx.createGain();
     master.gain.value = 0.85;
-    master.connect(ctx.destination);
+    // A safety limiter, not a sound: it sits well above normal levels and
+    // only acts on the peaks a root-heavy chord can stack up, so emphasising
+    // the root never tips into clipping on a phone.
+    const limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = -3;
+    limiter.knee.value = 2;
+    limiter.ratio.value = 20;
+    limiter.attack.value = 0.002;
+    limiter.release.value = 0.12;
+    master.connect(limiter);
+    limiter.connect(ctx.destination);
   }
   return ctx;
 }

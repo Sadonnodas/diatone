@@ -8,12 +8,22 @@ import { sampleFor, type Instrument } from './instrument';
 // A chord isn't struck dead flat — a few milliseconds of spread reads as
 // played rather than triggered.
 const ROLL = 0.016;
-// The bass doubles the root an octave down — the same rule Guided Ear
-// Training uses, and it keeps the bass clear of the voicing above it.
-const BASS_DROP = 12;
-const BASS_GAIN = 0.9;
+// The root, emphasised three ways. Measured, the bass samples are already the
+// loudest thing in a chord — but they sit at 65–125 Hz, which a phone speaker
+// barely reproduces, so turning the bass up alone mostly buys clipping. The
+// emphasis that survives a phone speaker lives higher up:
+//   · the piano's own root is louder than the 3rd/5th/7th above it (130–250 Hz)
+//   · the root is doubled an octave down on the chosen instrument, whose upper
+//     partials carry that pitch even where the fundamental is lost
+//   · the bass still doubles it too, for headphones
+// The limiter in engine.ts catches the extra peak level this stacks up.
+const BASS_DROP = 12; // bass and low double: root − 12, as in Guided Ear Training
+const BASS_GAIN = 1.15;
 const BASS_LEAD = 0.012; // a hair early, so the bottom arrives first
 const BASS_EXTRA_HOLD = 0.2; // rings just past the chord
+const ROOT_GAIN = 1.35; // the chord's own root, against…
+const UPPER_GAIN = 0.72; // …the tones stacked on it
+const LOW_DOUBLE_GAIN = 0.9; // the root again, an octave down
 const CHORD_HOLD = 1.5;
 const ANCHOR_HOLD = 0.65;
 const ANCHOR_GAIN = 0.45; // clearly context, not the answer
@@ -33,7 +43,18 @@ const chordVoices = (
     dur: dur + BASS_EXTRA_HOLD,
     gain: gain * BASS_GAIN,
   },
-  ...notes.map((midi, i) => ({ ref: sampleFor(inst, midi), at: at + i * ROLL, dur, gain })),
+  {
+    ref: sampleFor(inst, notes[0] - BASS_DROP),
+    at: Math.max(0, at - BASS_LEAD / 2),
+    dur,
+    gain: gain * LOW_DOUBLE_GAIN,
+  },
+  ...notes.map((midi, i) => ({
+    ref: sampleFor(inst, midi),
+    at: at + i * ROLL,
+    dur,
+    gain: gain * (i === 0 ? ROOT_GAIN : UPPER_GAIN),
+  })),
 ];
 
 /** One chord. With `tonic`, the key's home chord sounds first, underneath. */
@@ -119,6 +140,7 @@ export function prefetchChords(inst: Instrument, chords: number[][]): void {
   prefetch([
     ...chords.flat().map((m) => sampleFor(inst, m)),
     ...chords.map((notes) => bassMidi(notes[0] - BASS_DROP)),
+    ...chords.map((notes) => sampleFor(inst, notes[0] - BASS_DROP)),
   ]);
 }
 

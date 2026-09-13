@@ -14,9 +14,10 @@ export const OPEN_MIDI: Record<number, number> = { 1: 64, 2: 59, 3: 55, 4: 50, 5
 // Recorded ranges. Anything outside is reached by shifting the nearest sample;
 // we only ever do that by a semitone or two, which is inaudible.
 const GUITAR_MAX_FRET = 12;
-// Wide enough to cover both the chord band and every fretted note the
-// interval drill can produce, so choosing piano never means a shifted sample.
-const PIANO_LOW = 40;
+// Wide enough to cover the chord band, its root doubled an octave down (from
+// MIDI 36), and every fretted note the interval drill can produce — so
+// choosing piano never means a shifted sample.
+const PIANO_LOW = 36;
 const PIANO_HIGH = 79;
 // Only the octave that sits under the chord band — a bass note is always
 // root − 12, so 36..47 covers every key.
