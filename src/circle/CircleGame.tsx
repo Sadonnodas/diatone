@@ -20,7 +20,9 @@ import {
   wedgeToken,
   type CircleSettings,
   type LayoutQuestion,
+  type WedgePlace,
   type WedgeQuestion,
+  type WedgeSlot,
 } from './circleData';
 import { haptic, TAP, CORRECT, WRONG } from '../lib/haptics';
 import { armUnlock, stopAll } from '../audio/engine';
@@ -29,6 +31,45 @@ import { playChord, prefetchChords } from '../audio/phrases';
 import { chordToMidi } from '../audio/harmony';
 
 const STORAGE_KEY = 'diatone.circle.v2';
+
+/**
+ * A question as it stood after its latest answer. Everything needed to redraw
+ * it is stored on the entry — including the wedge's answer mode and guide —
+ * so changing settings later doesn't change what an old question looked like.
+ */
+type HistoryEntry =
+  | {
+      drill: 'layout';
+      run: number;
+      layout: LayoutQuestion;
+      marks: Record<string, Mark>;
+      revealed: Record<string, string>;
+      misses: { want: string; typed: string }[];
+      answered: number;
+    }
+  | {
+      drill: 'wedge';
+      run: number;
+      wedge: WedgeQuestion;
+      place: WedgePlace;
+      guide: boolean;
+      placed: Record<string, string>;
+      marks: Record<string, Mark>;
+      misses: { degree: string; typed: string }[];
+      answered: number;
+    };
+
+/** What each wedge slot prints before it's answered: the numeral guide when
+    you're building chords (if it's on), the chord when you're giving
+    numerals. */
+function hintsFor(slots: WedgeSlot[], place: WedgePlace, guide: boolean): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const w of slots) {
+    if (place === 'numerals') out[w.degree] = w.chord;
+    else if (guide) out[w.degree] = w.degree;
+  }
+  return out;
+}
 const ADVANCE_MS = 850;
 
 function loadSettings(): CircleSettings {
@@ -47,6 +88,20 @@ function loadSettings(): CircleSettings {
     /* ignore */
   }
   return defaultCircleSettings;
+}
+
+/** One line under a reviewed question: how it went, and what you said when
+    you missed — the question itself already shows the right answers. */
+function ReviewSummary({ answered, total, misses }: { answered: number; total: number; misses: string[] }) {
+  const partial = answered < total ? `${answered} of ${total} answered` : null;
+  if (misses.length === 0) {
+    return <span className="lead">{partial ? `${partial} · all right` : `all ${total} right`}</span>;
+  }
+  return (
+    <span className="miss">
+      {partial ? `${partial} · ` : ''}you said {misses.join(' · ')}
+    </span>
+  );
 }
 
 export default function CircleGame({ onBack }: { onBack: () => void }) {
@@ -74,6 +129,12 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
   // recognition.
   const [pickedSlot, setPickedSlot] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<{ typed: string; right: boolean } | null>(null);
+  const [layoutMisses, setLayoutMisses] = useState<{ want: string; typed: string }[]>([]);
+  const [wedgeMisses, setWedgeMisses] = useState<{ degree: string; typed: string }[]>([]);
+
+  // Past questions, newest last. reviewIndex null means playing live.
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [reviewIndex, setReviewIndex] = useState<number | null>(null);
 
   const timer = useRef<number | null>(null);
   const runId = useRef(0);
@@ -97,6 +158,7 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
     stopAll();
     runId.current += 1;
     setFlash('');
+    setReviewIndex(null);
     if (settings.drill === 'wedge') {
       const q = generateWedge(settings, Math.random, lastKey.current);
       lastKey.current = q.key || undefined;
@@ -105,11 +167,13 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
       setWedgeMarks({});
       setPickedSlot(null);
       setLastResult(null);
+      setWedgeMisses([]);
     } else {
       setLayout(generateLayout(settings));
       setStep(0);
       setMarks({});
       setRevealed({});
+      setLayoutMisses([]);
       setLetter(null);
       setAcc('');
     }
@@ -152,6 +216,18 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
     }, ADVANCE_MS);
   };
 
+  // Keep the history entry for the current question in step with it: added on
+  // its first answer, replaced on each one after. A question you walk away from
+  // halfway is still there to look back at.
+  const record = (entry: HistoryEntry) =>
+    setHistory((h) => {
+      const i = h.findIndex((e) => e.run === entry.run);
+      if (i < 0) return [...h, entry];
+      const next = [...h];
+      next[i] = entry;
+      return next;
+    });
+
   // ── Layout drill ──────────────────────────────────────────────────────────
   const layoutDone = layout ? step >= layout.blanks.length : false;
   const asked = layout && !layoutDone ? layout.blanks[step] : null;
@@ -166,15 +242,28 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
     window.setTimeout(() => setFlash(''), 460);
 
     const key = slotKey(asked);
-    setMarks((m) => ({ ...m, [key]: right ? 'ok' : 'no' }));
+    const nextMarks: Record<string, Mark> = { ...marks, [key]: right ? 'ok' : 'no' };
     // A miss fills the segment in with its real name, so the correction lands
     // in the place you got wrong rather than in a message.
-    setRevealed((r) => ({ ...r, [key]: right ? typed : segmentRoot(asked) }));
+    const nextRevealed = { ...revealed, [key]: right ? typed : segmentRoot(asked) };
+    const nextMisses = right ? layoutMisses : [...layoutMisses, { want: segmentRoot(asked), typed }];
+    setMarks(nextMarks);
+    setRevealed(nextRevealed);
+    setLayoutMisses(nextMisses);
     setLetter(null);
     setAcc('');
     sound(ringChord(asked.ring, asked.pos));
     const next = step + 1;
     setStep(next);
+    record({
+      drill: 'layout',
+      run: runId.current,
+      layout,
+      marks: nextMarks,
+      revealed: nextRevealed,
+      misses: nextMisses,
+      answered: next,
+    });
     finish(next >= layout.blanks.length);
   };
 
@@ -196,12 +285,28 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
 
     // The slot always ends up showing the right answer — green if you had it,
     // red if you didn't — and what you typed goes in the line above.
-    setPlaced((p) => ({ ...p, [w.degree]: wedgeToken(w, settings.place) }));
-    setWedgeMarks((m) => ({ ...m, [w.degree]: right ? 'ok' : 'no' }));
+    const nextPlaced = { ...placed, [w.degree]: wedgeToken(w, settings.place) };
+    const nextMarks: Record<string, Mark> = { ...wedgeMarks, [w.degree]: right ? 'ok' : 'no' };
+    const nextMisses = right ? wedgeMisses : [...wedgeMisses, { degree: w.degree, typed }];
+    setPlaced(nextPlaced);
+    setWedgeMarks(nextMarks);
+    setWedgeMisses(nextMisses);
     setLastResult({ typed, right });
     setPickedSlot(null);
     sound(w.chord);
-    finish(Object.keys(placed).length + 1 >= wedge.slots.length);
+    const answered = Object.keys(nextPlaced).length;
+    record({
+      drill: 'wedge',
+      run: runId.current,
+      wedge,
+      place: settings.place,
+      guide: settings.guide,
+      placed: nextPlaced,
+      marks: nextMarks,
+      misses: nextMisses,
+      answered,
+    });
+    finish(answered >= wedge.slots.length);
   };
 
   // The Numerals keypad, driven by the picked slot: root → accidental →
@@ -229,22 +334,31 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
   // What each slot already shows. Placing chords, that's the numeral guide (if
   // it's on); placing numerals, it's always the chord — which is the whole
   // point of the reverse drill.
-  const hints = useMemo(() => {
-    const out: Record<string, string> = {};
-    if (!wedge) return out;
-    for (const w of wedge.slots) {
-      if (settings.place === 'numerals') out[w.degree] = w.chord;
-      else if (settings.guide) out[w.degree] = w.degree;
-    }
-    return out;
-  }, [wedge, settings.place, settings.guide]);
+  const hints = useMemo(
+    () => (wedge ? hintsFor(wedge.slots, settings.place, settings.guide) : {}),
+    [wedge, settings.place, settings.guide],
+  );
+
+  // ── Review ────────────────────────────────────────────────────────────────
+  const reviewing = reviewIndex !== null;
+  const entry = reviewing ? (history[reviewIndex] ?? null) : null;
+
+  const enterReview = () => {
+    if (history.length === 0) return;
+    if (timer.current) clearTimeout(timer.current);
+    stopAll();
+    setReviewIndex(history.length - 1);
+  };
+  const reviewNav = (dir: number) =>
+    setReviewIndex((i) => (i === null ? null : Math.max(0, Math.min(history.length - 1, i + dir))));
+  const exitReview = () => setReviewIndex(null);
 
   const done = isWedge ? wedgeDone : layoutDone;
   const advance = () => {
-    if (done) generate();
+    if (done && !reviewing) generate();
   };
   const stop = (e: React.MouseEvent) => e.stopPropagation();
-  const waitingToAdvance = done && !settings.autoAdvance;
+  const waitingToAdvance = done && !settings.autoAdvance && !reviewing;
   const error = isWedge ? wedge?.error : layout?.error;
 
   // Set the drill up before it starts, rather than dropping straight into
@@ -297,6 +411,14 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
           <button className="icon-btn" aria-label="How it works" onClick={() => setInfoOpen(true)}>
             ?
           </button>
+          <button
+            className="icon-btn"
+            aria-label="Review"
+            onClick={enterReview}
+            disabled={history.length === 0}
+          >
+            ↺
+          </button>
           <ThemeIconButton />
           <button className="icon-btn" aria-label="Settings" onClick={() => setSettingsOpen(true)}>
             ⚙
@@ -304,6 +426,56 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
         </div>
       </div>
 
+      {entry ? (
+        <div className={`stage ${entry.drill === 'wedge' ? 'wedge-stage' : 'cof-stage'}`}>
+          {entry.drill === 'wedge' ? (
+            <>
+              <div className="ctx">
+                <span className="lead">in the key of</span>
+                <span className="k">{renderJazz(entry.wedge.key, 'rk')}</span>
+              </div>
+              <div className="wedge-status">
+                <ReviewSummary
+                  answered={entry.answered}
+                  total={entry.wedge.slots.length}
+                  misses={entry.misses.map((m) => `${m.degree}: ${prettyChord(m.typed)}`)}
+                />
+              </div>
+              <div className="wedge-wrap" onClick={stop}>
+                <WedgeBoard
+                  slots={entry.wedge.slots}
+                  placed={entry.placed}
+                  marks={entry.marks}
+                  hints={hintsFor(entry.wedge.slots, entry.place, entry.guide)}
+                  picked={null}
+                  onTapSlot={() => {}}
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="ctx">
+                <span className="lead">review</span>
+              </div>
+              <div className="cof-wheel">
+                <CircleWheel
+                  blanks={entry.layout.blanks}
+                  marks={entry.marks}
+                  highlight={null}
+                  revealed={entry.revealed}
+                />
+              </div>
+              <div className="wedge-status">
+                <ReviewSummary
+                  answered={entry.answered}
+                  total={entry.layout.blanks.length}
+                  misses={entry.misses.map((m) => `${prettyChord(m.typed)} for ${prettyChord(m.want)}`)}
+                />
+              </div>
+            </>
+          )}
+        </div>
+      ) : (
       <div className={`stage ${isWedge ? 'wedge-stage' : 'cof-stage'}`}>
         {error ? (
           <div className="empty">
@@ -375,14 +547,32 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
           </>
         ) : null}
       </div>
+      )}
 
-      {isWedge && !error && wedge && (
+      {reviewing && (
+        <div className="fret-actions" onClick={stop}>
+          <div className="review-nav" style={{ width: '100%', maxWidth: 360 }}>
+            <button onClick={() => reviewNav(-1)} disabled={reviewIndex === 0}>
+              ← Older
+            </button>
+            <button onClick={exitReview}>Return</button>
+            <button onClick={() => reviewNav(1)} disabled={reviewIndex === history.length - 1}>
+              Newer →
+            </button>
+          </div>
+          <div className="review-count">
+            {(reviewIndex ?? 0) + 1} of {history.length}
+          </div>
+        </div>
+      )}
+
+      {!reviewing && isWedge && !error && wedge && (
         <div onClick={stop}>
           <Keypad builder={builder} disabled={!pickedWedgeSlot || wedgeDone} />
         </div>
       )}
 
-      {!isWedge && !error && (
+      {!reviewing && !isWedge && !error && (
         <div onClick={stop}>
           <NameKeypad
             letter={letter}
