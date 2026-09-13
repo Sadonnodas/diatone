@@ -2009,6 +2009,18 @@ text.cof-label {
   font-weight: 500;
   fill: var(--text);
 }
+/* Sharing the slot with its numeral, the chord steps down a size: two lines
+   have to fit a band that one line had to itself, and in the tilted ii/iii
+   slots the upright text crosses the band diagonally. */
+.wedge-token.paired {
+  font-size: 17px;
+}
+/* The small accidental the buttons use (see .acc), in SVG terms. */
+.wedge-acc {
+  font-family: var(--font-ui), 'Apple Symbols', 'Segoe UI Symbol', sans-serif;
+  font-size: 0.66em;
+  font-weight: 500;
+}
 .wedge-label.no .wedge-token {
   fill: var(--wrong);
 }

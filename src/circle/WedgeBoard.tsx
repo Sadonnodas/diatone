@@ -1,5 +1,6 @@
 import { Fragment } from 'react';
 import { POSITIONS, type WedgeSlot } from './circleData';
+import { prettyChord } from './CircleWheel';
 
 /**
  * One key's wedge, zoomed. The wheel's centre sits below the board and the
@@ -12,18 +13,20 @@ import { POSITIONS, type WedgeSlot } from './circleData';
  * say "this is a slice of a circle", not enough to read.
  */
 const W = 340;
-// Cropped to the fan itself: its lowest points (the major ring's outer
-// corners) sit at y≈205, so anything past this is empty circle centre.
-const H = 214;
+// Cropped to the fan itself: its lowest points (the major ring's inner
+// corners) sit at y≈213, so anything past this is empty circle centre.
+const H = 222;
 const CX = W / 2;
-const CY = 250; // below the board, so the fan opens upward
+const CY = 258; // below the board, so the fan opens upward
 const STEP = 360 / POSITIONS;
 
-// Radii, in the printed wheel's order: majors nearest the centre.
+// Radii, in the printed wheel's order: majors nearest the centre. The vii°
+// tab is as deep as the others: once a chord is placed a slot carries two
+// lines (chord over numeral), and at 42px the top line was brushing the rim.
 const RADII: Record<string, [number, number]> = {
   major: [64, 130],
   minor: [130, 190],
-  dim: [190, 232],
+  dim: [190, 250],
 };
 
 const pt = (r: number, deg: number): [number, number] => {
@@ -37,6 +40,26 @@ function segmentPath(ri: number, ro: number, a0: number, a1: number): string {
   const [x1i, y1i] = pt(ri, a1);
   const [x0i, y0i] = pt(ri, a0);
   return `M${x0o} ${y0o}A${ro} ${ro} 0 0 1 ${x1o} ${y1o}L${x1i} ${y1i}A${ri} ${ri} 0 0 0 ${x0i} ${y0i}Z`;
+}
+
+/**
+ * A chord name for SVG, with its accidental set small in the UI font — the
+ * same treatment renderJazz gives the buttons. The display serif has no ♯/♭
+ * of its own, so left to fallback they come out full height and loosely
+ * spaced ("E ♯ °"). Numerals have no accidentals and pass straight through.
+ */
+function svgChord(name: string) {
+  const pretty = prettyChord(name);
+  const m = /^([A-G])([♯♭]+)(.*)$/.exec(pretty);
+  if (!m) return pretty;
+  const [, letter, acc, rest] = m;
+  return (
+    <>
+      {letter}
+      <tspan className="wedge-acc">{acc}</tspan>
+      {rest}
+    </>
+  );
 }
 
 export type Mark = 'ok' | 'no';
@@ -130,13 +153,19 @@ export function WedgeBoard({
               {/* Both, once it's placed: the pairing is the thing being
                   learned, so seeing "F" sitting on "IV" is the payoff. */}
               {token && (
-                <tspan x={lx} dy={hint ? '-0.36em' : '0'} className="wedge-token">
-                  {token}
+                <tspan
+                  x={lx}
+                  dy={hint ? '-0.3em' : '0'}
+                  className={`wedge-token${hint ? ' paired' : ''}`}
+                >
+                  {/* Tokens are stored as the key table spells them (E#dim);
+                      print them the way the buttons do (E♯°). */}
+                  {svgChord(token)}
                 </tspan>
               )}
               {hint && (
-                <tspan x={lx} dy={token ? '1.25em' : '0'} className="wedge-guide">
-                  {hint}
+                <tspan x={lx} dy={token ? '1.3em' : '0'} className="wedge-guide">
+                  {svgChord(hint)}
                 </tspan>
               )}
             </text>

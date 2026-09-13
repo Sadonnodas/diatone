@@ -232,7 +232,7 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
     const out: Record<string, string> = {};
     if (!wedge) return out;
     for (const w of wedge.slots) {
-      if (settings.place === 'numerals') out[w.degree] = prettyChord(w.chord);
+      if (settings.place === 'numerals') out[w.degree] = w.chord;
       else if (settings.guide) out[w.degree] = w.degree;
     }
     return out;
