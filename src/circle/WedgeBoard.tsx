@@ -73,9 +73,7 @@ export interface WedgeBoardProps {
       guide for placing chords; the chord itself when you're placing numerals
       onto it. */
   hints: Record<string, string>;
-  /** A chord is held — every empty slot is somewhere it could go. */
-  armed: boolean;
-  /** The slot picked first, waiting for a chord. */
+  /** The slot being answered. */
   picked: string | null;
   onTapSlot: (degree: string) => void;
 }
@@ -85,7 +83,6 @@ export function WedgeBoard({
   placed,
   marks,
   hints,
-  armed,
   picked,
   onTapSlot,
 }: WedgeBoardProps) {
@@ -137,7 +134,7 @@ export function WedgeBoard({
               data-degree={w.degree}
               className={`wedge-seg wedge-${w.slot.ring}${token ? ' filled' : ' empty'}${
                 mark ? ` ${mark}` : ''
-              }${armed && !token ? ' armed' : ''}${picked === w.degree ? ' picked' : ''}`}
+              }${picked === w.degree ? ' picked' : ''}`}
               d={segmentPath(ri, ro, a0, a1)}
               onClick={token ? undefined : () => onTapSlot(w.degree)}
               style={{ cursor: token ? 'default' : 'pointer' }}

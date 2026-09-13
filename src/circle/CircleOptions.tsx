@@ -46,7 +46,7 @@ export function CircleOptions({
         </div>
         <div className="desc" style={{ marginTop: 8 }}>
           {wedge
-            ? 'One key at a time, turned to the top — place its chords where they belong.'
+            ? 'One key at a time, turned to the top — tap a slot and build the chord that goes there.'
             : 'Name the missing segments of the wheel.'}
         </div>
       </div>
@@ -96,7 +96,7 @@ export function CircleOptions({
       {wedge && (
         <>
           <div>
-            <div className="group-label">Place</div>
+            <div className="group-label">Answer with</div>
             <div className="seg">
               <button
                 className={settings.place === 'chords' ? 'on' : ''}
@@ -113,8 +113,8 @@ export function CircleOptions({
             </div>
             <div className="desc" style={{ marginTop: 8 }}>
               {settings.place === 'chords'
-                ? 'Chord buttons onto the wedge.'
-                : 'Numeral buttons onto a wedge that already shows the chords.'}
+                ? 'Build each slot’s chord — root, accidental, quality — spelled the way the key spells it.'
+                : 'The wedge shows the chords; tap a slot and give its numeral.'}
             </div>
           </div>
 
@@ -123,8 +123,8 @@ export function CircleOptions({
               <div>
                 <div className="label">Show the numerals</div>
                 <div className="desc">
-                  Prints each slot’s numeral as a guide. Turn it off once the wedge is in your head —
-                  the numerals never move, so it stops teaching you anything.
+                  Prints each slot’s numeral, so you only need the chords. Off, you need to know
+                  where each one sits as well.
                 </div>
               </div>
               <Switch on={settings.guide} onClick={() => update({ guide: !settings.guide })} />

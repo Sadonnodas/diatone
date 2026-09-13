@@ -7,7 +7,7 @@ import {
   generateWedge,
   layoutAnswerMatches,
   segmentRoot,
-  wedgeToken,
+  wedgeAnswerMatches,
   keyAt,
   keyChord,
   ringChord,
@@ -211,12 +211,24 @@ describe('generateWedge', () => {
     expect(byDegree['vii°'].offset).toBe(0);
   });
 
-  it('hands over exactly the tokens the slots need, shuffled', () => {
-    for (const place of ['chords', 'numerals'] as const) {
-      const q = generateWedge(settings({ drill: 'wedge', place }), seeded(8));
-      const wanted = q.slots.map((w) => wedgeToken(w, place)).sort();
-      expect([...q.tokens].sort()).toEqual(wanted);
-    }
+  it('grades typed chords like Numerals: any notation, but the key’s own spelling', () => {
+    const q = generateWedge(settings({ drill: 'wedge', keys: ['F#'] }), seeded(3));
+    const byDegree = Object.fromEntries(q.slots.map((w) => [w.degree, w]));
+    expect(wedgeAnswerMatches('E#dim', byDegree['vii°'], 'chords')).toBe(true);
+    expect(wedgeAnswerMatches('E#°', byDegree['vii°'], 'chords')).toBe(true);
+    expect(wedgeAnswerMatches('G#-', byDegree['ii'], 'chords')).toBe(true);
+    expect(wedgeAnswerMatches('G#min', byDegree['ii'], 'chords')).toBe(true);
+    // Same sound, wrong spelling for this key — not accepted.
+    expect(wedgeAnswerMatches('Fdim', byDegree['vii°'], 'chords')).toBe(false);
+    // Right chord, wrong slot.
+    expect(wedgeAnswerMatches('C#', byDegree['IV'], 'chords')).toBe(false);
+  });
+
+  it('grades numerals against the slot’s degree', () => {
+    const q = generateWedge(settings({ drill: 'wedge', place: 'numerals', keys: ['C'] }), seeded(3));
+    const byDegree = Object.fromEntries(q.slots.map((w) => [w.degree, w]));
+    expect(wedgeAnswerMatches('vi', byDegree['vi'], 'numerals')).toBe(true);
+    expect(wedgeAnswerMatches('IV', byDegree['vi'], 'numerals')).toBe(false);
   });
 
   it('draws only from the keys you picked, and avoids repeating one', () => {

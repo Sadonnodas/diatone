@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CircleWheel, prettyChord, type Mark } from './CircleWheel';
 import { WedgeBoard } from './WedgeBoard';
 import { NameKeypad } from './NameKeypad';
+import { Keypad, useAnswerBuilder } from '../components/AnswerInput';
 import { CircleSettingsSheet } from './CircleSettings';
 import { CircleOptions, circleReady } from './CircleOptions';
 import { InfoModal } from '../components/InfoModal';
@@ -15,6 +16,7 @@ import {
   ringChord,
   segmentRoot,
   slotKey,
+  wedgeAnswerMatches,
   wedgeToken,
   type CircleSettings,
   type LayoutQuestion,
@@ -67,11 +69,11 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
   const [wedge, setWedge] = useState<WedgeQuestion | null>(null);
   const [placed, setPlaced] = useState<Record<string, string>>({});
   const [wedgeMarks, setWedgeMarks] = useState<Record<string, Mark>>({});
-  // Placement works from either end: pick up a chord and tap its slot, or tap
-  // a slot and then the chord that goes in it. Only one is ever held.
-  const [selected, setSelected] = useState<string | null>(null);
+  // The slot being answered. Nothing is offered to pick from: you tap a slot
+  // and build its chord on the Numerals keypad, so it's recall, not
+  // recognition.
   const [pickedSlot, setPickedSlot] = useState<string | null>(null);
-  const [used, setUsed] = useState<string[]>([]);
+  const [lastResult, setLastResult] = useState<{ typed: string; right: boolean } | null>(null);
 
   const timer = useRef<number | null>(null);
   const runId = useRef(0);
@@ -101,9 +103,8 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
       setWedge(q);
       setPlaced({});
       setWedgeMarks({});
-      setSelected(null);
       setPickedSlot(null);
-      setUsed([]);
+      setLastResult(null);
     } else {
       setLayout(generateLayout(settings));
       setStep(0);
@@ -180,47 +181,47 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
   // ── Wedge drill ───────────────────────────────────────────────────────────
   const wedgeDone = wedge ? Object.keys(placed).length >= wedge.slots.length : false;
 
-  // Put a token in a slot, however the two were chosen.
-  const commitPlacement = (token: string, degree: string) => {
-    if (!wedge) return;
-    const slot = wedge.slots.find((w) => w.degree === degree);
-    if (!slot) return;
-    const right = wedgeToken(slot, settings.place) === token;
+  const numeralsMode = settings.place === 'numerals';
+  const pickedWedgeSlot =
+    wedge && pickedSlot ? (wedge.slots.find((w) => w.degree === pickedSlot) ?? null) : null;
+
+  const answerWedge = (typed: string) => {
+    if (!wedge || !pickedWedgeSlot) return;
+    const w = pickedWedgeSlot;
+    const right = wedgeAnswerMatches(typed, w, settings.place);
     haptic(right ? CORRECT : WRONG);
     setStreak((st) => (right ? st + 1 : 0));
     setFlash(right ? 'flash-ok' : 'flash-no');
     window.setTimeout(() => setFlash(''), 460);
 
-    // Either way it lands where it belongs — a wrong placement shows you the
-    // slot it should have gone in, marked as a miss.
-    const target = right
-      ? degree
-      : (wedge.slots.find((w) => wedgeToken(w, settings.place) === token)?.degree ?? degree);
-    setPlaced((p) => ({ ...p, [target]: token }));
-    setWedgeMarks((m) => ({ ...m, [target]: right ? 'ok' : 'no' }));
-    setUsed((u) => [...u, token]);
-    setSelected(null);
+    // The slot always ends up showing the right answer — green if you had it,
+    // red if you didn't — and what you typed goes in the line above.
+    setPlaced((p) => ({ ...p, [w.degree]: wedgeToken(w, settings.place) }));
+    setWedgeMarks((m) => ({ ...m, [w.degree]: right ? 'ok' : 'no' }));
+    setLastResult({ typed, right });
     setPickedSlot(null);
-    sound(wedge.slots.find((w) => w.degree === target)?.chord ?? slot.chord);
+    sound(w.chord);
     finish(Object.keys(placed).length + 1 >= wedge.slots.length);
   };
 
-  const tapToken = (token: string) => {
-    if (used.includes(token) || wedgeDone) return;
-    if (pickedSlot) {
-      commitPlacement(token, pickedSlot);
-      return;
-    }
-    haptic(TAP);
-    setSelected((cur) => (cur === token ? null : token));
-  };
+  // The Numerals keypad, driven by the picked slot: root → accidental →
+  // quality to answer a chord, or a single degree tap in the numerals drill.
+  // It's always given a target in the right mode, even with nothing picked,
+  // so the keypad doesn't swap layouts the moment a slot is tapped.
+  const builder = useAnswerBuilder({
+    question: {
+      mode: numeralsMode ? 4 : 1,
+      answer: pickedWedgeSlot ? wedgeToken(pickedWedgeSlot, settings.place) : '',
+      seed: `${runId.current}:${pickedSlot ?? '-'}`,
+    },
+    use7thChords: false,
+    disabled: !pickedWedgeSlot || wedgeDone,
+    onSubmit: (ascii) => answerWedge(ascii),
+    onTap: () => haptic(TAP),
+  });
 
   const tapSlot = (degree: string) => {
     if (!wedge || placed[degree] || wedgeDone) return;
-    if (selected) {
-      commitPlacement(selected, degree);
-      return;
-    }
     haptic(TAP);
     setPickedSlot((cur) => (cur === degree ? null : degree));
   };
@@ -320,23 +321,16 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
               <span className="k">{renderJazz(wedge.key, 'wk')}</span>
             </div>
 
-            <div
-              className={`token-row reveal${pickedSlot ? ' awaiting' : ''}`}
-              onClick={stop}
-              style={{ animationDelay: '.06s' }}
-            >
-              {wedge.tokens.map((t) => (
-                <button
-                  key={t}
-                  className={`token${selected === t ? ' sel' : ''}${
-                    used.includes(t) ? ' spent' : ''
-                  }`}
-                  onClick={() => tapToken(t)}
-                  disabled={used.includes(t)}
-                >
-                  {renderJazz(settings.place === 'chords' ? prettyChord(t) : t, `t${t}`)}
-                </button>
-              ))}
+            <div className="wedge-status" aria-live="polite">
+              {wedgeDone ? (
+                <span className="lead">filled in</span>
+              ) : pickedWedgeSlot ? (
+                <span className="lead">{numeralsMode ? 'tap its numeral' : 'build its chord'}</span>
+              ) : lastResult && !lastResult.right ? (
+                <span className="miss">you said {prettyChord(lastResult.typed)}</span>
+              ) : (
+                <span className="lead">tap a slot</span>
+              )}
             </div>
 
             <div className="wedge-wrap reveal" onClick={stop} style={{ animationDelay: '.08s' }}>
@@ -345,7 +339,6 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
                 placed={placed}
                 marks={wedgeMarks}
                 hints={hints}
-                armed={selected !== null}
                 picked={pickedSlot}
                 onTapSlot={tapSlot}
               />
@@ -382,6 +375,12 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
           </>
         ) : null}
       </div>
+
+      {isWedge && !error && wedge && (
+        <div onClick={stop}>
+          <Keypad builder={builder} disabled={!pickedWedgeSlot || wedgeDone} />
+        </div>
+      )}
 
       {!isWedge && !error && (
         <div onClick={stop}>
@@ -422,7 +421,7 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
           <InfoModal title="Circle of fifths" onClose={() => setInfoOpen(false)}>
             <p>
               Two drills, picked in settings. <b>Layout</b> blanks segments of the wheel and you
-              name them. <b>Key wedge</b> zooms in on one key and you place its chords.
+              name them. <b>Key wedge</b> zooms in on one key: tap a slot and build its chord.
             </p>
             <p>
               The wheel is laid out like the printed one: majors nearest the centre, each

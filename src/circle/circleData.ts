@@ -13,6 +13,7 @@
 import { ALL_KEYS, chordData } from '../lib/chordData';
 import { DEGREE_KEYS } from '../lib/engine';
 import { rootPitchClass } from '../audio/harmony';
+import { answersMatch } from '../lib/normalize';
 
 export type Ring = 'dim' | 'major' | 'minor';
 
@@ -210,14 +211,21 @@ export interface WedgeQuestion {
   key: string;
   keyPos: number;
   slots: WedgeSlot[];
-  /** The buttons, shuffled so their order can't give the answer away. */
-  tokens: string[];
   error?: string;
 }
 
-/** What goes in a slot, given what the player is placing. */
+/** What goes in a slot, given what the player is supplying. */
 export const wedgeToken = (w: WedgeSlot, place: WedgePlace): string =>
   place === 'numerals' ? w.degree : w.chord;
+
+/**
+ * Is `typed` right for this slot? Graded exactly the way the Numerals drill
+ * grades — same normaliser, so Am / A- / Amin all pass — and, unlike the
+ * layout drill, strict about spelling: this is "the chords of F# major", and
+ * in F# major the vii° is E#°, not F°. Knowing that is part of the drill.
+ */
+export const wedgeAnswerMatches = (typed: string, w: WedgeSlot, place: WedgePlace): boolean =>
+  answersMatch(typed, wedgeToken(w, place));
 
 export function generateWedge(
   s: CircleSettings,
@@ -226,7 +234,7 @@ export function generateWedge(
 ): WedgeQuestion {
   const pool = s.keys.filter((k) => ALL_KEYS.includes(k));
   if (pool.length === 0) {
-    return { key: '', keyPos: 0, slots: [], tokens: [], error: 'Pick at least one key.' };
+    return { key: '', keyPos: 0, slots: [], error: 'Pick at least one key.' };
   }
   const fresh = pool.length > 1 ? pool.filter((k) => k !== avoidKey) : pool;
   const key = fresh[Math.floor(rand() * fresh.length)];
@@ -239,10 +247,5 @@ export function generateWedge(
     offset: w.offset,
   }));
 
-  return {
-    key,
-    keyPos,
-    slots,
-    tokens: shuffle(slots.map((w) => wedgeToken(w, s.place)), rand),
-  };
+  return { key, keyPos, slots };
 }

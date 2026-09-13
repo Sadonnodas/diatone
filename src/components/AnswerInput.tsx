@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback } from 'react';
-import type { Question } from '../lib/engine';
 import { DEGREE_KEYS } from '../lib/engine';
 import { display7th, progressionToJazz } from '../lib/jazz';
 import { renderJazz } from './ChordDisplay';
@@ -49,8 +48,20 @@ export interface BuilderApi {
   inProgressDisplay: string | null;
 }
 
+/**
+ * What the builder needs to know about the thing being answered. A Numerals
+ * Question satisfies it, and so can any other drill that wants this keypad:
+ * `mode` 4 means answer with a degree, `answer` sets how many chords are
+ * built, and `seed` changing resets the input.
+ */
+export interface BuilderTarget {
+  mode: number;
+  answer: string;
+  seed?: unknown;
+}
+
 export function useAnswerBuilder(opts: {
-  question: Question | null;
+  question: BuilderTarget | null;
   use7thChords: boolean;
   disabled: boolean;
   onSubmit: (ascii: string, display: string) => void;

@@ -1909,45 +1909,14 @@ text.cof-label {
 /* ── Key wedge ─────────────────────────────────────────────────────────────
    The zoomed slice: chord buttons above, the fan below. */
 .wedge-stage {
+  /* Shares the screen with a full chord keypad now, so the spacing is tight
+     on purpose: on a 667px phone the fan only just clears the keys. */
   justify-content: center;
-  gap: clamp(14px, 3vh, 26px);
-  padding-bottom: clamp(24px, 4vh, 40px);
+  gap: clamp(6px, 1.6vh, 20px);
+  padding-bottom: clamp(4px, 1.2vh, 14px);
 }
-.token-row {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-}
-.token {
-  min-width: 62px;
-  min-height: 44px;
-  padding: 8px 12px;
-  border-radius: 12px;
-  border: 0.5px solid var(--line-strong);
-  background: var(--surface-2);
-  color: var(--text);
-  font-family: var(--font-display);
-  font-size: 19px;
-  font-weight: 500;
-  transition:
-    transform 0.1s ease,
-    background 0.15s ease,
-    border-color 0.15s ease,
-    opacity 0.15s ease;
-}
-.token:active {
-  transform: scale(0.95);
-}
-.token.sel {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--on-fill);
-}
-.token.spent {
-  opacity: 0.22;
-  border-style: dashed;
+.wedge-stage .ctx {
+  margin-bottom: 0; /* the status line sits directly under the key */
 }
 /* Bleed past the app's side padding — a 90°-wide fan is inherently wider
    than it is tall, so width is the only thing that makes it bigger. */
@@ -1978,12 +1947,6 @@ text.cof-label {
   fill: var(--cof-gap);
   stroke-dasharray: 3 3;
   stroke: var(--line-strong);
-}
-/* Something is picked up — show where it can go. */
-.wedge-seg.armed {
-  fill: var(--accent-dim);
-  stroke: var(--accent-line);
-  stroke-dasharray: none;
 }
 .wedge-seg.ok {
   fill: color-mix(in srgb, var(--correct) 26%, var(--cof-major));
@@ -2047,14 +2010,31 @@ text.cof-label {
   text-align: left;
 }
 
-/* A slot chosen first, waiting for its chord. */
+/* The slot being answered. */
 .wedge-seg.picked {
   fill: var(--accent-dim);
   stroke: var(--accent);
   stroke-width: 2.5;
   stroke-dasharray: none;
 }
-/* ...and the chords it's waiting on, nudged so the next tap is obvious. */
-.token-row.awaiting .token:not(.spent) {
-  border-color: var(--accent-line);
+
+/* One line between the key and the wedge: what to do next, or what you said
+   when you missed (the slot itself shows the right answer). Fixed height so
+   the wedge doesn't bob as it changes. */
+.wedge-status {
+  min-height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+}
+.wedge-status .lead {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-3);
+}
+.wedge-status .miss {
+  color: var(--wrong);
+  font-weight: 500;
 }
