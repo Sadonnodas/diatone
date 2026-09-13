@@ -2018,3 +2018,31 @@ text.cof-label {
   letter-spacing: 0.04em;
   fill: var(--text-3);
 }
+
+/* Circle setup: the same options as the settings sheet, laid out as a screen
+   and scrollable, since the key wheel makes the wedge options tall. */
+.circle-setup {
+  justify-content: flex-start;
+  overflow-y: auto;
+  gap: clamp(16px, 3vh, 26px);
+  padding-bottom: 12px;
+}
+.circle-setup-body {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  width: 100%;
+  text-align: left;
+}
+
+/* A slot chosen first, waiting for its chord. */
+.wedge-seg.picked {
+  fill: var(--accent-dim);
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  stroke-dasharray: none;
+}
+/* ...and the chords it's waiting on, nudged so the next tap is obvious. */
+.token-row.awaiting .token:not(.spent) {
+  border-color: var(--accent-line);
+}

@@ -3,6 +3,7 @@ import { CircleWheel, prettyChord, type Mark } from './CircleWheel';
 import { WedgeBoard } from './WedgeBoard';
 import { NameKeypad } from './NameKeypad';
 import { CircleSettingsSheet } from './CircleSettings';
+import { CircleOptions, circleReady } from './CircleOptions';
 import { InfoModal } from '../components/InfoModal';
 import { renderJazz } from '../components/ChordDisplay';
 import { ThemeIconButton } from '../components/ThemeSwitch';
@@ -48,6 +49,7 @@ function loadSettings(): CircleSettings {
 
 export default function CircleGame({ onBack }: { onBack: () => void }) {
   const [settings, setSettings] = useState<CircleSettings>(loadSettings);
+  const [phase, setPhase] = useState<'setup' | 'play'>('setup');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [streak, setStreak] = useState(0);
@@ -65,7 +67,10 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
   const [wedge, setWedge] = useState<WedgeQuestion | null>(null);
   const [placed, setPlaced] = useState<Record<string, string>>({});
   const [wedgeMarks, setWedgeMarks] = useState<Record<string, Mark>>({});
+  // Placement works from either end: pick up a chord and tap its slot, or tap
+  // a slot and then the chord that goes in it. Only one is ever held.
   const [selected, setSelected] = useState<string | null>(null);
+  const [pickedSlot, setPickedSlot] = useState<string | null>(null);
   const [used, setUsed] = useState<string[]>([]);
 
   const timer = useRef<number | null>(null);
@@ -97,6 +102,7 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
       setPlaced({});
       setWedgeMarks({});
       setSelected(null);
+      setPickedSlot(null);
       setUsed([]);
     } else {
       setLayout(generateLayout(settings));
@@ -108,9 +114,10 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
     }
   }, [settings]);
 
+  // Nothing is generated on the setup screen — the drill starts on Start.
   useEffect(() => {
-    generate();
-  }, [generate]);
+    if (phase === 'play') generate();
+  }, [generate, phase]);
 
   useEffect(
     () => () => {
@@ -173,33 +180,49 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
   // ── Wedge drill ───────────────────────────────────────────────────────────
   const wedgeDone = wedge ? Object.keys(placed).length >= wedge.slots.length : false;
 
-  const tapToken = (token: string) => {
-    if (used.includes(token) || wedgeDone) return;
-    haptic(TAP);
-    setSelected((s) => (s === token ? null : token));
-  };
-
-  const tapSlot = (degree: string) => {
-    if (!wedge || !selected || placed[degree]) return;
+  // Put a token in a slot, however the two were chosen.
+  const commitPlacement = (token: string, degree: string) => {
+    if (!wedge) return;
     const slot = wedge.slots.find((w) => w.degree === degree);
     if (!slot) return;
-    const right = wedgeToken(slot, settings.place) === selected;
+    const right = wedgeToken(slot, settings.place) === token;
     haptic(right ? CORRECT : WRONG);
-    setStreak((s) => (right ? s + 1 : 0));
+    setStreak((st) => (right ? st + 1 : 0));
     setFlash(right ? 'flash-ok' : 'flash-no');
     window.setTimeout(() => setFlash(''), 460);
 
-    // Either way it lands where it belongs — a wrong drop shows you the slot
-    // it should have gone in, marked as a miss.
+    // Either way it lands where it belongs — a wrong placement shows you the
+    // slot it should have gone in, marked as a miss.
     const target = right
       ? degree
-      : (wedge.slots.find((w) => wedgeToken(w, settings.place) === selected)?.degree ?? degree);
-    setPlaced((p) => ({ ...p, [target]: selected }));
+      : (wedge.slots.find((w) => wedgeToken(w, settings.place) === token)?.degree ?? degree);
+    setPlaced((p) => ({ ...p, [target]: token }));
     setWedgeMarks((m) => ({ ...m, [target]: right ? 'ok' : 'no' }));
-    setUsed((u) => [...u, selected]);
+    setUsed((u) => [...u, token]);
     setSelected(null);
+    setPickedSlot(null);
     sound(wedge.slots.find((w) => w.degree === target)?.chord ?? slot.chord);
     finish(Object.keys(placed).length + 1 >= wedge.slots.length);
+  };
+
+  const tapToken = (token: string) => {
+    if (used.includes(token) || wedgeDone) return;
+    if (pickedSlot) {
+      commitPlacement(token, pickedSlot);
+      return;
+    }
+    haptic(TAP);
+    setSelected((cur) => (cur === token ? null : token));
+  };
+
+  const tapSlot = (degree: string) => {
+    if (!wedge || placed[degree] || wedgeDone) return;
+    if (selected) {
+      commitPlacement(selected, degree);
+      return;
+    }
+    haptic(TAP);
+    setPickedSlot((cur) => (cur === degree ? null : degree));
   };
 
   // What each slot already shows. Placing chords, that's the numeral guide (if
@@ -222,6 +245,39 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
   const stop = (e: React.MouseEvent) => e.stopPropagation();
   const waitingToAdvance = done && !settings.autoAdvance;
   const error = isWedge ? wedge?.error : layout?.error;
+
+  // Set the drill up before it starts, rather than dropping straight into
+  // whichever one was used last.
+  if (phase === 'setup') {
+    const ready = circleReady(settings);
+    return (
+      <div className="app">
+        <div className="top reveal" style={{ animationDelay: '.02s' }}>
+          <div className="top-left">
+            <button className="icon-btn" aria-label="Home" onClick={onBack}>
+              ←
+            </button>
+          </div>
+          <div className="top-right">
+            <ThemeIconButton />
+          </div>
+        </div>
+        <div className="stage circle-setup">
+          <div className="setup-head reveal" style={{ animationDelay: '.04s' }}>
+            <div className="setup-title">Circle of fifths</div>
+          </div>
+          <div className="circle-setup-body reveal" style={{ animationDelay: '.08s' }}>
+            <CircleOptions settings={settings} onChange={setSettings} />
+          </div>
+        </div>
+        <div className="fret-actions">
+          <button className="bigbtn" onClick={() => setPhase('play')} disabled={!ready}>
+            Start
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`app ${flash}`} onClick={advance}>
@@ -264,7 +320,11 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
               <span className="k">{renderJazz(wedge.key, 'wk')}</span>
             </div>
 
-            <div className="token-row reveal" onClick={stop} style={{ animationDelay: '.06s' }}>
+            <div
+              className={`token-row reveal${pickedSlot ? ' awaiting' : ''}`}
+              onClick={stop}
+              style={{ animationDelay: '.06s' }}
+            >
               {wedge.tokens.map((t) => (
                 <button
                   key={t}
@@ -286,6 +346,7 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
                 marks={wedgeMarks}
                 hints={hints}
                 armed={selected !== null}
+                picked={pickedSlot}
                 onTapSlot={tapSlot}
               />
             </div>
