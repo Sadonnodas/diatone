@@ -111,7 +111,15 @@ export const segmentLabel = (slot: Slot): string => segmentSpellings(slot).join(
 // ── Settings ────────────────────────────────────────────────────────────────
 
 /** Two drills. Layout teaches the wheel; Wedge teaches a key's place on it. */
-export type Drill = 'layout' | 'wedge';
+export type Drill = 'layout' | 'wedge' | 'mix';
+
+/** What an individual question is — a mixed session deals either. */
+export type QuestionDrill = 'layout' | 'wedge';
+
+/** How the wedge drill takes a chord: built from recall on the keypad, picked
+    out of a handful of plausible options, or a mix of the two. */
+export type WedgeStyle = 'build' | 'pick' | 'mix';
+export type QuestionStyle = 'build' | 'pick';
 
 /** What the wedge drill hands you to place. */
 export type WedgePlace = 'chords' | 'numerals';
@@ -124,6 +132,8 @@ export interface CircleSettings {
   gaps: number;
   /** Wedge drill: place chord buttons, or numeral buttons. */
   place: WedgePlace;
+  /** Wedge drill, chords only: build each chord, pick it, or both. */
+  style: WedgeStyle;
   /** Wedge drill: print each slot's numeral as a guide. */
   guide: boolean;
   /** Wedge drill: which keys come up. */
@@ -139,6 +149,7 @@ export const defaultCircleSettings: CircleSettings = {
   rings: { major: true, minor: false },
   gaps: 2,
   place: 'chords',
+  style: 'build',
   guide: true,
   keys: [...ALL_KEYS],
   autoAdvance: true,
@@ -211,6 +222,11 @@ export interface WedgeQuestion {
   key: string;
   keyPos: number;
   slots: WedgeSlot[];
+  /** Build: tap any slot and build its chord. Pick: the slots are highlighted
+      one at a time, in `order`, each with its own `options`. */
+  style: QuestionStyle;
+  order: string[];
+  options: Record<string, string[]>;
   error?: string;
 }
 
@@ -234,7 +250,7 @@ export function generateWedge(
 ): WedgeQuestion {
   const pool = s.keys.filter((k) => ALL_KEYS.includes(k));
   if (pool.length === 0) {
-    return { key: '', keyPos: 0, slots: [], error: 'Pick at least one key.' };
+    return { key: '', keyPos: 0, slots: [], style: 'build', order: [], options: {}, error: 'Pick at least one key.' };
   }
   const fresh = pool.length > 1 ? pool.filter((k) => k !== avoidKey) : pool;
   const key = fresh[Math.floor(rand() * fresh.length)];
@@ -247,5 +263,95 @@ export function generateWedge(
     offset: w.offset,
   }));
 
-  return { key, keyPos, slots };
+  const style = questionStyle(s, rand);
+  if (style === 'build') return { key, keyPos, slots, style, order: [], options: {} };
+  return {
+    key,
+    keyPos,
+    slots,
+    style,
+    order: shuffle(slots.map((w) => w.degree), rand),
+    options: Object.fromEntries(slots.map((w) => [w.degree, pickOptions(w, keyPos, rand)])),
+  };
+}
+
+/** Build or pick for this question. Numerals are always tapped from the seven
+    degrees, which is already a pick, so the style only applies to chords. */
+function questionStyle(s: CircleSettings, rand: () => number): QuestionStyle {
+  if (s.place === 'numerals') return 'build';
+  if (s.style === 'mix') return rand() < 0.5 ? 'build' : 'pick';
+  return s.style;
+}
+
+// ── Pick options ────────────────────────────────────────────────────────────
+
+export const PICK_OPTIONS = 6;
+
+const PC_SPELLINGS: string[][] = [
+  ['C', 'B#'], ['C#', 'Db'], ['D'], ['D#', 'Eb'], ['E', 'Fb'], ['F', 'E#'],
+  ['F#', 'Gb'], ['G'], ['G#', 'Ab'], ['A'], ['A#', 'Bb'], ['B', 'Cb'],
+];
+const QUALITY_SUFFIXES = ['', 'm', 'dim'];
+
+const splitChord = (chord: string): { root: string; quality: string } => {
+  const m = /^([A-G][#b]?)(.*)$/.exec(chord);
+  return m ? { root: m[1], quality: m[2] } : { root: chord, quality: '' };
+};
+
+/**
+ * Six chords for one slot: the right one and five that are wrong in the ways
+ * people actually get it wrong, so picking still takes knowing the chord —
+ * not just spotting the only sensible-looking button.
+ *
+ *  - same root, wrong quality     (E or E° when it's Em)
+ *  - right sound, wrong spelling  (F° when F# major spells it E#°)
+ *  - the same slot in the next key round the wheel either side
+ *  - other chords of this key     (right key, wrong position)
+ */
+export function pickOptions(w: WedgeSlot, keyPos: number, rand: () => number = Math.random): string[] {
+  const correct = w.chord;
+  const { root, quality } = splitChord(correct);
+  const taken = new Set([correct]);
+  const out: string[] = [];
+  const add = (c: string | undefined) => {
+    if (!c || taken.has(c) || out.length >= PICK_OPTIONS - 1) return;
+    if (answersMatch(c, correct)) return; // an equivalent notation isn't a wrong answer
+    taken.add(c);
+    out.push(c);
+  };
+
+  const otherQualities = shuffle(QUALITY_SUFFIXES.filter((q) => q !== quality), rand);
+  add(root + otherQualities[0]);
+
+  const pc = rootPitchClass(root);
+  const respelled = pc === null ? undefined : PC_SPELLINGS[pc].find((r) => r !== root);
+  add(respelled ? respelled + quality : undefined);
+
+  const neighbours = shuffle([keyChord(wrap(keyPos - 1), w.degree), keyChord(wrap(keyPos + 1), w.degree)], rand);
+  add(neighbours[0]);
+
+  const keyChords = shuffle(
+    DEGREE_KEYS.filter((d) => d !== w.degree).map((d) => keyChord(keyPos, d)),
+    rand,
+  );
+  for (const c of [neighbours[1], root + otherQualities[1], ...keyChords]) add(c);
+
+  return shuffle([correct, ...out], rand);
+}
+
+/** Layout or wedge for this question — in a mix, whichever the settings can
+    actually make, and never three of the same kind in a row. */
+export function chooseDrill(
+  s: CircleSettings,
+  recent: QuestionDrill[],
+  rand: () => number = Math.random,
+): QuestionDrill {
+  if (s.drill !== 'mix') return s.drill;
+  const layoutOk = s.rings.major || s.rings.minor;
+  const wedgeOk = s.keys.some((k) => ALL_KEYS.includes(k));
+  if (!layoutOk) return 'wedge';
+  if (!wedgeOk) return 'layout';
+  const pick: QuestionDrill = rand() < 0.5 ? 'layout' : 'wedge';
+  const [a, b] = recent.slice(-2);
+  return a === pick && b === pick ? (pick === 'layout' ? 'wedge' : 'layout') : pick;
 }

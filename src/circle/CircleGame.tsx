@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CircleWheel, prettyChord, type Mark } from './CircleWheel';
 import { WedgeBoard } from './WedgeBoard';
 import { NameKeypad } from './NameKeypad';
+import { OptionPad } from './OptionPad';
 import { Keypad, useAnswerBuilder } from '../components/AnswerInput';
 import { CircleSettingsSheet } from './CircleSettings';
 import { CircleOptions, circleReady } from './CircleOptions';
@@ -12,6 +13,7 @@ import {
   defaultCircleSettings,
   generateLayout,
   generateWedge,
+  chooseDrill,
   layoutAnswerMatches,
   ringChord,
   segmentRoot,
@@ -20,6 +22,7 @@ import {
   wedgeToken,
   type CircleSettings,
   type LayoutQuestion,
+  type QuestionDrill,
   type WedgePlace,
   type WedgeQuestion,
   type WedgeSlot,
@@ -153,9 +156,13 @@ export default function CircleGame({
 
   const timer = useRef<number | null>(null);
   const runId = useRef(0);
+  // What kind of question is on screen. In a layout/wedge mix this changes from
+  // question to question, so everything below keys off it, not the setting.
+  const [qDrill, setQDrill] = useState<QuestionDrill>(settings.drill === 'wedge' ? 'wedge' : 'layout');
+  const recentDrills = useRef<QuestionDrill[]>([]);
   // What the current question was made for, so a settings change can tell
   // whether it still fits.
-  const questionDrill = useRef<CircleSettings['drill'] | null>(null);
+  const questionDrill = useRef<QuestionDrill | null>(null);
   const questionPlace = useRef<WedgePlace>(settings.place);
   const lastKey = useRef<string | undefined>(undefined);
   const { instrument } = useInstrument();
@@ -170,7 +177,7 @@ export default function CircleGame({
     }
   }, [settings]);
 
-  const isWedge = settings.drill === 'wedge';
+  const isWedge = qDrill === 'wedge';
 
   const generate = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
@@ -178,9 +185,12 @@ export default function CircleGame({
     runId.current += 1;
     setFlash('');
     setReviewIndex(null);
-    questionDrill.current = settings.drill;
+    const kind = chooseDrill(settings, recentDrills.current);
+    recentDrills.current = [...recentDrills.current.slice(-1), kind];
+    questionDrill.current = kind;
     questionPlace.current = settings.place;
-    if (settings.drill === 'wedge') {
+    setQDrill(kind);
+    if (kind === 'wedge') {
       const q = generateWedge(settings, Math.random, lastKey.current);
       lastKey.current = q.key || undefined;
       setWedge(q);
@@ -206,13 +216,15 @@ export default function CircleGame({
   // half-answered wheel or wedge. Anything that changes what's being asked
   // (drill, rings, gap count, keys, answer mode) starts a fresh one.
   const fits = (): boolean => {
-    if (questionDrill.current !== settings.drill) return false;
-    if (settings.drill === 'wedge') {
+    const kind = questionDrill.current;
+    if (!kind || (settings.drill !== 'mix' && settings.drill !== kind)) return false;
+    if (kind === 'wedge') {
       return (
         !!wedge &&
         !wedge.error &&
         settings.keys.includes(wedge.key) &&
-        questionPlace.current === settings.place
+        questionPlace.current === settings.place &&
+        (settings.style === 'mix' || settings.place === 'numerals' || wedge.style === settings.style)
       );
     }
     return (
@@ -326,8 +338,14 @@ export default function CircleGame({
   const wedgeDone = wedge ? Object.keys(placed).length >= wedge.slots.length : false;
 
   const numeralsMode = settings.place === 'numerals';
+  const picking = wedge?.style === 'pick';
+  // Build: the slot you tapped. Pick: the next unanswered slot in the
+  // question's order, highlighted for you.
+  const activeDegree = picking
+    ? (wedge!.order.find((d) => !placed[d]) ?? null)
+    : pickedSlot;
   const pickedWedgeSlot =
-    wedge && pickedSlot ? (wedge.slots.find((w) => w.degree === pickedSlot) ?? null) : null;
+    wedge && activeDegree ? (wedge.slots.find((w) => w.degree === activeDegree) ?? null) : null;
 
   const answerWedge = (typed: string) => {
     if (!wedge || !pickedWedgeSlot) return;
@@ -382,7 +400,7 @@ export default function CircleGame({
   });
 
   const tapSlot = (degree: string) => {
-    if (!wedge || placed[degree] || wedgeDone) return;
+    if (!wedge || picking || placed[degree] || wedgeDone) return;
     haptic(TAP);
     setPickedSlot((cur) => (cur === degree ? null : degree));
   };
@@ -552,6 +570,10 @@ export default function CircleGame({
             <div className="wedge-status" aria-live="polite">
               {wedgeDone ? (
                 <span className="lead">filled in</span>
+              ) : lastResult && !lastResult.right && picking ? (
+                <span className="miss">you said {prettyChord(lastResult.typed)}</span>
+              ) : picking ? (
+                <span className="lead">which chord goes there?</span>
               ) : pickedWedgeSlot ? (
                 <span className="lead">{numeralsMode ? 'tap its numeral' : 'build its chord'}</span>
               ) : lastResult && !lastResult.right ? (
@@ -567,7 +589,7 @@ export default function CircleGame({
                 placed={placed}
                 marks={wedgeMarks}
                 hints={hints}
-                picked={pickedSlot}
+                picked={activeDegree}
                 onTapSlot={tapSlot}
               />
             </div>
@@ -624,7 +646,18 @@ export default function CircleGame({
 
       {!reviewing && isWedge && !error && wedge && (
         <div onClick={stop}>
-          <Keypad builder={builder} disabled={!pickedWedgeSlot || wedgeDone} />
+          {picking ? (
+            <OptionPad
+              options={pickedWedgeSlot ? wedge.options[pickedWedgeSlot.degree] : []}
+              disabled={!pickedWedgeSlot || wedgeDone}
+              onPick={(chord) => {
+                haptic(TAP);
+                answerWedge(chord);
+              }}
+            />
+          ) : (
+            <Keypad builder={builder} disabled={!pickedWedgeSlot || wedgeDone} />
+          )}
         </div>
       )}
 
@@ -666,8 +699,9 @@ export default function CircleGame({
         <div onClick={stop}>
           <InfoModal title="Circle of fifths" onClose={() => setInfoOpen(false)}>
             <p>
-              Two drills, picked in settings. <b>Layout</b> blanks segments of the wheel and you
-              name them. <b>Key wedge</b> zooms in on one key: tap a slot and build its chord.
+              Two drills, or a mix of both. <b>Layout</b> blanks segments of the wheel and you
+              name them. <b>Key wedge</b> zooms in on one key: tap a slot and build its chord —
+              or, in the pick style, choose it from six for each highlighted slot in turn.
             </p>
             <p>
               The wheel is laid out like the printed one: majors nearest the centre, each

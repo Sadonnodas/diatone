@@ -2158,3 +2158,9 @@ text.cof-label {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* The pick style's six chords, set like the keypad they stand in for. */
+.key.option {
+  font-family: var(--font-display);
+  font-size: 21px;
+}

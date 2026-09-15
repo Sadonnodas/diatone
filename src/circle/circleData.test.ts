@@ -8,6 +8,9 @@ import {
   layoutAnswerMatches,
   segmentRoot,
   wedgeAnswerMatches,
+  pickOptions,
+  PICK_OPTIONS,
+  chooseDrill,
   keyAt,
   keyChord,
   ringChord,
@@ -242,5 +245,75 @@ describe('generateWedge', () => {
 
   it('says so when no key is picked', () => {
     expect(generateWedge(settings({ drill: 'wedge', keys: [] }), seeded(1)).error).toBeTruthy();
+  });
+});
+
+describe('pickOptions', () => {
+  const slotsFor = (key: string) =>
+    Object.fromEntries(
+      generateWedge(settings({ drill: 'wedge', keys: [key], style: 'build' }), seeded(1)).slots.map((w) => [w.degree, w]),
+    );
+
+  it('offers six distinct chords with the right one exactly once', () => {
+    for (const key of ALL_KEYS) {
+      const q = generateWedge(settings({ drill: 'wedge', keys: [key], style: 'build' }), seeded(2));
+      for (const w of q.slots) {
+        const opts = pickOptions(w, q.keyPos, seeded(9));
+        expect(opts, `${key} ${w.degree}`).toHaveLength(PICK_OPTIONS);
+        expect(new Set(opts).size).toBe(PICK_OPTIONS);
+        expect(opts.filter((o) => wedgeAnswerMatches(o, w, 'chords'))).toEqual([w.chord]);
+      }
+    }
+  });
+
+  it('includes the same root with a wrong quality', () => {
+    const w = slotsFor('C')['iii']; // Em
+    const opts = pickOptions(w, ALL_KEYS.indexOf('C'), seeded(3));
+    expect(opts.some((o) => o === 'E' || o === 'Edim')).toBe(true);
+  });
+
+  it('includes the other spelling where the key insists on one', () => {
+    const w = slotsFor('F#')['vii°']; // E#dim
+    const opts = pickOptions(w, ALL_KEYS.indexOf('F#'), seeded(3));
+    expect(opts).toContain('E#dim');
+    expect(opts).toContain('Fdim');
+  });
+});
+
+describe('wedge styles and the layout/wedge mix', () => {
+  it('a pick question walks every slot once, each with its own options', () => {
+    const q = generateWedge(settings({ drill: 'wedge', keys: ['G'], style: 'pick' }), seeded(4));
+    expect(q.style).toBe('pick');
+    expect([...q.order].sort()).toEqual([...DEGREE_KEYS].sort());
+    for (const w of q.slots) expect(q.options[w.degree]).toContain(w.chord);
+  });
+
+  it('numerals are never a pick question', () => {
+    const q = generateWedge(settings({ drill: 'wedge', keys: ['G'], place: 'numerals', style: 'pick' }), seeded(4));
+    expect(q.style).toBe('build');
+  });
+
+  it('a style mix deals both', () => {
+    const rand = seeded(11);
+    const styles = new Set(
+      Array.from({ length: 30 }, () => generateWedge(settings({ drill: 'wedge', style: 'mix' }), rand).style),
+    );
+    expect(styles).toEqual(new Set(['build', 'pick']));
+  });
+
+  it('a drill mix deals both, never three of a kind in a row', () => {
+    const rand = seeded(5);
+    const s = settings({ drill: 'mix', rings: { major: true, minor: false }, keys: ['C'] });
+    const recent: ('layout' | 'wedge')[] = [];
+    for (let i = 0; i < 60; i++) recent.push(chooseDrill(s, recent, rand));
+    expect(new Set(recent)).toEqual(new Set(['layout', 'wedge']));
+    for (let i = 2; i < recent.length; i++) {
+      expect(recent[i] === recent[i - 1] && recent[i] === recent[i - 2]).toBe(false);
+    }
+  });
+
+  it('a drill mix falls back to whichever drill the settings can make', () => {
+    expect(chooseDrill(settings({ drill: 'mix', rings: { major: false, minor: false } }), [], seeded(1))).toBe('wedge');
+    expect(chooseDrill(settings({ drill: 'mix', keys: [] }), [], seeded(1))).toBe('layout');
   });
 });
