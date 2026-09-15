@@ -263,8 +263,13 @@ button {
   flex-direction: column;
   align-items: center;
   /* Hero centred in the space above the keypad, with the question text lifted a
-     bit higher above it (see .ctx margin-bottom). */
+     bit higher above it (see .ctx margin-bottom). `safe` is the guard: when a
+     stage's content is taller than the stage, plain centring spills the excess
+     upward, over the header — which is how question titles ended up on top of
+     the streak and buttons. Safe centring falls back to top alignment instead.
+     The plain declaration first is for browsers that don't know `safe`. */
   justify-content: center;
+  justify-content: safe center;
   gap: 6px;
   text-align: center;
   min-height: 0;
@@ -973,7 +978,7 @@ button {
 
 /* ---- Setup screen (choose keys) ---- */
 .setup-stage {
-  justify-content: center;
+  /* centring (safe) comes from .stage */
   gap: clamp(18px, 4vh, 32px);
 }
 .setup-head {
@@ -1383,7 +1388,8 @@ button {
   gap: 12px;
 }
 .fret-stage {
-  justify-content: center;
+  /* Centring (safe) comes from .stage — restating plain `center` here is what
+     silently switched the overflow guard off for every fretboard drill. */
   gap: clamp(14px, 3vh, 26px);
 }
 /* Constant-height context so swapping the Hint button for the scale-type label
@@ -1508,10 +1514,49 @@ button {
 /* ---- Intervals ---- */
 /* Room at the foot of the stage for the "tap to continue" pill. */
 .iv-stage {
-  padding-bottom: clamp(40px, 6vh, 56px);
+  /* Room under the result for the absolutely-placed "tap to continue" hint, so
+     it never sits on the play buttons. */
+  padding-bottom: clamp(56px, 7.5vh, 64px);
+  /* Spacing that shrinks with the screen: on a 667px phone this stage has
+     ~430px for a title, prompt, board, result and play buttons. */
+  gap: clamp(8px, 2.2vh, 26px);
+}
+.iv-stage {
+  /* The height left for the board once everything else on this screen is
+     accounted for. Every term mirrors a real size: the app's padding and
+     header, the three interval key rows, the title, prompt, result reserve,
+     hint padding and gaps. */
+  --iv-board-room: calc(
+    100vh - max(20px, env(safe-area-inset-top)) - max(26px, env(safe-area-inset-bottom)) - 30px
+      - 3 * clamp(46px, 6.4vh, 62px) - 20px
+      - 32px - clamp(4px, 1.6vh, 20px) - 26px
+      - clamp(98px, 11.5vh, 106px) - clamp(56px, 7.5vh, 64px)
+      - 3 * clamp(8px, 2.2vh, 26px)
+  );
+}
+.iv-stage .fretwrap {
+  /* A fixed box, the same for every question. The board's own shape changes
+     with each question's fret span, and sizing by it moved the title and the
+     result from one question to the next. Capped at 260px, and kept 16px short
+     of the room so there's always a little air under the header. */
+  height: min(calc(var(--iv-board-room) - 16px), 260px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.iv-stage .fretwrap svg {
+  display: block;
+  width: 100%;
+  height: 100%; /* preserveAspectRatio="meet" scales the board inside the box */
 }
 /* Twelve keys instead of the Numerals keypad's rows of ~7, so they're shorter
    and the fretboard above keeps its room. */
+.iv-pad {
+  /* The interval keypad is its own, shorter layout; the reserve on .pad is
+     sized for the Numerals chord keypad and was leaving ~100px of dead space
+     above these keys, squeezing the question up under the header. */
+  min-height: 0;
+}
 .iv-pad .key {
   height: clamp(46px, 6.4vh, 62px);
   font-size: 17px;
@@ -1555,7 +1600,7 @@ button {
    name (low E) can't wrap and nudge the board. */
 .iv-stage .ctx {
   gap: 7px;
-  margin-bottom: clamp(8px, 2vh, 20px);
+  margin-bottom: clamp(4px, 1.6vh, 20px);
 }
 .iv-stage .ctx .lead {
   font-size: 13.5px;
@@ -1572,7 +1617,8 @@ button {
    reserve also has to cover the play buttons — the setting doesn't change
    mid-question, so the extra height is constant while you drill. */
 .iv-result.with-hear {
-  min-height: clamp(98px, 15vh, 118px);
+  /* result line + semitones + one row of play buttons, and no more */
+  min-height: clamp(98px, 11.5vh, 106px); /* measured: a wrong answer renders 98px */
 }
 .iv-result {
   min-height: clamp(52px, 7.5vh, 64px);
