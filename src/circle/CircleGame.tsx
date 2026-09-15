@@ -29,6 +29,7 @@ import { armUnlock, stopAll } from '../audio/engine';
 import { useInstrument } from '../audio/instrument';
 import { playChord, prefetchChords } from '../audio/phrases';
 import { chordToMidi } from '../audio/harmony';
+import type { MixedHooks } from '../lib/mixed';
 
 const STORAGE_KEY = 'diatone.circle.v2';
 
@@ -104,9 +105,23 @@ function ReviewSummary({ answered, total, misses }: { answered: number; total: n
   );
 }
 
-export default function CircleGame({ onBack }: { onBack: () => void }) {
+export default function CircleGame({
+  onBack,
+  skipSetup = false,
+  mixed,
+}: {
+  onBack: () => void;
+  /** Go straight into the drill with the saved settings, if they can make a
+      question. */
+  skipSetup?: boolean;
+  mixed?: MixedHooks;
+}) {
   const [settings, setSettings] = useState<CircleSettings>(loadSettings);
-  const [phase, setPhase] = useState<'setup' | 'play'>('setup');
+  const [phase, setPhase] = useState<'setup' | 'play'>(() =>
+    (skipSetup || mixed) && circleReady(settings) ? 'play' : 'setup',
+  );
+  const mixedRef = useRef(mixed);
+  mixedRef.current = mixed;
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [streak, setStreak] = useState(0);
@@ -138,6 +153,10 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
 
   const timer = useRef<number | null>(null);
   const runId = useRef(0);
+  // What the current question was made for, so a settings change can tell
+  // whether it still fits.
+  const questionDrill = useRef<CircleSettings['drill'] | null>(null);
+  const questionPlace = useRef<WedgePlace>(settings.place);
   const lastKey = useRef<string | undefined>(undefined);
   const { instrument } = useInstrument();
 
@@ -159,6 +178,8 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
     runId.current += 1;
     setFlash('');
     setReviewIndex(null);
+    questionDrill.current = settings.drill;
+    questionPlace.current = settings.place;
     if (settings.drill === 'wedge') {
       const q = generateWedge(settings, Math.random, lastKey.current);
       lastKey.current = q.key || undefined;
@@ -179,9 +200,35 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
     }
   }, [settings]);
 
+  // Does the question on screen still fit the settings? Playback, auto-advance,
+  // the numeral guide and the palette never change a question, so closing the
+  // settings sheet after touching only those keeps your place — including a
+  // half-answered wheel or wedge. Anything that changes what's being asked
+  // (drill, rings, gap count, keys, answer mode) starts a fresh one.
+  const fits = (): boolean => {
+    if (questionDrill.current !== settings.drill) return false;
+    if (settings.drill === 'wedge') {
+      return (
+        !!wedge &&
+        !wedge.error &&
+        settings.keys.includes(wedge.key) &&
+        questionPlace.current === settings.place
+      );
+    }
+    return (
+      !!layout &&
+      !layout.error &&
+      layout.blanks.length === Math.max(1, settings.gaps) &&
+      layout.blanks.every((b) => b.ring !== 'dim' && settings.rings[b.ring])
+    );
+  };
+  const fitsRef = useRef(fits);
+  fitsRef.current = fits;
+
   // Nothing is generated on the setup screen — the drill starts on Start.
   useEffect(() => {
-    if (phase === 'play') generate();
+    if (phase !== 'play' || fitsRef.current()) return;
+    generate();
   }, [generate, phase]);
 
   useEffect(
@@ -208,11 +255,18 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
     if (notes) void playChord(instrument, notes);
   };
 
+  // Move past the question: prepare the next one, and in a mixed session let
+  // the session hand over.
+  const next = () => {
+    generate();
+    mixedRef.current?.onDone();
+  };
+
   const finish = (allDone: boolean) => {
     if (!allDone || !settings.autoAdvance) return;
     const mine = runId.current;
     timer.current = window.setTimeout(() => {
-      if (runId.current === mine) generate();
+      if (runId.current === mine) next();
     }, ADVANCE_MS);
   };
 
@@ -236,6 +290,7 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
     if (!asked || !letter || !layout) return;
     const typed = letter + (acc === 'b' ? 'b' : acc === '#' ? '#' : '');
     const right = layoutAnswerMatches(typed, asked);
+    mixedRef.current?.onResult(right);
     haptic(right ? CORRECT : WRONG);
     setStreak((s) => (right ? s + 1 : 0));
     setFlash(right ? 'flash-ok' : 'flash-no');
@@ -278,6 +333,7 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
     if (!wedge || !pickedWedgeSlot) return;
     const w = pickedWedgeSlot;
     const right = wedgeAnswerMatches(typed, w, settings.place);
+    mixedRef.current?.onResult(right);
     haptic(right ? CORRECT : WRONG);
     setStreak((st) => (right ? st + 1 : 0));
     setFlash(right ? 'flash-ok' : 'flash-no');
@@ -355,7 +411,7 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
 
   const done = isWedge ? wedgeDone : layoutDone;
   const advance = () => {
-    if (done && !reviewing) generate();
+    if (done && !reviewing) next();
   };
   const stop = (e: React.MouseEvent) => e.stopPropagation();
   const waitingToAdvance = done && !settings.autoAdvance && !reviewing;
@@ -401,9 +457,9 @@ export default function CircleGame({ onBack }: { onBack: () => void }) {
           <button className="icon-btn" aria-label="Home" onClick={onBack}>
             ←
           </button>
-          <div className="streak" aria-label={`Streak ${streak}`}>
+          <div className="streak" aria-label={`Streak ${mixed ? mixed.streak : streak}`}>
             <span className="dot" />
-            <span className="n">{streak}</span>
+            <span className="n">{mixed ? mixed.streak : streak}</span>
             <span className="streak-word">streak</span>
           </div>
         </div>

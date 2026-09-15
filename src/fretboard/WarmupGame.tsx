@@ -11,6 +11,7 @@ import {
 import { renderJazz } from '../components/ChordDisplay';
 import { WarmupInfo } from './WarmupInfo';
 import { ThemeSettingRow } from '../components/ThemeSwitch';
+import type { MixedHooks } from '../lib/mixed';
 import { haptic, TAP, CORRECT, WRONG } from '../lib/haptics';
 import { ThemeIconButton } from '../components/ThemeSwitch';
 
@@ -62,7 +63,7 @@ function loadSettings(): WarmupSettings {
   return defaults;
 }
 
-export default function WarmupGame({ onBack }: { onBack: () => void }) {
+export default function WarmupGame({ onBack, mixed }: { onBack: () => void; mixed?: MixedHooks }) {
   const [settings, setSettings] = useState<WarmupSettings>(loadSettings);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
@@ -76,6 +77,8 @@ export default function WarmupGame({ onBack }: { onBack: () => void }) {
   const [reviewIndex, setReviewIndex] = useState<number | null>(null);
   const timer = useRef<number | null>(null);
   const lastSig = useRef<string>('');
+  const mixedRef = useRef(mixed);
+  mixedRef.current = mixed;
 
   useEffect(() => {
     try {
@@ -143,9 +146,22 @@ export default function WarmupGame({ onBack }: { onBack: () => void }) {
     });
   }, [enabledShapes, enabledQualities]);
 
-  useEffect(() => {
+  // Move past the question: prepare the next one, and in a mixed session let
+  // the session hand over.
+  const next = useCallback(() => {
     generate();
+    mixedRef.current?.onDone();
   }, [generate]);
+
+  // New question on mount and when the shapes/qualities change — unless the one
+  // on screen is still one of them.
+  const questionRef = useRef<WQuestion | null>(null);
+  questionRef.current = question;
+  useEffect(() => {
+    const q = questionRef.current;
+    const stillFits = !!q && enabledShapes.includes(q.shape) && enabledQualities.includes(q.quality);
+    if (!stillFits) generate();
+  }, [generate, enabledShapes, enabledQualities]);
 
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
@@ -176,10 +192,11 @@ export default function WarmupGame({ onBack }: { onBack: () => void }) {
     setAnswered(true);
     setStreak((s) => (isCorrect ? s + 1 : 0));
     setHistory((h) => [...h, { question, selected: new Set(selected), correct: isCorrect }]);
+    mixedRef.current?.onResult(isCorrect);
     haptic(isCorrect ? CORRECT : WRONG);
     setFlash(isCorrect ? 'flash-ok' : 'flash-no');
     window.setTimeout(() => setFlash(''), 500);
-    if (isCorrect && settings.autoAdvance) timer.current = window.setTimeout(generate, 900);
+    if (isCorrect && settings.autoAdvance) timer.current = window.setTimeout(next, 900);
   };
 
   const enterReview = () => {
@@ -200,9 +217,9 @@ export default function WarmupGame({ onBack }: { onBack: () => void }) {
           <button className="icon-btn" aria-label="Home" onClick={onBack}>
             ←
           </button>
-          <div className="streak" aria-label={`Streak ${streak}`}>
+          <div className="streak" aria-label={`Streak ${mixed ? mixed.streak : streak}`}>
             <span className="dot" />
-            <span className="n">{streak}</span>
+            <span className="n">{mixed ? mixed.streak : streak}</span>
             <span className="streak-word">streak</span>
           </div>
         </div>
@@ -284,7 +301,7 @@ export default function WarmupGame({ onBack }: { onBack: () => void }) {
                 {correct ? '✓ Correct' : '✗ See the highlighted notes'}
               </div>
               {!(correct && settings.autoAdvance) && (
-                <button className="bigbtn" onClick={generate}>
+                <button className="bigbtn" onClick={next}>
                   Next
                 </button>
               )}

@@ -18,6 +18,7 @@ import { armUnlock, stopAll } from '../audio/engine';
 import { useInstrument } from '../audio/instrument';
 import { playFrettedInterval, playIntervalClass, prefetchFretted } from '../audio/phrases';
 import { ThemeIconButton } from '../components/ThemeSwitch';
+import type { MixedHooks } from '../lib/mixed';
 
 const STORAGE_KEY = 'diatone.intervals.v1';
 const ADVANCE_MS = 900;
@@ -71,7 +72,7 @@ function buildNotes(q: IntervalQuestion, answer: number | null, correct: boolean
   return [root, note];
 }
 
-export default function IntervalGame({ onBack }: { onBack: () => void }) {
+export default function IntervalGame({ onBack, mixed }: { onBack: () => void; mixed?: MixedHooks }) {
   const [settings, setSettings] = useState<Settings>(loadSettings);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
@@ -88,6 +89,8 @@ export default function IntervalGame({ onBack }: { onBack: () => void }) {
   // tapped on before the notes finished) checks this before advancing.
   const runId = useRef(0);
   const { instrument } = useInstrument();
+  const mixedRef = useRef(mixed);
+  mixedRef.current = mixed;
 
   useEffect(armUnlock, []);
 
@@ -114,9 +117,27 @@ export default function IntervalGame({ onBack }: { onBack: () => void }) {
     setQuestion(q);
   }, [rootStrings, stringGap, fretSpan, intervals]);
 
-  useEffect(() => {
+  // Move past the question: prepare the next one, and in a mixed session let
+  // the session hand over.
+  const next = useCallback(() => {
     generate();
+    mixedRef.current?.onDone();
   }, [generate]);
+
+  // New question on mount and when the limits change — unless the one on screen
+  // is still inside them.
+  const questionRef = useRef<IntervalQuestion | null>(null);
+  questionRef.current = question;
+  useEffect(() => {
+    const q = questionRef.current;
+    const stillFits =
+      !!q &&
+      !!rootStrings[q.rootString] &&
+      !!intervals[q.cls] &&
+      q.rootString - q.noteString <= stringGap &&
+      Math.abs(q.noteFret - q.rootFret) <= fretSpan;
+    if (!stillFits) generate();
+  }, [generate, rootStrings, intervals, stringGap, fretSpan]);
 
   // Warm this question's samples so answering sounds instant — also on an
   // instrument switch, which needs a different pair of recordings.
@@ -144,6 +165,7 @@ export default function IntervalGame({ onBack }: { onBack: () => void }) {
   const submit = (cls: number) => {
     if (!question || answer !== null || reviewing) return;
     const isCorrect = cls === question.cls;
+    mixedRef.current?.onResult(isCorrect);
     haptic(isCorrect ? CORRECT : WRONG);
     setAnswer(cls);
     setCorrect(isCorrect);
@@ -154,7 +176,7 @@ export default function IntervalGame({ onBack }: { onBack: () => void }) {
 
     const advanceAfter = isCorrect && settings.autoAdvance;
     if (!settings.playback) {
-      if (advanceAfter) timer.current = window.setTimeout(generate, ADVANCE_MS);
+      if (advanceAfter) timer.current = window.setTimeout(next, ADVANCE_MS);
       return;
     }
 
@@ -168,7 +190,7 @@ export default function IntervalGame({ onBack }: { onBack: () => void }) {
       question.noteFret,
     )
       .then(() => {
-        if (advanceAfter && runId.current === mine) generate();
+        if (advanceAfter && runId.current === mine) next();
       });
   };
 
@@ -199,7 +221,7 @@ export default function IntervalGame({ onBack }: { onBack: () => void }) {
   // Tap anywhere to move on once the answer is showing (§18) — the header and
   // the sheets stop the click so their own buttons still work.
   const advance = () => {
-    if (answered && !reviewing) generate();
+    if (answered && !reviewing) next();
   };
   const waitingToAdvance = answered && !reviewing && !(correct && settings.autoAdvance);
   const stop = (e: React.MouseEvent) => e.stopPropagation();
@@ -211,9 +233,9 @@ export default function IntervalGame({ onBack }: { onBack: () => void }) {
           <button className="icon-btn" aria-label="Home" onClick={onBack}>
             ←
           </button>
-          <div className="streak" aria-label={`Streak ${streak}`}>
+          <div className="streak" aria-label={`Streak ${mixed ? mixed.streak : streak}`}>
             <span className="dot" />
-            <span className="n">{streak}</span>
+            <span className="n">{mixed ? mixed.streak : streak}</span>
             <span className="streak-word">streak</span>
           </div>
         </div>

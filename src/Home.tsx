@@ -1,11 +1,44 @@
 import type { PwaApi } from './pwa';
 import { ThemeToggleButton } from './components/ThemeSwitch';
 
-export type Screen = 'home' | 'numerals' | 'fretboard' | 'intervals' | 'warmup' | 'circle';
+export type Screen = 'home' | 'numerals' | 'fretboard' | 'intervals' | 'warmup' | 'circle' | 'mixed';
 
 function formatBuild(iso: string): string {
   const d = new Date(iso);
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString();
+}
+
+// A die showing five — "pick one for me".
+function DieIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="3.5" y="3.5" width="17" height="17" rx="4" stroke="currentColor" strokeWidth="1.7" />
+      {[
+        [8.5, 8.5],
+        [15.5, 8.5],
+        [12, 12],
+        [8.5, 15.5],
+        [15.5, 15.5],
+      ].map(([cx, cy], i) => (
+        <circle key={i} cx={cx} cy={cy} r="1.5" fill="currentColor" />
+      ))}
+    </svg>
+  );
+}
+
+// Two crossing arrows — questions from several drills, shuffled together.
+function ShuffleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M3 7h3.5c2 0 3.2 1 4.4 2.7l2.2 4.6c1.2 1.7 2.4 2.7 4.4 2.7H21M3 17h3.5c2 0 3.2-1 4.4-2.7M13.1 9.7c1.2-1.7 2.4-2.7 4.4-2.7H21M18 4l3 3-3 3M18 14l3 3-3 3"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 }
 
 // Two rings and a wedge — the circle drill at a glance.
@@ -73,7 +106,15 @@ function IntervalIcon() {
   );
 }
 
-export default function Home({ onPick, pwa }: { onPick: (g: Screen) => void; pwa: PwaApi }) {
+export default function Home({
+  onPick,
+  onRandom,
+  pwa,
+}: {
+  onPick: (g: Screen) => void;
+  onRandom: () => void;
+  pwa: PwaApi;
+}) {
   return (
     <div className="app home">
       <ThemeToggleButton className="home-theme reveal" />
@@ -94,7 +135,7 @@ export default function Home({ onPick, pwa }: { onPick: (g: Screen) => void; pwa
           <div className="gc-icon serif">II</div>
           <div className="gc-text">
             <div className="gc-title">Numerals</div>
-            <div className="gc-desc">Roman numerals ↔ chords in all 12 keys</div>
+            <div className="gc-desc">Numerals ↔ chords in all 12 keys</div>
           </div>
           <div className="gc-arrow">→</div>
         </button>
@@ -124,7 +165,7 @@ export default function Home({ onPick, pwa }: { onPick: (g: Screen) => void; pwa
           </div>
           <div className="gc-text">
             <div className="gc-title">Intervals</div>
-            <div className="gc-desc">Name the gap between two notes on the neck</div>
+            <div className="gc-desc">Name the gap between two notes</div>
           </div>
           <div className="gc-arrow">→</div>
         </button>
@@ -154,13 +195,31 @@ export default function Home({ onPick, pwa }: { onPick: (g: Screen) => void; pwa
           </div>
           <div className="gc-text">
             <div className="gc-title">Warm-up</div>
-            <div className="gc-desc">Degrees in the rectangle & stack shapes</div>
+            <div className="gc-desc">Rectangle & stack shape degrees</div>
           </div>
           <div className="gc-arrow">→</div>
         </button>
       </div>
 
-      <div className="home-foot reveal" style={{ animationDelay: '.4s' }}>
+      {/* Ways in that aren't one particular drill. */}
+      <div className="home-modes reveal" style={{ animationDelay: '.38s' }}>
+        <button className="home-mode" onClick={onRandom}>
+          <DieIcon />
+          <span>
+            <b>Random drill</b>
+            <small>pick one for me</small>
+          </span>
+        </button>
+        <button className="home-mode" onClick={() => onPick('mixed')}>
+          <ShuffleIcon />
+          <span>
+            <b>Mixed</b>
+            <small>questions from several</small>
+          </span>
+        </button>
+      </div>
+
+      <div className="home-foot reveal" style={{ animationDelay: '.44s' }}>
         {pwa.needRefresh ? (
           <button className="update-link on" onClick={pwa.updateNow} disabled={pwa.updating}>
             {pwa.updating ? 'Updating…' : 'Update to latest'}

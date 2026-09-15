@@ -48,7 +48,9 @@ export interface FretQuestion {
 
 const SCALE_TYPES = Object.keys(SCALE_TYPE_INFO) as ScaleType[];
 
-export function useFretboardGame(settings: FretSettings) {
+/** `onAdvanced` runs after the drill moves on to its next question by itself or
+    by the Next button — not when settings regenerate one. */
+export function useFretboardGame(settings: FretSettings, onAdvanced?: () => void) {
   const [question, setQuestion] = useState<FretQuestion | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [answered, setAnswered] = useState(false);
@@ -130,10 +132,20 @@ export function useFretboardGame(settings: FretSettings) {
     setQuestion({ error: 'Could not place a shape — try more shapes.' } as FretQuestion);
   }, [pool, modes]);
 
-  // Regenerate when the pool/modes change (and on mount).
+  // New question on mount, and when the scale/shape/mode choices change — but
+  // only if the one on screen no longer fits them. Narrowing the pool to
+  // something that still includes this question shouldn't cost you it.
+  const questionRef = useRef<FretQuestion | null>(null);
+  questionRef.current = question;
   useEffect(() => {
-    generate();
-  }, [generate]);
+    const q = questionRef.current;
+    const stillFits =
+      !!q &&
+      !q.error &&
+      pool.some((p) => p.scaleType === q.scaleType && p.shape === q.shape) &&
+      modes.includes(q.contextMode);
+    if (!stillFits) generate();
+  }, [generate, pool, modes]);
 
   const toggle = useCallback(
     (string: number, fret: number) => {
@@ -172,10 +184,17 @@ export function useFretboardGame(settings: FretSettings) {
   );
   const exitReview = useCallback(() => setReviewIndex(null), []);
 
+  const onAdvancedRef = useRef(onAdvanced);
+  onAdvancedRef.current = onAdvanced;
+  const advance = useCallback(() => {
+    generate();
+    onAdvancedRef.current?.();
+  }, [generate]);
+
   const scheduleAdvance = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
-    timer.current = window.setTimeout(generate, 900);
-  }, [generate]);
+    timer.current = window.setTimeout(advance, 900);
+  }, [advance]);
 
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
@@ -191,6 +210,7 @@ export function useFretboardGame(settings: FretSettings) {
     toggle,
     check,
     generate,
+    advance,
     scheduleAdvance,
     enterReview,
     reviewNav,

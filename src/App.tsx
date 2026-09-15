@@ -5,11 +5,24 @@ import FretboardGame from './fretboard/FretboardGame';
 import IntervalGame from './fretboard/IntervalGame';
 import WarmupGame from './fretboard/WarmupGame';
 import CircleGame from './circle/CircleGame';
+import MixedGame from './MixedGame';
+import { RANDOM_GAMES, pickGame } from './lib/mixed';
 import { usePwa } from './pwa';
 
 export default function App() {
   const pwa = usePwa();
   const [screen, setScreen] = useState<Screen>('home');
+  // Set when a drill was opened by the Random button: straight in, no setup.
+  const [skipSetup, setSkipSetup] = useState(false);
+  const home = () => setScreen('home');
+  const open = (s: Screen) => {
+    setSkipSetup(false);
+    setScreen(s);
+  };
+  const openRandom = () => {
+    setSkipSetup(true);
+    setScreen(pickGame(RANDOM_GAMES));
+  };
   const [updateDismissed, setUpdateDismissed] = useState(false);
   const stop = (e: React.MouseEvent) => e.stopPropagation();
 
@@ -29,12 +42,13 @@ export default function App() {
         </div>
       )}
 
-      {screen === 'home' && <Home onPick={setScreen} pwa={pwa} />}
-      {screen === 'numerals' && <NumeralsGame onBack={() => setScreen('home')} />}
-      {screen === 'fretboard' && <FretboardGame onBack={() => setScreen('home')} />}
-      {screen === 'intervals' && <IntervalGame onBack={() => setScreen('home')} />}
-      {screen === 'warmup' && <WarmupGame onBack={() => setScreen('home')} />}
-      {screen === 'circle' && <CircleGame onBack={() => setScreen('home')} />}
+      {screen === 'home' && <Home onPick={open} onRandom={openRandom} pwa={pwa} />}
+      {screen === 'numerals' && <NumeralsGame onBack={home} skipSetup={skipSetup} />}
+      {screen === 'fretboard' && <FretboardGame onBack={home} />}
+      {screen === 'intervals' && <IntervalGame onBack={home} />}
+      {screen === 'warmup' && <WarmupGame onBack={home} />}
+      {screen === 'circle' && <CircleGame onBack={home} skipSetup={skipSetup} />}
+      {screen === 'mixed' && <MixedGame onBack={home} />}
     </>
   );
 }

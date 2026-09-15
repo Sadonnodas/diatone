@@ -127,11 +127,21 @@ export function trainerReducer(state: TrainerState, action: Action): TrainerStat
       const settings = action.settings;
       // Rebuild the same seed unless it's now invalid; then roll a fresh one (§10).
       const seed = isSeedValid(state.seed, settings) ? state.seed : pickSeed(settings);
+      // Clear the verdict only if the question itself changed (§16) — toggling
+      // playback or auto-advance mustn't wipe an answer you're still reading.
+      const before = state.seed ? buildQuestionFromSeed(state.seed, state.settings) : null;
+      const after = seed ? buildQuestionFromSeed(seed, settings) : null;
+      const unchanged =
+        seed === state.seed &&
+        !!before &&
+        !!after &&
+        questionSig(before) === questionSig(after) &&
+        before.answer === after.answer;
       return {
         ...state,
         settings,
         seed,
-        feedback: null, // clear stale feedback (§16); keep userAnswer
+        feedback: unchanged ? state.feedback : null, // keep userAnswer either way
       };
     }
 

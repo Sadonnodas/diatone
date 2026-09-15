@@ -1261,7 +1261,7 @@ button {
   justify-content: flex-start;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  gap: clamp(20px, 4.5vh, 44px);
+  gap: clamp(16px, 3vh, 32px);
 }
 .home-head {
   margin-top: auto;
@@ -1740,13 +1740,34 @@ button {
    Three rings of twelve. Majors carry the gold/blue quality colours the
    warm-up already uses, so "major ring / minor ring" reads without a legend. */
 .cof-stage {
-  justify-content: center;
+  /* Centred while it fits, and never overflowing upward when it doesn't: the
+     auto margins below share out spare room like centring, but collapse to
+     zero when there's none. With the wheel and a full keypad on one screen,
+     plain centring pushed the title up under the header buttons. */
+  justify-content: flex-start;
   gap: clamp(10px, 2.5vh, 20px);
-  padding-bottom: clamp(28px, 5vh, 44px);
+  padding-bottom: clamp(12px, 2.5vh, 28px);
+}
+.cof-stage > .ctx {
+  margin-top: auto;
+  margin-bottom: 0; /* the lift in .ctx is for the Numerals hero, not a wheel */
+}
+.cof-stage > .cof-progress,
+.cof-stage > .wedge-status:last-child {
+  margin-bottom: auto;
+}
+.cof-stage > .empty {
+  margin: auto 0;
 }
 .cof-wheel {
   position: relative;
-  width: min(100%, 380px);
+  /* Sized by height as well as width: what's left once the header, the
+     keypad (three key rows + captions) and the safe areas are taken out. */
+  width: min(
+    100%,
+    380px,
+    calc(100vh - 3 * var(--key-h) - 250px - env(safe-area-inset-top) - env(safe-area-inset-bottom))
+  );
   aspect-ratio: 1;
 }
 .cof {
@@ -1910,13 +1931,23 @@ text.cof-label {
    The zoomed slice: chord buttons above, the fan below. */
 .wedge-stage {
   /* Shares the screen with a full chord keypad now, so the spacing is tight
-     on purpose: on a 667px phone the fan only just clears the keys. */
-  justify-content: center;
+     on purpose: on a 667px phone the fan only just clears the keys. Same
+     never-overflow-upward centring as .cof-stage. */
+  justify-content: flex-start;
   gap: clamp(6px, 1.6vh, 20px);
   padding-bottom: clamp(4px, 1.2vh, 14px);
 }
 .wedge-stage .ctx {
   margin-bottom: 0; /* the status line sits directly under the key */
+}
+.wedge-stage > .ctx {
+  margin-top: auto;
+}
+.wedge-stage > .wedge-wrap {
+  margin-bottom: auto;
+}
+.wedge-stage > .empty {
+  margin: auto 0;
 }
 /* Bleed past the app's side padding — a 90°-wide fan is inherently wider
    than it is tall, so width is the only thing that makes it bigger. */
@@ -2037,4 +2068,47 @@ text.cof-label {
 .wedge-status .miss {
   color: var(--wrong);
   font-weight: 500;
+}
+
+/* Random and Mixed: a compact row under the drill cards — ways in that aren't
+   a particular drill, so they read as a different kind of button. */
+.home-modes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.home-mode {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 13px;
+  border-radius: var(--radius);
+  border: 0.5px solid var(--accent-line);
+  background: var(--accent-dim);
+  color: var(--accent);
+  text-align: left;
+  transition: transform 0.12s ease, background 0.15s ease;
+}
+.home-mode:active {
+  transform: scale(0.97);
+}
+.home-mode span {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.home-mode b {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text);
+}
+.home-mode small {
+  font-size: 11.5px;
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

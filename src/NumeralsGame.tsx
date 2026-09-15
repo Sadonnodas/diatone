@@ -14,6 +14,7 @@ import { Review } from './components/Review';
 import { InfoModal } from './components/InfoModal';
 import { KeyWheel } from './components/KeyWheel';
 import { MODES, transposeStranded } from './lib/modes';
+import type { MixedHooks } from './lib/mixed';
 import { haptic, TAP, CORRECT, WRONG } from './lib/haptics';
 import { armUnlock, stopAll } from './audio/engine';
 import { useInstrument } from './audio/instrument';
@@ -54,12 +55,25 @@ function EyeOff() {
   );
 }
 
-export default function NumeralsGame({ onBack }: { onBack: () => void }) {
+export default function NumeralsGame({
+  onBack,
+  skipSetup = false,
+  mixed,
+}: {
+  onBack: () => void;
+  /** Go straight into the drill with the saved keys and modes. */
+  skipSetup?: boolean;
+  mixed?: MixedHooks;
+}) {
   const [state, dispatch] = useReducer(trainerReducer, undefined, loadInitialState);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [flash, setFlash] = useState<'' | 'flash-ok' | 'flash-no'>('');
-  const [phase, setPhase] = useState<'setup' | 'play'>('setup');
+  const [phase, setPhase] = useState<'setup' | 'play'>(skipSetup || mixed ? 'play' : 'setup');
+  // Read through a ref so the session's changing callbacks never retrigger
+  // this drill's effects.
+  const mixedRef = useRef(mixed);
+  mixedRef.current = mixed;
   const [setupKeys, setSetupKeys] = useState<string[]>(state.settings.selectedKeys);
   const [setupModes, setSetupModes] = useState<number[]>(state.settings.selectedModes);
   const advanceTimer = useRef<number | null>(null);
@@ -142,8 +156,20 @@ export default function NumeralsGame({ onBack }: { onBack: () => void }) {
     },
   });
 
+  // Move past the current question. In a mixed session the next question is
+  // still prepared here, then the session is told it can hand over.
+  const goNext = useCallback(() => {
+    dispatch({ type: 'NEXT' });
+    mixedRef.current?.onDone();
+  }, []);
+
   // Feedback side effects: haptic + flash + (correct & autoAdvance) auto-roll (§18).
+  // Runs once per answer. A settings change now keeps the verdict on screen, and
+  // re-running here would replay the haptic, the flash and the chord.
+  const handledFeedback = useRef<typeof state.feedback>(null);
   useEffect(() => {
+    if (state.feedback === handledFeedback.current) return;
+    handledFeedback.current = state.feedback;
     if (advanceTimer.current) {
       clearTimeout(advanceTimer.current);
       advanceTimer.current = null;
@@ -153,9 +179,10 @@ export default function NumeralsGame({ onBack }: { onBack: () => void }) {
       stopAll(); // a new question — don't let the last phrase bleed into it
       return;
     }
+    mixedRef.current?.onResult(state.feedback.correct);
     haptic(state.feedback.correct ? CORRECT : WRONG);
     setFlash(state.feedback.correct ? 'flash-ok' : 'flash-no');
-    const t = window.setTimeout(() => setFlash(''), 500);
+    window.setTimeout(() => setFlash(''), 500);
 
     const advanceAfter = state.feedback.correct && state.settings.autoAdvance;
     if (state.settings.playback) {
@@ -166,34 +193,40 @@ export default function NumeralsGame({ onBack }: { onBack: () => void }) {
         // Nothing sounded (samples missing, or an answer we can't voice): fall
         // back to the normal pause instead of advancing the instant the empty
         // promise resolves, which would flick the verdict off screen.
-        if (seconds > 0) dispatch({ type: 'NEXT' });
-        else advanceTimer.current = window.setTimeout(() => dispatch({ type: 'NEXT' }), CORRECT_ADVANCE_MS);
+        if (seconds > 0) goNext();
+        else advanceTimer.current = window.setTimeout(goNext, CORRECT_ADVANCE_MS);
       });
     } else if (advanceAfter) {
-      advanceTimer.current = window.setTimeout(() => dispatch({ type: 'NEXT' }), CORRECT_ADVANCE_MS);
+      advanceTimer.current = window.setTimeout(goNext, CORRECT_ADVANCE_MS);
     }
+    // No cleanup: this only ever runs for a new answer, which clears the old
+    // timer above. Unmount is handled below.
+  }, [state.feedback, state.settings.autoAdvance, state.settings.playback, answerKey, playAnswer, goNext]);
 
-    return () => {
-      window.clearTimeout(t);
+  // Leaving the screen mid-phrase shouldn't keep playing, or advance a screen
+  // that's gone.
+  useEffect(
+    () => () => {
+      stopAll();
       if (advanceTimer.current) clearTimeout(advanceTimer.current);
-    };
-  }, [state.feedback, state.settings.autoAdvance, state.settings.playback, answerKey, playAnswer]);
-
-  // Leaving the screen mid-phrase shouldn't keep playing.
-  useEffect(() => () => stopAll(), []);
+    },
+    [],
+  );
 
   // Enter advances when feedback is showing (§18).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Enter' && state.feedback && !reviewing) dispatch({ type: 'NEXT' });
+      // A hidden drill in a mixed session must not react to the keyboard.
+      if (mixedRef.current && !mixedRef.current.active) return;
+      if (e.key === 'Enter' && state.feedback && !reviewing) goNext();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [state.feedback, reviewing]);
+  }, [state.feedback, reviewing, goNext]);
 
   // Tap-anywhere-to-advance once feedback is showing (§17/§18).
   const onAppClick = () => {
-    if (state.feedback && !reviewing) dispatch({ type: 'NEXT' });
+    if (state.feedback && !reviewing) goNext();
   };
 
   const stop = (e: React.MouseEvent) => e.stopPropagation();
@@ -281,9 +314,9 @@ export default function NumeralsGame({ onBack }: { onBack: () => void }) {
           <button className="icon-btn" aria-label="Home" onClick={onBack}>
             ←
           </button>
-          <div className="streak" aria-label={`Streak ${state.streak}`}>
+          <div className="streak" aria-label={`Streak ${mixed ? mixed.streak : state.streak}`}>
             <span className="dot" />
-            <span className="n">{state.streak}</span>
+            <span className="n">{mixed ? mixed.streak : state.streak}</span>
             <span className="streak-word">streak</span>
           </div>
         </div>

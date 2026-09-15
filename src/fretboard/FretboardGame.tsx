@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FretboardWindow } from './FretboardWindow';
 import { FretboardSettings } from './FretboardSettings';
 import { InfoModal } from '../components/InfoModal';
@@ -8,6 +8,7 @@ import { buildFretNotes } from './fretDisplay';
 import { renderJazz } from '../components/ChordDisplay';
 import { haptic, TAP, CORRECT, WRONG } from '../lib/haptics';
 import { ThemeIconButton } from '../components/ThemeSwitch';
+import type { MixedHooks } from '../lib/mixed';
 
 const STORAGE_KEY = 'diatone.fret.v1';
 
@@ -21,19 +22,28 @@ function loadSettings(): FretSettings {
   return defaultFretSettings;
 }
 
-export default function FretboardGame({ onBack }: { onBack: () => void }) {
+export default function FretboardGame({ onBack, mixed }: { onBack: () => void; mixed?: MixedHooks }) {
   const [settings, setSettings] = useState<FretSettings>(loadSettings);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [flash, setFlash] = useState<'' | 'flash-ok' | 'flash-no'>('');
   const [hintShown, setHintShown] = useState(false);
 
+  const mixedRef = useRef(mixed);
+  mixedRef.current = mixed;
+
   const {
-    question, selected, answered, correct, streak,
+    question, selected, answered, correct, streak: ownStreak,
     history, reviewIndex,
-    toggle, check, generate, scheduleAdvance,
+    toggle, check, advance, scheduleAdvance,
     enterReview, reviewNav, exitReview,
-  } = useFretboardGame(settings);
+  } = useFretboardGame(settings, () => mixedRef.current?.onDone());
+  const streak = mixed ? mixed.streak : ownStreak;
+
+  const onCheck = () => {
+    const result = check();
+    if (result !== undefined) mixedRef.current?.onResult(result);
+  };
 
   useEffect(() => setHintShown(false), [question]);
 
@@ -171,7 +181,7 @@ export default function FretboardGame({ onBack }: { onBack: () => void }) {
       ) : valid ? (
         <div className="fret-actions">
           {!answered ? (
-            <button className="bigbtn" onClick={check} disabled={selected.size === 0}>
+            <button className="bigbtn" onClick={onCheck} disabled={selected.size === 0}>
               Check
             </button>
           ) : (
@@ -180,7 +190,7 @@ export default function FretboardGame({ onBack }: { onBack: () => void }) {
                 {correct ? '✓ Correct' : '✗ See the highlighted notes'}
               </div>
               {!(correct && settings.autoAdvance) && (
-                <button className="bigbtn" onClick={generate}>
+                <button className="bigbtn" onClick={advance}>
                   Next
                 </button>
               )}
