@@ -75,6 +75,8 @@ export interface WedgeBoardProps {
   hints: Record<string, string>;
   /** The slot being answered. */
   picked: string | null;
+  /** Let filled slots be tapped too — a progression can use a chord twice. */
+  tapFilled?: boolean;
   onTapSlot: (degree: string) => void;
 }
 
@@ -84,6 +86,7 @@ export function WedgeBoard({
   marks,
   hints,
   picked,
+  tapFilled = false,
   onTapSlot,
 }: WedgeBoardProps) {
   return (
@@ -136,8 +139,8 @@ export function WedgeBoard({
                 mark ? ` ${mark}` : ''
               }${picked === w.degree ? ' picked' : ''}`}
               d={segmentPath(ri, ro, a0, a1)}
-              onClick={token ? undefined : () => onTapSlot(w.degree)}
-              style={{ cursor: token ? 'default' : 'pointer' }}
+              onClick={token && !tapFilled ? undefined : () => onTapSlot(w.degree)}
+              style={{ cursor: token && !tapFilled ? 'default' : 'pointer' }}
             />
             <text
               className={`wedge-label${mark ? ` ${mark}` : ''}`}

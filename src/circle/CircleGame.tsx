@@ -3,6 +3,7 @@ import { CircleWheel, prettyChord, type Mark } from './CircleWheel';
 import { WedgeBoard } from './WedgeBoard';
 import { NameKeypad } from './NameKeypad';
 import { OptionPad } from './OptionPad';
+import { ProgressionPad, type ProgressionCell } from './ProgressionPad';
 import { Keypad, useAnswerBuilder } from '../components/AnswerInput';
 import { CircleSettingsSheet } from './CircleSettings';
 import { CircleOptions, circleReady } from './CircleOptions';
@@ -14,6 +15,7 @@ import {
   generateLayout,
   generateWedge,
   chooseDrill,
+  generateProgression,
   layoutAnswerMatches,
   ringChord,
   segmentRoot,
@@ -22,6 +24,7 @@ import {
   wedgeToken,
   type CircleSettings,
   type LayoutQuestion,
+  type ProgressionQuestion,
   type QuestionDrill,
   type WedgePlace,
   type WedgeQuestion,
@@ -30,7 +33,7 @@ import {
 import { haptic, TAP, CORRECT, WRONG } from '../lib/haptics';
 import { armUnlock, stopAll } from '../audio/engine';
 import { useInstrument } from '../audio/instrument';
-import { playChord, prefetchChords } from '../audio/phrases';
+import { playChord, playProgression, prefetchChords } from '../audio/phrases';
 import { chordToMidi } from '../audio/harmony';
 import type { MixedHooks } from '../lib/mixed';
 
@@ -49,6 +52,17 @@ type HistoryEntry =
       marks: Record<string, Mark>;
       revealed: Record<string, string>;
       misses: { want: string; typed: string }[];
+      answered: number;
+    }
+  | {
+      drill: 'progression';
+      run: number;
+      prog: ProgressionQuestion;
+      guide: boolean;
+      cells: ProgressionCell[];
+      placed: Record<string, string>;
+      marks: Record<string, Mark>;
+      misses: { degree: string; tapped: string }[];
       answered: number;
     }
   | {
@@ -150,6 +164,14 @@ export default function CircleGame({
   const [layoutMisses, setLayoutMisses] = useState<{ want: string; typed: string }[]>([]);
   const [wedgeMisses, setWedgeMisses] = useState<{ degree: string; typed: string }[]>([]);
 
+  // Progression drill
+  const [prog, setProg] = useState<ProgressionQuestion | null>(null);
+  const [cells, setCells] = useState<ProgressionCell[]>([]);
+  const [progPlaced, setProgPlaced] = useState<Record<string, string>>({});
+  const [progMarks, setProgMarks] = useState<Record<string, Mark>>({});
+  const [progMisses, setProgMisses] = useState<{ degree: string; tapped: string }[]>([]);
+  const [lastTap, setLastTap] = useState<{ chord: string; right: boolean } | null>(null);
+
   // Past questions, newest last. reviewIndex null means playing live.
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [reviewIndex, setReviewIndex] = useState<number | null>(null);
@@ -178,6 +200,7 @@ export default function CircleGame({
   }, [settings]);
 
   const isWedge = qDrill === 'wedge';
+  const isProg = qDrill === 'progression';
 
   const generate = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
@@ -190,7 +213,16 @@ export default function CircleGame({
     questionDrill.current = kind;
     questionPlace.current = settings.place;
     setQDrill(kind);
-    if (kind === 'wedge') {
+    if (kind === 'progression') {
+      const q = generateProgression(settings, Math.random, lastKey.current);
+      lastKey.current = q.key || undefined;
+      setProg(q);
+      setCells(q.degrees.map((degree) => ({ degree })));
+      setProgPlaced({});
+      setProgMarks({});
+      setProgMisses([]);
+      setLastTap(null);
+    } else if (kind === 'wedge') {
       const q = generateWedge(settings, Math.random, lastKey.current);
       lastKey.current = q.key || undefined;
       setWedge(q);
@@ -218,6 +250,9 @@ export default function CircleGame({
   const fits = (): boolean => {
     const kind = questionDrill.current;
     if (!kind || (settings.drill !== 'mix' && settings.drill !== kind)) return false;
+    if (kind === 'progression') {
+      return !!prog && !prog.error && settings.keys.includes(prog.key);
+    }
     if (kind === 'wedge') {
       return (
         !!wedge &&
@@ -254,12 +289,14 @@ export default function CircleGame({
   // Warm whatever this question can sound.
   useEffect(() => {
     if (!settings.playback) return;
-    const names = isWedge
-      ? (wedge?.slots ?? []).map((w) => w.chord)
-      : (layout?.blanks ?? []).map((s) => ringChord(s.ring, s.pos));
+    const names = isProg
+      ? (prog?.slots ?? []).map((w) => w.chord)
+      : isWedge
+        ? (wedge?.slots ?? []).map((w) => w.chord)
+        : (layout?.blanks ?? []).map((s) => ringChord(s.ring, s.pos));
     const chords = names.map(chordToMidi).filter((c): c is number[] => c !== null);
     if (chords.length) prefetchChords(instrument, chords);
-  }, [wedge, layout, isWedge, instrument, settings.playback]);
+  }, [wedge, layout, prog, isWedge, isProg, instrument, settings.playback]);
 
   const sound = (chord: string) => {
     if (!settings.playback) return;
@@ -413,6 +450,69 @@ export default function CircleGame({
     [wedge, settings.place, settings.guide],
   );
 
+  // ── Progression drill ─────────────────────────────────────────────────────
+  const progStep = cells.findIndex((c) => !c.chord);
+  const progDone = !!prog && cells.length > 0 && progStep === -1;
+  const progChord = (degree: string) => prog?.slots.find((w) => w.degree === degree)?.chord ?? '';
+
+  const playWholeProgression = (): Promise<number> => {
+    if (!prog) return Promise.resolve(0);
+    const chords = prog.degrees.map(progChord).map(chordToMidi).filter((c): c is number[] => c !== null);
+    return playProgression(instrument, chords);
+  };
+
+  const tapProgSlot = (degree: string) => {
+    if (!prog || progDone || reviewIndex !== null) return;
+    const want = prog.degrees[progStep];
+    const right = degree === want;
+    mixedRef.current?.onResult(right);
+    haptic(right ? CORRECT : WRONG);
+    setStreak((st) => (right ? st + 1 : 0));
+    setFlash(right ? 'flash-ok' : 'flash-no');
+    window.setTimeout(() => setFlash(''), 460);
+
+    // The strip always gets the right chord — green if you found its slot, red
+    // if you didn't — and the right slot is filled in on the wedge either way.
+    const chord = progChord(want);
+    const nextCells = cells.map((c, i) => (i === progStep ? { ...c, chord, right } : c));
+    const nextPlaced = { ...progPlaced, [want]: chord };
+    const nextMarks: Record<string, Mark> = { ...progMarks, [want]: right ? 'ok' : 'no' };
+    const nextMisses = right ? progMisses : [...progMisses, { degree: want, tapped: progChord(degree) }];
+    setCells(nextCells);
+    setProgPlaced(nextPlaced);
+    setProgMarks(nextMarks);
+    setProgMisses(nextMisses);
+    setLastTap({ chord: progChord(degree), right });
+
+    const answered = progStep + 1;
+    record({
+      drill: 'progression',
+      run: runId.current,
+      prog,
+      guide: settings.guide,
+      cells: nextCells,
+      placed: nextPlaced,
+      marks: nextMarks,
+      misses: nextMisses,
+      answered,
+    });
+
+    const finished = answered >= prog.degrees.length;
+    if (!finished) {
+      sound(chord);
+      return;
+    }
+    // Spelled out: play it as a progression, and only move on once it's done.
+    if (!settings.playback) {
+      finish(true);
+      return;
+    }
+    const mine = runId.current;
+    void playWholeProgression().then(() => {
+      if (settings.autoAdvance && runId.current === mine) next();
+    });
+  };
+
   // ── Review ────────────────────────────────────────────────────────────────
   const reviewing = reviewIndex !== null;
   const entry = reviewing ? (history[reviewIndex] ?? null) : null;
@@ -427,13 +527,13 @@ export default function CircleGame({
     setReviewIndex((i) => (i === null ? null : Math.max(0, Math.min(history.length - 1, i + dir))));
   const exitReview = () => setReviewIndex(null);
 
-  const done = isWedge ? wedgeDone : layoutDone;
+  const done = isProg ? progDone : isWedge ? wedgeDone : layoutDone;
   const advance = () => {
     if (done && !reviewing) next();
   };
   const stop = (e: React.MouseEvent) => e.stopPropagation();
   const waitingToAdvance = done && !settings.autoAdvance && !reviewing;
-  const error = isWedge ? wedge?.error : layout?.error;
+  const error = isProg ? prog?.error : isWedge ? wedge?.error : layout?.error;
 
   // Set the drill up before it starts, rather than dropping straight into
   // whichever one was used last.
@@ -501,8 +601,40 @@ export default function CircleGame({
       </div>
 
       {entry ? (
-        <div className={`stage ${entry.drill === 'wedge' ? 'wedge-stage' : 'cof-stage'}`}>
-          {entry.drill === 'wedge' ? (
+        <div className={`stage ${entry.drill === 'layout' ? 'cof-stage' : 'wedge-stage'}`}>
+          {entry.drill === 'progression' ? (
+            <>
+              <div className="ctx">
+                <span className="lead">in the key of</span>
+                <span className="k">{renderJazz(entry.prog.key, 'rpk')}</span>
+              </div>
+              <div className="review-prog">
+                {entry.cells.map((c, i) => (
+                  <span key={i} className={c.chord ? (c.right ? 'ok' : 'no') : ''}>
+                    <small>{c.degree}</small>
+                    {c.chord ? renderJazz(prettyChord(c.chord), `rpc${i}`) : '·'}
+                  </span>
+                ))}
+              </div>
+              <div className="wedge-status">
+                <ReviewSummary
+                  answered={entry.answered}
+                  total={entry.prog.degrees.length}
+                  misses={entry.misses.map((m) => `${prettyChord(m.tapped)} for ${m.degree}`)}
+                />
+              </div>
+              <div className="wedge-wrap" onClick={stop}>
+                <WedgeBoard
+                  slots={entry.prog.slots}
+                  placed={entry.placed}
+                  marks={entry.marks}
+                  hints={hintsFor(entry.prog.slots, 'chords', entry.guide)}
+                  picked={null}
+                  onTapSlot={() => {}}
+                />
+              </div>
+            </>
+          ) : entry.drill === 'wedge' ? (
             <>
               <div className="ctx">
                 <span className="lead">in the key of</span>
@@ -550,7 +682,7 @@ export default function CircleGame({
           )}
         </div>
       ) : (
-      <div className={`stage ${isWedge ? 'wedge-stage' : 'cof-stage'}`}>
+      <div className={`stage ${isWedge || isProg ? 'wedge-stage' : 'cof-stage'}`}>
         {error ? (
           <div className="empty">
             {error}
@@ -560,6 +692,38 @@ export default function CircleGame({
               </button>
             </div>
           </div>
+        ) : isProg && prog ? (
+          <>
+            <div className="ctx reveal" style={{ animationDelay: '.04s' }}>
+              <span className="lead">in the key of</span>
+              <span className="k">{renderJazz(prog.key, 'pk')}</span>
+            </div>
+
+            <div className="wedge-status" aria-live="polite">
+              {progDone ? (
+                <span className="lead">spelled out</span>
+              ) : lastTap && !lastTap.right ? (
+                <span className="miss">you tapped {prettyChord(lastTap.chord)}</span>
+              ) : (
+                <span className="lead">
+                  tap <b className="numeral">{prog.degrees[progStep]}</b> on the wedge
+                </span>
+              )}
+            </div>
+
+            <div className="wedge-wrap reveal" onClick={stop} style={{ animationDelay: '.08s' }}>
+              <WedgeBoard
+                slots={prog.slots}
+                placed={progPlaced}
+                marks={progMarks}
+                hints={hintsFor(prog.slots, 'chords', settings.guide)}
+                picked={null}
+                tapFilled
+                onTapSlot={tapProgSlot}
+              />
+            </div>
+            {waitingToAdvance && <div className="next-hint">tap to continue →</div>}
+          </>
         ) : isWedge && wedge ? (
           <>
             <div className="ctx reveal" style={{ animationDelay: '.04s' }}>
@@ -644,6 +808,23 @@ export default function CircleGame({
         </div>
       )}
 
+      {!reviewing && isProg && !error && prog && (
+        <div onClick={stop}>
+          <ProgressionPad
+            cells={cells}
+            step={progStep}
+            onReplay={
+              progDone && settings.playback
+                ? () => {
+                    if (timer.current) clearTimeout(timer.current);
+                    void playWholeProgression();
+                  }
+                : undefined
+            }
+          />
+        </div>
+      )}
+
       {!reviewing && isWedge && !error && wedge && (
         <div onClick={stop}>
           {picking ? (
@@ -661,7 +842,7 @@ export default function CircleGame({
         </div>
       )}
 
-      {!reviewing && !isWedge && !error && (
+      {!reviewing && !isWedge && !isProg && !error && (
         <div onClick={stop}>
           <NameKeypad
             letter={letter}

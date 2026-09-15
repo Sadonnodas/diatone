@@ -2164,3 +2164,92 @@ text.cof-label {
   font-family: var(--font-display);
   font-size: 21px;
 }
+
+/* The progression strip: a numeral over the chord it spells. */
+.prog-row {
+  display: flex;
+  gap: 10px;
+}
+.prog-cell {
+  flex: 1;
+  min-width: 0;
+  height: var(--key-h);
+  border: 0.5px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+.prog-cell.live {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.prog-cell.ok {
+  border-color: var(--correct);
+  background: var(--correct-dim);
+}
+.prog-cell.no {
+  border-color: var(--wrong);
+  background: var(--wrong-dim);
+}
+.prog-degree {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-2);
+}
+.prog-chord {
+  font-family: var(--font-display);
+  font-size: 21px;
+  line-height: 1;
+  color: var(--text);
+}
+.prog-cell.no .prog-chord {
+  color: var(--wrong);
+}
+.prog-foot {
+  min-height: var(--key-h); /* the replay button, or its space */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* In review, the progression in one line: numeral over chord. */
+.review-prog {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  font-family: var(--font-display);
+  font-size: 20px;
+  color: var(--text);
+}
+.review-prog span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.05;
+}
+.review-prog small {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-3);
+}
+.review-prog .no {
+  color: var(--wrong);
+}
+
+/* A numeral inside the capitalised status line keeps its case — "ii" and "II"
+   are different chords. */
+.wedge-status .numeral {
+  text-transform: none;
+  font-family: var(--font-display);
+  font-size: 17px;
+  line-height: 1; /* mustn't make the line taller: the wedge below would shift */
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--accent);
+}

@@ -14,6 +14,7 @@ import { ALL_KEYS, chordData } from '../lib/chordData';
 import { DEGREE_KEYS } from '../lib/engine';
 import { rootPitchClass } from '../audio/harmony';
 import { answersMatch } from '../lib/normalize';
+import { COMMON_PATTERNS } from '../lib/patterns';
 
 export type Ring = 'dim' | 'major' | 'minor';
 
@@ -111,10 +112,10 @@ export const segmentLabel = (slot: Slot): string => segmentSpellings(slot).join(
 // ── Settings ────────────────────────────────────────────────────────────────
 
 /** Two drills. Layout teaches the wheel; Wedge teaches a key's place on it. */
-export type Drill = 'layout' | 'wedge' | 'mix';
+export type Drill = 'layout' | 'wedge' | 'progression' | 'mix';
 
 /** What an individual question is — a mixed session deals either. */
-export type QuestionDrill = 'layout' | 'wedge';
+export type QuestionDrill = 'layout' | 'wedge' | 'progression';
 
 /** How the wedge drill takes a chord: built from recall on the keypad, picked
     out of a handful of plausible options, or a mix of the two. */
@@ -136,7 +137,7 @@ export interface CircleSettings {
   style: WedgeStyle;
   /** Wedge drill: print each slot's numeral as a guide. */
   guide: boolean;
-  /** Wedge drill: which keys come up. */
+  /** Wedge and progression drills: which keys come up. */
   keys: string[];
   autoAdvance: boolean;
   playback: boolean;
@@ -339,19 +340,74 @@ export function pickOptions(w: WedgeSlot, keyPos: number, rand: () => number = M
   return shuffle([correct, ...out], rand);
 }
 
-/** Layout or wedge for this question — in a mix, whichever the settings can
-    actually make, and never three of the same kind in a row. */
+/** Which drill this question comes from. In a mix, one of the drills the
+    settings can actually make, and never three of the same kind in a row. */
 export function chooseDrill(
   s: CircleSettings,
   recent: QuestionDrill[],
   rand: () => number = Math.random,
 ): QuestionDrill {
   if (s.drill !== 'mix') return s.drill;
-  const layoutOk = s.rings.major || s.rings.minor;
-  const wedgeOk = s.keys.some((k) => ALL_KEYS.includes(k));
-  if (!layoutOk) return 'wedge';
-  if (!wedgeOk) return 'layout';
-  const pick: QuestionDrill = rand() < 0.5 ? 'layout' : 'wedge';
+  const keysOk = s.keys.some((k) => ALL_KEYS.includes(k));
+  const ready: QuestionDrill[] = [
+    ...(s.rings.major || s.rings.minor ? (['layout'] as const) : []),
+    ...(keysOk ? (['wedge', 'progression'] as const) : []),
+  ];
+  if (ready.length === 0) return 'layout'; // reports its own error
   const [a, b] = recent.slice(-2);
-  return a === pick && b === pick ? (pick === 'layout' ? 'wedge' : 'layout') : pick;
+  const pool = a && a === b && ready.length > 1 ? ready.filter((d) => d !== a) : ready;
+  return pool[Math.floor(rand() * pool.length)];
 }
+
+// ── Drill 3: a progression, spelled out on the wedge ───────────────────────
+
+/** Progressions worth knowing by shape: the ten Numerals uses, plus the short
+    cadences that turn up everywhere. */
+export const KNOWN_PROGRESSIONS: string[][] = [
+  ...COMMON_PATTERNS.Major,
+  ['ii', 'V', 'I'],
+  ['IV', 'V', 'I'],
+  ['I', 'IV', 'V'],
+  ['vi', 'ii', 'V'],
+  ['iii', 'vi', 'ii', 'V'],
+  ['I', 'IV', 'vii°', 'iii'],
+  ['IV', 'vii°', 'I'],
+];
+
+export interface ProgressionQuestion {
+  key: string;
+  keyPos: number;
+  /** The whole wedge, to tap on. */
+  slots: WedgeSlot[];
+  /** The progression, as degrees — the same one may appear more than once. */
+  degrees: string[];
+  error?: string;
+}
+
+/**
+ * Half the time a progression people actually play, half the time any three
+ * or four degrees — never the same degree twice running, which would just be
+ * tapping one slot again.
+ */
+export function generateProgression(
+  s: CircleSettings,
+  rand: () => number = Math.random,
+  avoidKey?: string,
+): ProgressionQuestion {
+  const base = generateWedge({ ...s, style: 'build' }, rand, avoidKey);
+  if (base.error) return { key: '', keyPos: 0, slots: [], degrees: [], error: base.error };
+
+  let degrees: string[];
+  if (rand() < 0.5) {
+    degrees = KNOWN_PROGRESSIONS[Math.floor(rand() * KNOWN_PROGRESSIONS.length)];
+  } else {
+    const length = rand() < 0.5 ? 3 : 4;
+    degrees = [];
+    while (degrees.length < length) {
+      const d = DEGREE_KEYS[Math.floor(rand() * DEGREE_KEYS.length)];
+      if (d !== degrees[degrees.length - 1]) degrees.push(d);
+    }
+  }
+  return { key: base.key, keyPos: base.keyPos, slots: base.slots, degrees: [...degrees] };
+}
+

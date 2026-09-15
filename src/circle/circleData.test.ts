@@ -11,6 +11,9 @@ import {
   pickOptions,
   PICK_OPTIONS,
   chooseDrill,
+  generateProgression,
+  KNOWN_PROGRESSIONS,
+  type QuestionDrill,
   keyAt,
   keyChord,
   ringChord,
@@ -301,19 +304,57 @@ describe('wedge styles and the layout/wedge mix', () => {
     expect(styles).toEqual(new Set(['build', 'pick']));
   });
 
-  it('a drill mix deals both, never three of a kind in a row', () => {
+  it('a drill mix deals all three, never three of a kind in a row', () => {
     const rand = seeded(5);
     const s = settings({ drill: 'mix', rings: { major: true, minor: false }, keys: ['C'] });
-    const recent: ('layout' | 'wedge')[] = [];
+    const recent: QuestionDrill[] = [];
     for (let i = 0; i < 60; i++) recent.push(chooseDrill(s, recent, rand));
-    expect(new Set(recent)).toEqual(new Set(['layout', 'wedge']));
+    expect(new Set(recent)).toEqual(new Set(['layout', 'wedge', 'progression']));
     for (let i = 2; i < recent.length; i++) {
       expect(recent[i] === recent[i - 1] && recent[i] === recent[i - 2]).toBe(false);
     }
   });
 
-  it('a drill mix falls back to whichever drill the settings can make', () => {
-    expect(chooseDrill(settings({ drill: 'mix', rings: { major: false, minor: false } }), [], seeded(1))).toBe('wedge');
+  it('a drill mix falls back to the drills the settings can make', () => {
+    const noRings = settings({ drill: 'mix', rings: { major: false, minor: false } });
+    for (let i = 0; i < 10; i++) expect(chooseDrill(noRings, [], seeded(i))).not.toBe('layout');
     expect(chooseDrill(settings({ drill: 'mix', keys: [] }), [], seeded(1))).toBe('layout');
+  });
+});
+
+describe('generateProgression', () => {
+  it('uses the chosen keys and only real degrees', () => {
+    const rand = seeded(6);
+    for (let i = 0; i < 40; i++) {
+      const q = generateProgression(settings({ drill: 'progression', keys: ['F', 'D'] }), rand);
+      expect(['F', 'D']).toContain(q.key);
+      expect(q.degrees.length).toBeGreaterThanOrEqual(3);
+      expect(q.degrees.length).toBeLessThanOrEqual(4);
+      for (const d of q.degrees) expect(DEGREE_KEYS).toContain(d);
+    }
+  });
+
+  it('deals both known and made-up progressions', () => {
+    const rand = seeded(7);
+    const known = (d: string[]) => KNOWN_PROGRESSIONS.some((p) => p.join() === d.join());
+    const seen = Array.from({ length: 40 }, () => known(generateProgression(settings({ drill: 'progression' }), rand).degrees));
+    expect(new Set(seen)).toEqual(new Set([true, false]));
+  });
+
+  it('never repeats a degree back to back in a made-up one', () => {
+    const rand = seeded(8);
+    for (let i = 0; i < 60; i++) {
+      const { degrees } = generateProgression(settings({ drill: 'progression' }), rand);
+      for (let j = 1; j < degrees.length; j++) {
+        if (KNOWN_PROGRESSIONS.some((p) => p.join() === degrees.join())) break;
+        expect(degrees[j]).not.toBe(degrees[j - 1]);
+      }
+    }
+  });
+
+  it('spells the answer in the key — iii V I in F is Am C F', () => {
+    const q = generateProgression(settings({ drill: 'progression', keys: ['F'] }), seeded(1));
+    const chord = (d: string) => q.slots.find((w) => w.degree === d)!.chord;
+    expect(['iii', 'V', 'I'].map(chord)).toEqual(['Am', 'C', 'F']);
   });
 });

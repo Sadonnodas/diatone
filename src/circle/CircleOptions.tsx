@@ -10,7 +10,7 @@ function Switch({ on, onClick }: { on: boolean; onClick: () => void }) {
 export const circleReady = (s: CircleSettings): boolean => {
   const layoutOk = s.rings.major || s.rings.minor;
   const wedgeOk = s.keys.length > 0;
-  if (s.drill === 'wedge') return wedgeOk;
+  if (s.drill === 'wedge' || s.drill === 'progression') return wedgeOk;
   if (s.drill === 'layout') return layoutOk;
   return layoutOk || wedgeOk; // a mix plays whichever it can
 };
@@ -29,8 +29,9 @@ export function CircleOptions({
 }) {
   const update = (patch: Partial<CircleSettings>) => onChange({ ...settings, ...patch });
   const drill = settings.drill;
-  const showLayout = drill !== 'wedge';
-  const showWedge = drill !== 'layout';
+  const showLayout = drill === 'layout' || drill === 'mix';
+  const showWedge = drill === 'wedge' || drill === 'mix';
+  const usesKeys = drill !== 'layout';
 
   const toggleKey = (k: string) =>
     update({
@@ -50,6 +51,12 @@ export function CircleOptions({
           <button className={drill === 'wedge' ? 'on' : ''} onClick={() => update({ drill: 'wedge' })}>
             Key wedge
           </button>
+          <button
+            className={drill === 'progression' ? 'on' : ''}
+            onClick={() => update({ drill: 'progression' })}
+          >
+            Progression
+          </button>
           <button className={drill === 'mix' ? 'on' : ''} onClick={() => update({ drill: 'mix' })}>
             Mix
           </button>
@@ -59,7 +66,9 @@ export function CircleOptions({
             ? 'One key at a time, turned to the top — fill in the chords that go there.'
             : drill === 'layout'
               ? 'Name the missing segments of the wheel.'
-              : 'Layout and key-wedge questions, shuffled together. Both sets of options below apply.'}
+              : drill === 'progression'
+                ? 'A progression in numerals — tap its chords on the key’s wedge, in order, to spell it out.'
+                : 'Layout, key-wedge and progression questions, shuffled together. All the options below apply.'}
         </div>
       </div>
 
@@ -153,14 +162,19 @@ export function CircleOptions({
               </div>
             </div>
           )}
+        </>
+      )}
 
-          {settings.place === 'chords' && (
+      {usesKeys && (
+        <>
+          {(drill !== 'wedge' || settings.place === 'chords') && (
             <div className="setting-row">
               <div>
                 <div className="label">Show the numerals</div>
                 <div className="desc">
-                  Prints each slot’s numeral, so you only need the chords. Off, you need to know
-                  where each one sits as well.
+                  {drill === 'progression'
+                    ? 'Prints each slot’s numeral on the wedge — which makes finding them trivial. Turn it off to drill where each numeral sits.'
+                    : 'Prints each slot’s numeral, so you only need the chords. Off, you need to know where each one sits as well.'}
                 </div>
               </div>
               <Switch on={settings.guide} onClick={() => update({ guide: !settings.guide })} />
