@@ -1995,6 +1995,21 @@ text.cof-label {
 .wedge-stage > .empty {
   margin: auto 0;
 }
+.wedge-stage {
+  /* What's left for the fan once the rest of this screen is accounted for:
+     app padding and header, the chord keypad's reserved height, the key line,
+     the status line, the progression strip, the gaps and the bottom padding.
+     Without this the fan runs into the keypad on a short phone. */
+  --wedge-room: calc(
+    100vh - max(20px, env(safe-area-inset-top)) - max(26px, env(safe-area-inset-bottom)) - 30px
+      - (3 * var(--key-h) + 70px)
+      - 43px - 22px - clamp(38px, 5.5vh, 46px)
+      - 3 * clamp(6px, 1.6vh, 20px) - clamp(4px, 1.2vh, 14px)
+  );
+}
+.wedge-stage .wedge {
+  max-height: var(--wedge-room);
+}
 /* Bleed past the app's side padding — a 90°-wide fan is inherently wider
    than it is tall, so width is the only thing that makes it bigger. */
 .wedge-wrap {
@@ -2165,23 +2180,32 @@ text.cof-label {
   font-size: 21px;
 }
 
-/* The progression strip: a numeral over the chord it spells. */
-.prog-row {
+/* The progression being spelled out: a compact strip above the wedge, so the
+   chord keypad can have the bottom of the screen. Its height is reserved in
+   every wedge-family question, so the wedge doesn't move between them. */
+.prog-slot {
+  min-height: clamp(38px, 5.5vh, 46px);
   display: flex;
-  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+.prog-strip {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 .prog-cell {
-  flex: 1;
-  min-width: 0;
-  height: var(--key-h);
+  min-width: 58px;
+  padding: 4px 8px;
   border: 0.5px solid var(--line-strong);
-  border-radius: var(--radius);
+  border-radius: 10px;
   background: var(--surface-2);
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 2px;
+  line-height: 1.1;
 }
 .prog-cell.live {
   border-color: var(--accent);
@@ -2196,25 +2220,18 @@ text.cof-label {
   background: var(--wrong-dim);
 }
 .prog-degree {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.04em;
-  color: var(--text-2);
+  color: var(--text-3);
 }
 .prog-chord {
   font-family: var(--font-display);
-  font-size: 21px;
-  line-height: 1;
+  font-size: 17px;
   color: var(--text);
 }
 .prog-cell.no .prog-chord {
   color: var(--wrong);
-}
-.prog-foot {
-  min-height: var(--key-h); /* the replay button, or its space */
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 /* In review, the progression in one line: numeral over chord. */

@@ -67,7 +67,7 @@ export function CircleOptions({
             : drill === 'layout'
               ? 'Name the missing segments of the wheel.'
               : drill === 'progression'
-                ? 'A progression in numerals — tap its chords on the key’s wedge, in order, to spell it out.'
+                ? 'A progression in numerals: for each one, tap its slot on the wedge and then build the chord that goes there.'
                 : 'Layout, key-wedge and progression questions, shuffled together. All the options below apply.'}
         </div>
       </div>
@@ -167,14 +167,14 @@ export function CircleOptions({
 
       {usesKeys && (
         <>
-          {(drill !== 'wedge' || settings.place === 'chords') && (
+          {drill !== 'progression' && (drill !== 'wedge' || settings.place === 'chords') && (
             <div className="setting-row">
               <div>
                 <div className="label">Show the numerals</div>
                 <div className="desc">
-                  {drill === 'progression'
-                    ? 'Prints each slot’s numeral on the wedge — which makes finding them trivial. Turn it off to drill where each numeral sits.'
-                    : 'Prints each slot’s numeral, so you only need the chords. Off, you need to know where each one sits as well.'}
+                  Prints each slot’s numeral, so you only need the chords. Off, you need to know
+                  where each one sits as well. (Progression questions never print them — finding
+                  the slot is the question.)
                 </div>
               </div>
               <Switch on={settings.guide} onClick={() => update({ guide: !settings.guide })} />
