@@ -135,8 +135,14 @@ export interface CircleSettings {
   place: WedgePlace;
   /** Wedge drill, chords only: build each chord, pick it, or both. */
   style: WedgeStyle;
-  /** Wedge drill: print each slot's numeral as a guide. */
+  /** Wedge drill: print each slot's numeral as a guide. Off by default — the
+      numerals never move, so printing them stops teaching you anything after
+      the first few questions. */
   guide: boolean;
+  /** Which revision of the defaults these settings were last reconciled with.
+      Bumping SETTINGS_REV re-applies changed defaults once over a saved value
+      that was only ever the old default. */
+  rev?: number;
   /** Wedge and progression drills: which keys come up. */
   keys: string[];
   autoAdvance: boolean;
@@ -145,13 +151,17 @@ export interface CircleSettings {
 
 export const GAP_CHOICES = [1, 2, 4];
 
+/** Bump when a default changes and saved settings should follow it once. */
+export const SETTINGS_REV = 1;
+
 export const defaultCircleSettings: CircleSettings = {
+  rev: SETTINGS_REV,
   drill: 'layout',
   rings: { major: true, minor: false },
   gaps: 2,
   place: 'chords',
   style: 'build',
-  guide: true,
+  guide: false,
   keys: [...ALL_KEYS],
   autoAdvance: true,
   playback: true,

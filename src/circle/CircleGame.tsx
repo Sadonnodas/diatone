@@ -12,6 +12,7 @@ import { renderJazz } from '../components/ChordDisplay';
 import { ThemeIconButton } from '../components/ThemeSwitch';
 import {
   defaultCircleSettings,
+  SETTINGS_REV,
   generateLayout,
   generateWedge,
   chooseDrill,
@@ -96,12 +97,20 @@ function loadSettings(): CircleSettings {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const saved = JSON.parse(raw) as Partial<CircleSettings>;
-      return {
+      const merged: CircleSettings = {
         ...defaultCircleSettings,
         ...saved,
         rings: { ...defaultCircleSettings.rings, ...(saved.rings ?? {}) },
         keys: saved.keys?.length ? saved.keys : defaultCircleSettings.keys,
       };
+      // Settings saved before the numeral guide became off-by-default carry the
+      // old default, which nobody chose. Apply the new one once; a deliberate
+      // change after that sticks.
+      if (saved.rev !== SETTINGS_REV) {
+        merged.guide = defaultCircleSettings.guide;
+        merged.rev = SETTINGS_REV;
+      }
+      return merged;
     }
   } catch {
     /* ignore */
