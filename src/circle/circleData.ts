@@ -394,10 +394,15 @@ export interface ProgressionQuestion {
   error?: string;
 }
 
+/** No chord twice: a repeat is just finding the same slot again. */
+const allDistinct = (degrees: string[]) => new Set(degrees).size === degrees.length;
+
+/** The known progressions that don't repeat a chord (I–IV–V–IV is out). */
+export const DISTINCT_PROGRESSIONS = KNOWN_PROGRESSIONS.filter(allDistinct);
+
 /**
  * Half the time a progression people actually play, half the time any three
- * or four degrees — never the same degree twice running, which would just be
- * tapping one slot again.
+ * or four degrees. Never the same degree twice in one progression.
  */
 export function generateProgression(
   s: CircleSettings,
@@ -409,14 +414,10 @@ export function generateProgression(
 
   let degrees: string[];
   if (rand() < 0.5) {
-    degrees = KNOWN_PROGRESSIONS[Math.floor(rand() * KNOWN_PROGRESSIONS.length)];
+    degrees = DISTINCT_PROGRESSIONS[Math.floor(rand() * DISTINCT_PROGRESSIONS.length)];
   } else {
     const length = rand() < 0.5 ? 3 : 4;
-    degrees = [];
-    while (degrees.length < length) {
-      const d = DEGREE_KEYS[Math.floor(rand() * DEGREE_KEYS.length)];
-      if (d !== degrees[degrees.length - 1]) degrees.push(d);
-    }
+    degrees = shuffle([...DEGREE_KEYS], rand).slice(0, length);
   }
   return { key: base.key, keyPos: base.keyPos, slots: base.slots, degrees: [...degrees] };
 }

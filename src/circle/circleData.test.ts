@@ -13,6 +13,7 @@ import {
   chooseDrill,
   generateProgression,
   KNOWN_PROGRESSIONS,
+  DISTINCT_PROGRESSIONS,
   type QuestionDrill,
   keyAt,
   keyChord,
@@ -336,20 +337,23 @@ describe('generateProgression', () => {
 
   it('deals both known and made-up progressions', () => {
     const rand = seeded(7);
-    const known = (d: string[]) => KNOWN_PROGRESSIONS.some((p) => p.join() === d.join());
+    const known = (d: string[]) => DISTINCT_PROGRESSIONS.some((p) => p.join() === d.join());
     const seen = Array.from({ length: 40 }, () => known(generateProgression(settings({ drill: 'progression' }), rand).degrees));
     expect(new Set(seen)).toEqual(new Set([true, false]));
   });
 
-  it('never repeats a degree back to back in a made-up one', () => {
+  it('never uses the same chord twice in one progression', () => {
     const rand = seeded(8);
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 200; i++) {
       const { degrees } = generateProgression(settings({ drill: 'progression' }), rand);
-      for (let j = 1; j < degrees.length; j++) {
-        if (KNOWN_PROGRESSIONS.some((p) => p.join() === degrees.join())) break;
-        expect(degrees[j]).not.toBe(degrees[j - 1]);
-      }
+      expect(new Set(degrees).size, degrees.join(' ')).toBe(degrees.length);
     }
+  });
+
+  it('drops the known progressions that repeat a chord', () => {
+    expect(KNOWN_PROGRESSIONS.some((p) => p.join() === 'I,IV,V,IV')).toBe(true);
+    expect(DISTINCT_PROGRESSIONS.some((p) => p.join() === 'I,IV,V,IV')).toBe(false);
+    expect(DISTINCT_PROGRESSIONS.length).toBeGreaterThan(10);
   });
 
   it('spells the answer in the key — iii V I in F is Am C F', () => {
