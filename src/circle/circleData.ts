@@ -382,6 +382,29 @@ export const KNOWN_PROGRESSIONS: string[][] = [
   ['iii', 'vi', 'ii', 'V'],
   ['I', 'IV', 'vii°', 'iii'],
   ['IV', 'vii°', 'I'],
+  // More that turn up everywhere — pop, folk, soul, the circle-of-fifths walk.
+  ['I', 'vi', 'IV', 'V'], // doo-wop
+  ['IV', 'V', 'iii', 'vi'], // the "royal road"
+  ['I', 'V', 'vi', 'iii'], // Pachelbel's opening
+  ['vi', 'V', 'IV', 'iii'], // descending
+  ['IV', 'iii', 'ii', 'I'], // stepwise down to home
+  ['I', 'ii', 'iii', 'IV'], // stepwise up
+  ['ii', 'iii', 'IV', 'V'],
+  ['I', 'iii', 'IV', 'V'],
+  ['I', 'IV', 'ii', 'V'],
+  ['I', 'ii', 'IV', 'V'],
+  ['I', 'iii', 'ii', 'V'],
+  ['vi', 'IV', 'ii', 'V'],
+  ['I', 'V', 'IV'],
+  ['IV', 'I', 'V'],
+  ['vi', 'V', 'IV'],
+  ['vi', 'IV', 'V'],
+  ['IV', 'V', 'vi'],
+  ['ii', 'IV', 'V'],
+  ['I', 'ii', 'V'],
+  ['iii', 'IV', 'V'],
+  ['vii°', 'iii', 'vi'], // a fragment of the circle-of-fifths walk
+  ['iii', 'vi', 'ii'],
 ];
 
 export interface ProgressionQuestion {
@@ -400,25 +423,44 @@ const allDistinct = (degrees: string[]) => new Set(degrees).size === degrees.len
 /** The known progressions that don't repeat a chord (I–IV–V–IV is out). */
 export const DISTINCT_PROGRESSIONS = KNOWN_PROGRESSIONS.filter(allDistinct);
 
+/** How a progression is compared for "have I had this recently". */
+export const progressionSig = (degrees: string[]) => degrees.join(' ');
+
+/** Share of questions that are well-known progressions; the rest are made up. */
+export const KNOWN_SHARE = 0.4;
+/** How many recent progressions can't come back yet. */
+export const RECENT_PROGRESSIONS = 24;
+
 /**
- * Half the time a progression people actually play, half the time any three
- * or four degrees. Never the same degree twice in one progression.
+ * A well-known progression 40% of the time, otherwise any three or four
+ * degrees. Never the same degree twice in one progression, and never one of
+ * the `recent` progressions — so the familiar ones cycle through the whole
+ * list instead of turning up again after a handful of questions.
  */
 export function generateProgression(
   s: CircleSettings,
   rand: () => number = Math.random,
   avoidKey?: string,
+  recent: string[] = [],
 ): ProgressionQuestion {
   const base = generateWedge({ ...s, style: 'build' }, rand, avoidKey);
   if (base.error) return { key: '', keyPos: 0, slots: [], degrees: [], error: base.error };
 
-  let degrees: string[];
-  if (rand() < 0.5) {
-    degrees = DISTINCT_PROGRESSIONS[Math.floor(rand() * DISTINCT_PROGRESSIONS.length)];
+  const seen = new Set(recent);
+  let degrees: string[] | undefined;
+  if (rand() < KNOWN_SHARE) {
+    const fresh = DISTINCT_PROGRESSIONS.filter((p) => !seen.has(progressionSig(p)));
+    const pool = fresh.length ? fresh : DISTINCT_PROGRESSIONS;
+    degrees = pool[Math.floor(rand() * pool.length)];
   } else {
-    const length = rand() < 0.5 ? 3 : 4;
-    degrees = shuffle([...DEGREE_KEYS], rand).slice(0, length);
+    // 1,050 possibilities, so a couple of retries all but guarantees a new one.
+    for (let i = 0; i < 20; i++) {
+      const length = rand() < 0.5 ? 3 : 4;
+      const candidate = shuffle([...DEGREE_KEYS], rand).slice(0, length);
+      degrees = candidate;
+      if (!seen.has(progressionSig(candidate))) break;
+    }
   }
-  return { key: base.key, keyPos: base.keyPos, slots: base.slots, degrees: [...degrees] };
+  return { key: base.key, keyPos: base.keyPos, slots: base.slots, degrees: [...degrees!] };
 }
 

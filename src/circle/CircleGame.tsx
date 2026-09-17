@@ -17,6 +17,8 @@ import {
   generateWedge,
   chooseDrill,
   generateProgression,
+  progressionSig,
+  RECENT_PROGRESSIONS,
   layoutAnswerMatches,
   ringChord,
   segmentRoot,
@@ -200,6 +202,7 @@ export default function CircleGame({
   const questionDrill = useRef<QuestionDrill | null>(null);
   const questionPlace = useRef<WedgePlace>(settings.place);
   const lastKey = useRef<string | undefined>(undefined);
+  const recentProgs = useRef<string[]>([]);
   const { instrument } = useInstrument();
 
   useEffect(armUnlock, []);
@@ -227,8 +230,11 @@ export default function CircleGame({
     questionPlace.current = settings.place;
     setQDrill(kind);
     if (kind === 'progression') {
-      const q = generateProgression(settings, Math.random, lastKey.current);
+      const q = generateProgression(settings, Math.random, lastKey.current, recentProgs.current);
       lastKey.current = q.key || undefined;
+      if (q.degrees.length) {
+        recentProgs.current = [...recentProgs.current, progressionSig(q.degrees)].slice(-RECENT_PROGRESSIONS);
+      }
       setProg(q);
       setCells(q.degrees.map((degree) => ({ degree })));
       setProgPlaced({});

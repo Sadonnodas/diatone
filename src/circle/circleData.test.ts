@@ -14,6 +14,8 @@ import {
   generateProgression,
   KNOWN_PROGRESSIONS,
   DISTINCT_PROGRESSIONS,
+  progressionSig,
+  RECENT_PROGRESSIONS,
   type QuestionDrill,
   keyAt,
   keyChord,
@@ -348,6 +350,39 @@ describe('generateProgression', () => {
       const { degrees } = generateProgression(settings({ drill: 'progression' }), rand);
       expect(new Set(degrees).size, degrees.join(' ')).toBe(degrees.length);
     }
+  });
+
+  it('the known list is all real degrees, no duplicates, no repeated chords', () => {
+    const sigs = DISTINCT_PROGRESSIONS.map((p) => p.join(' '));
+    expect(new Set(sigs).size).toBe(sigs.length);
+    for (const p of DISTINCT_PROGRESSIONS) for (const d of p) expect(DEGREE_KEYS).toContain(d);
+    expect(DISTINCT_PROGRESSIONS.length).toBeGreaterThanOrEqual(35);
+  });
+
+  it('never repeats one of the recent progressions', () => {
+    const rand = seeded(13);
+    const recent: string[] = [];
+    for (let i = 0; i < 300; i++) {
+      const { degrees } = generateProgression(settings({ drill: 'progression' }), rand, undefined, recent);
+      const sig = progressionSig(degrees);
+      expect(recent, `question ${i}: ${sig}`).not.toContain(sig);
+      recent.push(sig);
+      if (recent.length > RECENT_PROGRESSIONS) recent.shift();
+    }
+  });
+
+  it('works through the whole known list rather than a few favourites', () => {
+    const rand = seeded(21);
+    const recent: string[] = [];
+    const knownSeen = new Set<string>();
+    const knownSigs = new Set(DISTINCT_PROGRESSIONS.map((p) => p.join(' ')));
+    for (let i = 0; i < 400; i++) {
+      const sig = progressionSig(generateProgression(settings({ drill: 'progression' }), rand, undefined, recent).degrees);
+      if (knownSigs.has(sig)) knownSeen.add(sig);
+      recent.push(sig);
+      if (recent.length > RECENT_PROGRESSIONS) recent.shift();
+    }
+    expect(knownSeen.size).toBe(knownSigs.size);
   });
 
   it('drops the known progressions that repeat a chord', () => {
