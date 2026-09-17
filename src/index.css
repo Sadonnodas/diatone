@@ -70,7 +70,7 @@
   --radius: 14px;
   /* One key's height, shared so the keypad's reserved height can be derived
      from it rather than guessed. */
-  --key-h: clamp(58px, 8.2vh, 80px);
+  --key-h: clamp(58px, 8.2svh, 80px);
   --font-display: 'Fraunces', Georgia, serif;
   --font-ui: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
 }
@@ -279,7 +279,7 @@ button {
 /* Fixed-height area under the hero: holds the answer as you build it, then your
    answer + the verdict — reserved so nothing reflows on submit. */
 .subarea {
-  min-height: clamp(64px, 8.5vh, 78px);
+  min-height: clamp(64px, 8.5svh, 78px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -351,7 +351,7 @@ button {
   /* One numeral and a four-chord progression are wildly different type sizes;
      reserving the taller of the two keeps the question in the same place as
      you move between drills instead of jumping on every mode change. */
-  min-height: min(clamp(96px, 33vw, 176px), 17vh);
+  min-height: min(clamp(96px, 33vw, 176px), 17svh);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -604,7 +604,7 @@ button {
   z-index: 21;
   margin: 0 auto;
   max-width: 430px;
-  max-height: 88vh;
+  max-height: 88svh;
   display: flex;
   flex-direction: column;
   background: var(--surface-1);
@@ -917,9 +917,31 @@ button {
   /* The answer band is taken out of the flow and pinned above the keypad, so
      the question centres against the whole stage. In the flow its reserved
      height (usually showing nothing) sat in the centred column and rode the
-     question roughly half that reserve up the screen. The padding keeps the
-     hero clear of the band on short screens. */
-  padding-bottom: clamp(96px, 15vh, 132px);
+     question roughly half that reserve up the screen. */
+  padding-bottom: clamp(96px, 15svh, 132px);
+  /* How far the pinned answer band reaches up from the stage's bottom edge:
+     its offset, the answer text, and the play buttons under it. The answer
+     text is sized for its answered state — a wrong answer's two lines measure
+     80px, more than the reserve's minimum on a short screen. */
+  --answer-band: calc(
+    clamp(44px, 6.5svh, 60px) + max(clamp(64px, 8.5svh, 78px), 80px) + 10px + 8px + 46px
+  );
+  /* Centring by two spacers instead of justify-content, so the lower one can
+     have a floor (below). No gap: the question is the only thing in the flow. */
+  justify-content: flex-start;
+  gap: 0;
+}
+.play-stage::before,
+.play-stage::after {
+  content: '';
+  flex: 1 1 0;
+}
+/* The part of the answer band the padding doesn't already cover. With room to
+   spare this never binds, so the question sits exactly where it always has; on
+   a short screen — a phone browser with its toolbars — the question moves up
+   rather than sliding under the answer. */
+.play-stage::after {
+  min-height: calc(var(--answer-band) - clamp(96px, 15svh, 132px));
 }
 .question-block {
   display: flex;
@@ -931,7 +953,7 @@ button {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: clamp(44px, 6.5vh, 60px); /* clear of the tap-to-continue hint */
+  bottom: clamp(44px, 6.5svh, 60px); /* clear of the tap-to-continue hint */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -942,7 +964,7 @@ button {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  bottom: max(10px, 2vh);
+  bottom: max(10px, 2svh);
   font-size: 14px;
   font-weight: 500;
   letter-spacing: 0.03em;
@@ -979,7 +1001,7 @@ button {
 /* ---- Setup screen (choose keys) ---- */
 .setup-stage {
   /* centring (safe) comes from .stage */
-  gap: clamp(18px, 4vh, 32px);
+  gap: clamp(18px, 4svh, 32px);
 }
 .setup-head {
   display: flex;
@@ -1047,7 +1069,7 @@ button {
   transform: translate(-50%, -50%);
   width: calc(100% - 28px);
   max-width: 420px;
-  max-height: 86vh;
+  max-height: 86svh;
   display: flex;
   flex-direction: column;
   background: var(--surface-1);
@@ -1193,7 +1215,7 @@ button {
   flex-wrap: wrap;
   gap: 9px;
   /* Lift the question text higher above the centred hero. */
-  margin-bottom: clamp(12px, 4vh, 40px);
+  margin-bottom: clamp(12px, 4svh, 40px);
 }
 .ctx .lead {
   font-size: 17.5px;
@@ -1266,7 +1288,7 @@ button {
   justify-content: flex-start;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  gap: clamp(16px, 3vh, 32px);
+  gap: clamp(16px, 3svh, 32px);
 }
 .home-head {
   margin-top: auto;
@@ -1299,7 +1321,7 @@ button {
   align-items: center;
   gap: 16px;
   text-align: left;
-  padding: clamp(14px, 2vh, 18px) 18px;
+  padding: clamp(14px, 2svh, 18px) 18px;
   border-radius: var(--radius);
   border: 0.5px solid var(--line-strong);
   background: var(--surface-1);
@@ -1390,7 +1412,7 @@ button {
 .fret-stage {
   /* Centring (safe) comes from .stage — restating plain `center` here is what
      silently switched the overflow guard off for every fretboard drill. */
-  gap: clamp(14px, 3vh, 26px);
+  gap: clamp(14px, 3svh, 26px);
 }
 /* Constant-height context so swapping the Hint button for the scale-type label
    on answer doesn't move the board. */
@@ -1516,10 +1538,10 @@ button {
 .iv-stage {
   /* Room under the result for the absolutely-placed "tap to continue" hint, so
      it never sits on the play buttons. */
-  padding-bottom: clamp(56px, 7.5vh, 64px);
+  padding-bottom: clamp(56px, 7.5svh, 64px);
   /* Spacing that shrinks with the screen: on a 667px phone this stage has
      ~430px for a title, prompt, board, result and play buttons. */
-  gap: clamp(8px, 2.2vh, 26px);
+  gap: clamp(8px, 2.2svh, 26px);
 }
 .iv-stage {
   /* The height left for the board once everything else on this screen is
@@ -1527,11 +1549,11 @@ button {
      header, the three interval key rows, the title, prompt, result reserve,
      hint padding and gaps. */
   --iv-board-room: calc(
-    100vh - max(20px, env(safe-area-inset-top)) - max(26px, env(safe-area-inset-bottom)) - 30px
-      - 3 * clamp(46px, 6.4vh, 62px) - 20px
-      - 32px - clamp(4px, 1.6vh, 20px) - 26px
-      - clamp(98px, 11.5vh, 106px) - clamp(56px, 7.5vh, 64px)
-      - 3 * clamp(8px, 2.2vh, 26px)
+    100svh - max(20px, env(safe-area-inset-top)) - max(26px, env(safe-area-inset-bottom)) - 30px
+      - 3 * clamp(46px, 6.4svh, 62px) - 20px
+      - 32px - clamp(4px, 1.6svh, 20px) - 26px
+      - clamp(98px, 11.5svh, 106px) - clamp(56px, 7.5svh, 64px)
+      - 3 * clamp(8px, 2.2svh, 26px)
   );
 }
 .iv-stage .fretwrap {
@@ -1558,7 +1580,7 @@ button {
   min-height: 0;
 }
 .iv-pad .key {
-  height: clamp(46px, 6.4vh, 62px);
+  height: clamp(46px, 6.4svh, 62px);
   font-size: 17px;
 }
 .iv-pad .key small {
@@ -1600,7 +1622,7 @@ button {
    name (low E) can't wrap and nudge the board. */
 .iv-stage .ctx {
   gap: 7px;
-  margin-bottom: clamp(4px, 1.6vh, 20px);
+  margin-bottom: clamp(4px, 1.6svh, 20px);
 }
 .iv-stage .ctx .lead {
   font-size: 13.5px;
@@ -1618,10 +1640,10 @@ button {
    mid-question, so the extra height is constant while you drill. */
 .iv-result.with-hear {
   /* result line + semitones + one row of play buttons, and no more */
-  min-height: clamp(98px, 11.5vh, 106px); /* measured: a wrong answer renders 98px */
+  min-height: clamp(98px, 11.5svh, 106px); /* measured: a wrong answer renders 98px */
 }
 .iv-result {
-  min-height: clamp(52px, 7.5vh, 64px);
+  min-height: clamp(52px, 7.5svh, 64px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1728,7 +1750,7 @@ button {
 /* Bigger hero now that the screen is decluttered. The vh cap keeps it from being
    oversized on short screens (unchanged on normal/tall ones). */
 .hero.single {
-  font-size: min(clamp(96px, 33vw, 176px), 17vh);
+  font-size: min(clamp(96px, 33vw, 176px), 17svh);
 }
 .hero.correct {
   color: var(--accent);
@@ -1791,8 +1813,8 @@ button {
      zero when there's none. With the wheel and a full keypad on one screen,
      plain centring pushed the title up under the header buttons. */
   justify-content: flex-start;
-  gap: clamp(10px, 2.5vh, 20px);
-  padding-bottom: clamp(12px, 2.5vh, 28px);
+  gap: clamp(10px, 2.5svh, 20px);
+  padding-bottom: clamp(12px, 2.5svh, 28px);
 }
 .cof-stage > .ctx {
   margin-top: auto;
@@ -1812,7 +1834,7 @@ button {
   width: min(
     100%,
     380px,
-    calc(100vh - 3 * var(--key-h) - 250px - env(safe-area-inset-top) - env(safe-area-inset-bottom))
+    calc(100svh - 3 * var(--key-h) - 250px - env(safe-area-inset-top) - env(safe-area-inset-bottom))
   );
   aspect-ratio: 1;
 }
@@ -1980,8 +2002,8 @@ text.cof-label {
      on purpose: on a 667px phone the fan only just clears the keys. Same
      never-overflow-upward centring as .cof-stage. */
   justify-content: flex-start;
-  gap: clamp(6px, 1.6vh, 20px);
-  padding-bottom: clamp(4px, 1.2vh, 14px);
+  gap: clamp(6px, 1.6svh, 20px);
+  padding-bottom: clamp(4px, 1.2svh, 14px);
 }
 .wedge-stage .ctx {
   margin-bottom: 0; /* the status line sits directly under the key */
@@ -2001,10 +2023,11 @@ text.cof-label {
      the status line, the progression strip, the gaps and the bottom padding.
      Without this the fan runs into the keypad on a short phone. */
   --wedge-room: calc(
-    100vh - max(20px, env(safe-area-inset-top)) - max(26px, env(safe-area-inset-bottom)) - 30px
+    100svh - max(20px, env(safe-area-inset-top)) - max(26px, env(safe-area-inset-bottom)) - 30px
       - (3 * var(--key-h) + 70px)
-      - 43px - 22px - clamp(38px, 5.5vh, 46px)
-      - 3 * clamp(6px, 1.6vh, 20px) - clamp(4px, 1.2vh, 14px)
+      - 46px - 22px - clamp(38px, 5.5svh, 46px)
+      - 3 * clamp(6px, 1.6svh, 20px) - clamp(4px, 1.2svh, 14px)
+      - 8px /* a little air, so a tight screen isn't edge to edge */
   );
 }
 .wedge-stage .wedge {
@@ -2091,7 +2114,7 @@ text.cof-label {
 .circle-setup {
   justify-content: flex-start;
   overflow-y: auto;
-  gap: clamp(16px, 3vh, 26px);
+  gap: clamp(16px, 3svh, 26px);
   padding-bottom: 12px;
 }
 .circle-setup-body {
@@ -2184,7 +2207,7 @@ text.cof-label {
    chord keypad can have the bottom of the screen. Its height is reserved in
    every wedge-family question, so the wedge doesn't move between them. */
 .prog-slot {
-  min-height: clamp(38px, 5.5vh, 46px);
+  min-height: clamp(38px, 5.5svh, 46px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2269,4 +2292,31 @@ text.cof-label {
   font-weight: 600;
   letter-spacing: 0.02em;
   color: var(--accent);
+}
+
+/* ── Short screens ─────────────────────────────────────────────────────────
+   A phone browser with its toolbars leaves ~720px, where Numerals' question
+   and its pinned answer band can't both have their usual room. Set from the
+   visible height by src/main.tsx (and index.html before paint); never on the
+   installed app on anything iPhone-11-sized or taller. */
+html.short-screen .play-stage .ctx {
+  margin-bottom: clamp(8px, 2svh, 16px);
+}
+html.short-screen .hero {
+  min-height: min(clamp(96px, 33vw, 176px), 15.5svh);
+}
+html.short-screen .hero.single {
+  font-size: min(clamp(96px, 33vw, 176px), 15.5svh);
+}
+/* Clear the "tap to continue" pill (40px tall, max(10px, 2svh) off the
+   bottom) so it never sits on the play buttons — and tell the question the
+   band now starts that much higher. */
+html.short-screen .answer-area {
+  bottom: calc(max(10px, 2svh) + 44px);
+}
+html.short-screen .play-stage {
+  --answer-band: calc(
+    max(10px, 2svh) + 44px + max(clamp(64px, 8.5svh, 78px), 80px) + 10px + 8px + 46px
+      + 8px /* air between the question and the answer */
+  );
 }
