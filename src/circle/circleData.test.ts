@@ -28,6 +28,7 @@ import {
   type CircleSettings,
 } from './circleData';
 import { ALL_KEYS, chordData } from '../lib/chordData';
+import { rootPitchClass } from '../audio/harmony';
 import { DEGREE_KEYS } from '../lib/engine';
 
 const settings = (over: Partial<CircleSettings> = {}): CircleSettings => ({
@@ -272,17 +273,56 @@ describe('pickOptions', () => {
     }
   });
 
-  it('includes the same root with a wrong quality', () => {
-    const w = slotsFor('C')['iii']; // Em
-    const opts = pickOptions(w, ALL_KEYS.indexOf('C'), seeded(3));
-    expect(opts.some((o) => o === 'E' || o === 'Edim')).toBe(true);
+  const eachSlot = (fn: (w: ReturnType<typeof slotsFor>[string], keyPos: number, key: string) => void) => {
+    for (const key of ALL_KEYS) {
+      const slots = slotsFor(key);
+      for (const w of Object.values(slots)) fn(w, ALL_KEYS.indexOf(key), key);
+    }
+  };
+  const quality = (c: string) => c.replace(/^[A-G][#b]?/, '');
+  const root = (c: string) => /^[A-G][#b]?/.exec(c)![0];
+
+  it('gives every option the slot’s quality — the ring already says which', () => {
+    eachSlot((w, keyPos) => {
+      for (const seed of [1, 2, 3]) {
+        for (const o of pickOptions(w, keyPos, seeded(seed))) expect(quality(o), `${w.chord}: ${o}`).toBe(quality(w.chord));
+      }
+    });
   });
 
-  it('includes the other spelling where the key insists on one', () => {
-    const w = slotsFor('F#')['vii°']; // E#dim
-    const opts = pickOptions(w, ALL_KEYS.indexOf('F#'), seeded(3));
-    expect(opts).toContain('E#dim');
-    expect(opts).toContain('Fdim');
+  it('never repeats a root, by letter or by pitch — nothing to count', () => {
+    eachSlot((w, keyPos) => {
+      for (const seed of [1, 2, 3]) {
+        const opts = pickOptions(w, keyPos, seeded(seed));
+        expect(new Set(opts.map(root)).size, opts.join(' ')).toBe(PICK_OPTIONS);
+        expect(new Set(opts.map((o) => rootPitchClass(root(o)))).size, opts.join(' ')).toBe(PICK_OPTIONS);
+      }
+    });
+  });
+
+  it('offers the neighbouring keys’ chord for the same slot', () => {
+    const w = slotsFor('C')['iii']; // Em — G's iii is Bm, F's is Am
+    const opts = pickOptions(w, ALL_KEYS.indexOf('C'), seeded(3));
+    expect(opts).toContain('Bm');
+    expect(opts).toContain('Am');
+  });
+
+  it('does not let an odd spelling stand out on its own', () => {
+    // F# major's vii° is E#° — it gets company that looks just as odd.
+    const w = slotsFor('F#')['vii°'];
+    for (const seed of [1, 2, 3, 4]) {
+      const opts = pickOptions(w, ALL_KEYS.indexOf('F#'), seeded(seed));
+      expect(opts).toContain('E#dim');
+      expect(opts).toContain('B#dim');
+    }
+  });
+
+  it('gives no positional hint either: the answer is spread evenly', () => {
+    const w = slotsFor('D')['ii'];
+    const counts = new Array(PICK_OPTIONS).fill(0);
+    const rand = seeded(17);
+    for (let i = 0; i < 3000; i++) counts[pickOptions(w, ALL_KEYS.indexOf('D'), rand).indexOf(w.chord)]++;
+    for (const c of counts) expect(c).toBeGreaterThan(400); // ~500 each
   });
 });
 

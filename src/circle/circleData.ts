@@ -298,54 +298,75 @@ function questionStyle(s: CircleSettings, rand: () => number): QuestionStyle {
 
 export const PICK_OPTIONS = 6;
 
-const PC_SPELLINGS: string[][] = [
-  ['C', 'B#'], ['C#', 'Db'], ['D'], ['D#', 'Eb'], ['E', 'Fb'], ['F', 'E#'],
-  ['F#', 'Gb'], ['G'], ['G#', 'Ab'], ['A'], ['A#', 'Bb'], ['B', 'Cb'],
-];
-const QUALITY_SUFFIXES = ['', 'm', 'dim'];
-
 const splitChord = (chord: string): { root: string; quality: string } => {
   const m = /^([A-G][#b]?)(.*)$/.exec(chord);
   return m ? { root: m[1], quality: m[2] } : { root: chord, quality: '' };
 };
 
+// How a key spells a root that isn't in its scale: sharp keys with sharps,
+// flat keys with flats, C with the everyday names.
+const SHARP_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const FLAT_NAMES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+const COMMON_NAMES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
+const SHARP_KEYS = new Set(['G', 'D', 'A', 'E', 'B', 'F#']);
+
+/** Spell a pitch class the way this key would: its own scale spelling where
+    the note is in the key, its accidental direction where it isn't. */
+function keySpeller(keyPos: number): (pc: number) => string {
+  const key = keyAt(keyPos);
+  const diatonic = new Map<number, string>();
+  for (const c of chordData[key].triads.chords) {
+    const { root } = splitChord(c);
+    const pc = rootPitchClass(root);
+    if (pc !== null) diatonic.set(pc, root);
+  }
+  const names = key === 'C' ? COMMON_NAMES : SHARP_KEYS.has(key) ? SHARP_NAMES : FLAT_NAMES;
+  return (pc) => diatonic.get(pc) ?? names[pc];
+}
+
+// Spellings that look strange on sight. F# major's vii° is E#°; offered
+// alone, it would be the one odd button and give itself away.
+const ODD_ROOT_DECOY: Record<string, string> = { 'E#': 'B#', 'B#': 'E#', Cb: 'Fb', Fb: 'Cb' };
+
 /**
- * Six chords for one slot: the right one and five that are wrong in the ways
- * people actually get it wrong, so picking still takes knowing the chord —
- * not just spotting the only sensible-looking button.
+ * Six chords for one slot: the right one and five wrong ones that can't be
+ * ruled out at a glance.
  *
- *  - same root, wrong quality     (E or E° when it's Em)
- *  - right sound, wrong spelling  (F° when F# major spells it E#°)
- *  - the same slot in the next key round the wheel either side
- *  - other chords of this key     (right key, wrong position)
+ * Every option has the slot's quality — the ring already says major, minor or
+ * diminished, so a wrong quality is a free elimination, and offering the right
+ * root in three qualities singled it out. Every option has a different root,
+ * spelled the way this key would spell it, so neither letter counts nor odd
+ * spellings point anywhere. The wrong roots are, in order of preference:
+ *
+ *  - the chord in this slot for the neighbouring keys — the spokes either side
+ *  - this key's other chords of the same quality
+ *  - this slot two keys away, then anything else
  */
 export function pickOptions(w: WedgeSlot, keyPos: number, rand: () => number = Math.random): string[] {
   const correct = w.chord;
   const { root, quality } = splitChord(correct);
-  const taken = new Set([correct]);
+  const spell = keySpeller(keyPos);
+  const used = new Set<number>([rootPitchClass(root) ?? -1]);
   const out: string[] = [];
-  const add = (c: string | undefined) => {
-    if (!c || taken.has(c) || out.length >= PICK_OPTIONS - 1) return;
-    if (answersMatch(c, correct)) return; // an equivalent notation isn't a wrong answer
-    taken.add(c);
-    out.push(c);
+  const add = (pc: number | null, spelled?: string) => {
+    if (pc === null || used.has(pc) || out.length >= PICK_OPTIONS - 1) return;
+    used.add(pc);
+    out.push((spelled ?? spell(pc)) + quality);
   };
+  const pcOf = (chord: string) => rootPitchClass(splitChord(chord).root);
 
-  const otherQualities = shuffle(QUALITY_SUFFIXES.filter((q) => q !== quality), rand);
-  add(root + otherQualities[0]);
+  const decoy = ODD_ROOT_DECOY[root];
+  if (decoy) add(rootPitchClass(decoy), decoy);
 
-  const pc = rootPitchClass(root);
-  const respelled = pc === null ? undefined : PC_SPELLINGS[pc].find((r) => r !== root);
-  add(respelled ? respelled + quality : undefined);
+  for (const off of shuffle([-1, 1], rand)) add(pcOf(keyChord(wrap(keyPos + off), w.degree)));
 
-  const neighbours = shuffle([keyChord(wrap(keyPos - 1), w.degree), keyChord(wrap(keyPos + 1), w.degree)], rand);
-  add(neighbours[0]);
-
-  const keyChords = shuffle(
-    DEGREE_KEYS.filter((d) => d !== w.degree).map((d) => keyChord(keyPos, d)),
-    rand,
+  const sameQuality = DEGREE_KEYS.filter(
+    (d) => d !== w.degree && splitChord(keyChord(keyPos, d)).quality === quality,
   );
-  for (const c of [neighbours[1], root + otherQualities[1], ...keyChords]) add(c);
+  for (const d of shuffle(sameQuality, rand)) add(pcOf(keyChord(keyPos, d)));
+
+  for (const off of shuffle([-2, 2], rand)) add(pcOf(keyChord(wrap(keyPos + off), w.degree)));
+  for (const pc of shuffle([...Array(12).keys()], rand)) add(pc);
 
   return shuffle([correct, ...out], rand);
 }
