@@ -8,7 +8,7 @@ import { buildFretNotes } from './fretDisplay';
 import { renderJazz } from '../components/ChordDisplay';
 import { haptic, TAP, CORRECT, WRONG } from '../lib/haptics';
 import { ThemeIconButton } from '../components/ThemeSwitch';
-import type { MixedHooks } from '../lib/mixed';
+import { reviewControls, type MixedHooks } from '../lib/mixed';
 
 const STORAGE_KEY = 'diatone.fret.v1';
 
@@ -34,9 +34,9 @@ export default function FretboardGame({ onBack, mixed }: { onBack: () => void; m
 
   const {
     question, selected, answered, correct, streak: ownStreak,
-    history, reviewIndex,
+    history, reviewIndex: ownReviewIndex,
     toggle, check, advance, scheduleAdvance,
-    enterReview, reviewNav, exitReview,
+    setReviewIndex, cancelAdvance,
   } = useFretboardGame(settings, () => mixedRef.current?.onDone());
   const streak = mixed ? mixed.streak : ownStreak;
 
@@ -67,6 +67,13 @@ export default function FretboardGame({ onBack, mixed }: { onBack: () => void; m
     return () => window.clearTimeout(t);
   }, [answered, correct, settings.autoAdvance, scheduleAdvance]);
 
+  const rv = reviewControls(ownReviewIndex, setReviewIndex, history.length, mixed);
+  const reviewIndex = rv.index;
+  const enterReview = () => {
+    if (!rv.canEnter) return;
+    cancelAdvance();
+    rv.enter();
+  };
   const reviewing = reviewIndex !== null;
   const item = reviewing ? history[reviewIndex] : null;
   // Displayed question/state: a history entry while reviewing, otherwise live.
@@ -115,7 +122,7 @@ export default function FretboardGame({ onBack, mixed }: { onBack: () => void; m
             className="icon-btn"
             aria-label="Review"
             onClick={enterReview}
-            disabled={history.length === 0}
+            disabled={!rv.canEnter}
           >
             ↺
           </button>
@@ -166,16 +173,16 @@ export default function FretboardGame({ onBack, mixed }: { onBack: () => void; m
         <div className="fret-actions">
           <div className={`fb ${dCor ? 'ok' : 'no'}`}>{dCor ? '✓ Correct' : '✗ Incorrect'}</div>
           <div className="review-nav" style={{ width: '100%', maxWidth: 360 }}>
-            <button onClick={() => reviewNav(-1)} disabled={reviewIndex === 0}>
+            <button onClick={() => rv.nav(-1)} disabled={rv.atOldest}>
               ← Older
             </button>
-            <button onClick={exitReview}>Return</button>
-            <button onClick={() => reviewNav(1)} disabled={reviewIndex === history.length - 1}>
+            <button onClick={rv.exit}>Return</button>
+            <button onClick={() => rv.nav(1)} disabled={rv.atNewest}>
               Newer →
             </button>
           </div>
           <div className="review-count">
-            {(reviewIndex ?? 0) + 1} of {history.length}
+            {rv.position} of {rv.count}
           </div>
         </div>
       ) : valid ? (

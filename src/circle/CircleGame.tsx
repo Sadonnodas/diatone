@@ -39,7 +39,7 @@ import { useInstrument } from '../audio/instrument';
 import { playChord, playProgression, prefetchChords } from '../audio/phrases';
 import { chordToMidi } from '../audio/harmony';
 import { answersMatch } from '../lib/normalize';
-import type { MixedHooks } from '../lib/mixed';
+import { reviewControls, type MixedHooks } from '../lib/mixed';
 
 const STORAGE_KEY = 'diatone.circle.v2';
 
@@ -189,7 +189,7 @@ export default function CircleGame({
 
   // Past questions, newest last. reviewIndex null means playing live.
   const [history, setHistory] = useState<HistoryEntry[]>([]);
-  const [reviewIndex, setReviewIndex] = useState<number | null>(null);
+  const [ownReviewIndex, setReviewIndex] = useState<number | null>(null);
 
   const timer = useRef<number | null>(null);
   const runId = useRef(0);
@@ -355,10 +355,15 @@ export default function CircleGame({
   const layoutDone = layout ? step >= layout.blanks.length : false;
   const asked = layout && !layoutDone ? layout.blanks[step] : null;
 
+  // The ring gives the quality; the answer is named as the chord it is.
+  const askedSuffix = asked?.ring === 'minor' ? 'm' : '';
+
   const answerName = () => {
     if (!asked || !letter || !layout) return;
-    const typed = letter + (acc === 'b' ? 'b' : acc === '#' ? '#' : '');
-    const right = layoutAnswerMatches(typed, asked);
+    const root = letter + (acc === 'b' ? 'b' : acc === '#' ? '#' : '');
+    const right = layoutAnswerMatches(root, asked);
+    const typed = root + askedSuffix;
+    const want = segmentRoot(asked) + askedSuffix;
     mixedRef.current?.onResult(right);
     haptic(right ? CORRECT : WRONG);
     setStreak((s) => (right ? s + 1 : 0));
@@ -369,8 +374,8 @@ export default function CircleGame({
     const nextMarks: Record<string, Mark> = { ...marks, [key]: right ? 'ok' : 'no' };
     // A miss fills the segment in with its real name, so the correction lands
     // in the place you got wrong rather than in a message.
-    const nextRevealed = { ...revealed, [key]: right ? typed : segmentRoot(asked) };
-    const nextMisses = right ? layoutMisses : [...layoutMisses, { want: segmentRoot(asked), typed }];
+    const nextRevealed = { ...revealed, [key]: right ? typed : want };
+    const nextMisses = right ? layoutMisses : [...layoutMisses, { want, typed }];
     setMarks(nextMarks);
     setRevealed(nextRevealed);
     setLayoutMisses(nextMisses);
@@ -567,18 +572,17 @@ export default function CircleGame({
   });
 
   // ── Review ────────────────────────────────────────────────────────────────
+  const rv = reviewControls(ownReviewIndex, setReviewIndex, history.length, mixed);
+  const reviewIndex = rv.index;
   const reviewing = reviewIndex !== null;
   const entry = reviewing ? (history[reviewIndex] ?? null) : null;
 
   const enterReview = () => {
-    if (history.length === 0) return;
+    if (!rv.canEnter) return;
     if (timer.current) clearTimeout(timer.current);
     stopAll();
-    setReviewIndex(history.length - 1);
+    rv.enter();
   };
-  const reviewNav = (dir: number) =>
-    setReviewIndex((i) => (i === null ? null : Math.max(0, Math.min(history.length - 1, i + dir))));
-  const exitReview = () => setReviewIndex(null);
 
   const done = isProg ? progDone : isWedge ? wedgeDone : layoutDone;
   const advance = () => {
@@ -642,7 +646,7 @@ export default function CircleGame({
             className="icon-btn"
             aria-label="Review"
             onClick={enterReview}
-            disabled={history.length === 0}
+            disabled={!rv.canEnter}
           >
             ↺
           </button>
@@ -870,16 +874,16 @@ export default function CircleGame({
       {reviewing && (
         <div className="fret-actions" onClick={stop}>
           <div className="review-nav" style={{ width: '100%', maxWidth: 360 }}>
-            <button onClick={() => reviewNav(-1)} disabled={reviewIndex === 0}>
+            <button onClick={() => rv.nav(-1)} disabled={rv.atOldest}>
               ← Older
             </button>
-            <button onClick={exitReview}>Return</button>
-            <button onClick={() => reviewNav(1)} disabled={reviewIndex === history.length - 1}>
+            <button onClick={rv.exit}>Return</button>
+            <button onClick={() => rv.nav(1)} disabled={rv.atNewest}>
               Newer →
             </button>
           </div>
           <div className="review-count">
-            {(reviewIndex ?? 0) + 1} of {history.length}
+            {rv.position} of {rv.count}
           </div>
         </div>
       )}
@@ -927,6 +931,7 @@ export default function CircleGame({
             }}
             onAnswer={answerName}
             disabled={layoutDone}
+            suffix={askedSuffix}
           />
         </div>
       )}

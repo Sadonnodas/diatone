@@ -14,7 +14,7 @@ import { Review } from './components/Review';
 import { InfoModal } from './components/InfoModal';
 import { KeyWheel } from './components/KeyWheel';
 import { MODES, transposeStranded } from './lib/modes';
-import type { MixedHooks } from './lib/mixed';
+import { reviewControls, type MixedHooks } from './lib/mixed';
 import { haptic, TAP, CORRECT, WRONG } from './lib/haptics';
 import { armUnlock, stopAll } from './audio/engine';
 import { useInstrument } from './audio/instrument';
@@ -85,7 +85,11 @@ export default function NumeralsGame({
   useEffect(armUnlock, []);
 
   const question = currentQuestion(state);
-  const reviewing = state.reviewIndex !== null;
+  // In a mixed session the session drives review (see lib/mixed); on its own
+  // the reducer does.
+  const rv = reviewControls(state.reviewIndex, () => {}, state.history.length, mixed);
+  const reviewIndex = rv.index;
+  const reviewing = reviewIndex !== null;
   const disabled = state.feedback !== null || reviewing;
 
   // Persist settings.
@@ -242,8 +246,18 @@ export default function NumeralsGame({
 
   const updateSettings = (s: Settings) => dispatch({ type: 'UPDATE_SETTINGS', settings: s });
 
-  const reviewEntry =
-    state.reviewIndex !== null ? (state.history[state.reviewIndex] ?? null) : null;
+  const reviewEntry = reviewIndex !== null ? (state.history[reviewIndex] ?? null) : null;
+
+  const enterReview = () => {
+    if (!rv.canEnter) return;
+    // A pending auto-advance would pull the question out from under you.
+    if (advanceTimer.current) clearTimeout(advanceTimer.current);
+    if (mixed) mixed.onReview();
+    else dispatch({ type: 'REVIEW_PREV' });
+  };
+  const reviewPrev = () => (mixed ? mixed.onReviewNav(-1) : dispatch({ type: 'REVIEW_PREV' }));
+  const reviewNext = () => (mixed ? mixed.onReviewNav(1) : dispatch({ type: 'REVIEW_NEXT' }));
+  const reviewClose = () => (mixed ? mixed.onReviewExit() : dispatch({ type: 'REVIEW_EXIT' }));
 
   // Setup screen: pick the keys to train on before the drill starts.
   if (phase === 'setup') {
@@ -347,8 +361,8 @@ export default function NumeralsGame({
           <button
             className="icon-btn"
             aria-label="Review"
-            onClick={() => dispatch({ type: 'REVIEW_PREV' })}
-            disabled={state.history.length === 0}
+            onClick={enterReview}
+            disabled={!rv.canEnter}
           >
             ↺
           </button>
@@ -453,11 +467,11 @@ export default function NumeralsGame({
         <div onClick={stop}>
           <Review
             entry={reviewEntry}
-            index={state.reviewIndex ?? 0}
-            total={state.history.length}
-            onPrev={() => dispatch({ type: 'REVIEW_PREV' })}
-            onNext={() => dispatch({ type: 'REVIEW_NEXT' })}
-            onClose={() => dispatch({ type: 'REVIEW_EXIT' })}
+            index={rv.position - 1}
+            total={rv.count}
+            onPrev={reviewPrev}
+            onNext={reviewNext}
+            onClose={reviewClose}
             onHear={state.settings.playback ? (text, key) => void playAnswer(text, key) : undefined}
           />
         </div>

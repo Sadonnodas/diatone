@@ -1,11 +1,11 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import NumeralsGame from './NumeralsGame';
 import FretboardGame from './fretboard/FretboardGame';
 import IntervalGame from './fretboard/IntervalGame';
 import WarmupGame from './fretboard/WarmupGame';
 import CircleGame from './circle/CircleGame';
 import { ThemeIconButton } from './components/ThemeSwitch';
-import { GAMES, pickGame, type GameId, type MixedHooks } from './lib/mixed';
+import { GAMES, pickGame, type GameId, type MixedHooks, type MixedReview } from './lib/mixed';
 
 const STORAGE_KEY = 'diatone.mixed.v1';
 const DEFAULT_POOL: GameId[] = ['numerals', 'fretboard', 'intervals', 'circle'];
@@ -49,6 +49,14 @@ export default function MixedGame({ onBack }: { onBack: () => void }) {
   const [current, setCurrent] = useState<GameId | null>(null);
   const [mounted, setMounted] = useState<GameId[]>([]);
   const [streak, setStreak] = useState(0);
+  // Every answered question, in the order they were asked, by drill — what
+  // the session's review walks through.
+  const [log, setLog] = useState<GameId[]>([]);
+  // Drills whose current question already has its place in the log.
+  const logged = useRef(new Set<GameId>());
+  // The session's review: which entry of the log is showing. The live drill
+  // stays `current`, so leaving the review goes straight back to it.
+  const [review, setReview] = useState<{ pos: number } | null>(null);
 
   const togglePool = (id: GameId) =>
     setPool((p) => {
@@ -70,9 +78,42 @@ export default function MixedGame({ onBack }: { onBack: () => void }) {
     [pool],
   );
 
-  const onResult = useCallback((correct: boolean) => {
+  const onResult = useCallback((id: GameId, correct: boolean) => {
     setStreak((st) => (correct ? st + 1 : 0));
+    // A question can take several answers (a circle with three gaps); it goes
+    // in the log once, on the first.
+    if (!logged.current.has(id)) {
+      logged.current.add(id);
+      setLog((l) => [...l, id]);
+    }
   }, []);
+
+  const onDone = (id: GameId) => {
+    logged.current.delete(id);
+    deal(id);
+  };
+
+  const startReview = () => {
+    if (log.length > 0) setReview({ pos: log.length - 1 });
+  };
+  const exitReview = () => setReview(null);
+  const navReview = (dir: -1 | 1) =>
+    setReview((r) => {
+      if (!r) return r;
+      const pos = r.pos + dir;
+      if (pos >= log.length) return null;
+      return { pos: Math.max(0, pos) };
+    });
+
+  /** What the drill `id` should show of the session's review, if anything. */
+  const reviewFor = (id: GameId): MixedReview | null => {
+    if (!review || log[review.pos] !== id) return null;
+    let back = 0;
+    for (let i = review.pos + 1; i < log.length; i++) if (log[i] === id) back++;
+    return { back, position: review.pos + 1, count: log.length };
+  };
+  // While reviewing, the drill on screen is the one that owns the question.
+  const shown = review ? log[review.pos] : current;
 
   if (phase === 'setup') {
     return (
@@ -131,12 +172,17 @@ export default function MixedGame({ onBack }: { onBack: () => void }) {
   return (
     <>
       {mounted.map((id) => {
-        const active = id === current;
+        const active = id === shown;
         const mixed: MixedHooks = {
           active,
           streak,
-          onResult,
-          onDone: () => deal(id),
+          onResult: (correct) => onResult(id, correct),
+          onDone: () => onDone(id),
+          review: reviewFor(id),
+          canReview: log.length > 0,
+          onReview: startReview,
+          onReviewNav: navReview,
+          onReviewExit: exitReview,
         };
         return (
           // `display: contents` keeps each drill laid out exactly as it is on

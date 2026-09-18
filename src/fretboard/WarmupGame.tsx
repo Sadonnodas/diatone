@@ -11,7 +11,7 @@ import {
 import { renderJazz } from '../components/ChordDisplay';
 import { WarmupInfo } from './WarmupInfo';
 import { ThemeSettingRow } from '../components/ThemeSwitch';
-import type { MixedHooks } from '../lib/mixed';
+import { reviewControls, type MixedHooks } from '../lib/mixed';
 import { haptic, TAP, CORRECT, WRONG } from '../lib/haptics';
 import { ThemeIconButton } from '../components/ThemeSwitch';
 
@@ -74,7 +74,9 @@ export default function WarmupGame({ onBack, mixed }: { onBack: () => void; mixe
   const [streak, setStreak] = useState(0);
   const [flash, setFlash] = useState<'' | 'flash-ok' | 'flash-no'>('');
   const [history, setHistory] = useState<WHistory[]>([]);
-  const [reviewIndex, setReviewIndex] = useState<number | null>(null);
+  const [ownReviewIndex, setReviewIndex] = useState<number | null>(null);
+  const rv = reviewControls(ownReviewIndex, setReviewIndex, history.length, mixed);
+  const reviewIndex = rv.index;
   const timer = useRef<number | null>(null);
   const lastSig = useRef<string>('');
   const mixedRef = useRef(mixed);
@@ -200,13 +202,10 @@ export default function WarmupGame({ onBack, mixed }: { onBack: () => void; mixe
   };
 
   const enterReview = () => {
-    if (history.length === 0) return;
+    if (!rv.canEnter) return;
     if (timer.current) clearTimeout(timer.current);
-    setReviewIndex(history.length - 1);
+    rv.enter();
   };
-  const reviewNav = (dir: number) =>
-    setReviewIndex((i) => (i === null ? null : Math.max(0, Math.min(history.length - 1, i + dir))));
-  const exitReview = () => setReviewIndex(null);
 
   const fretNotes = dq ? buildFretNotes(dq.notes, dq.target, dSel, dAns, 'none') : [];
 
@@ -231,7 +230,7 @@ export default function WarmupGame({ onBack, mixed }: { onBack: () => void; mixe
             className="icon-btn"
             aria-label="Review"
             onClick={enterReview}
-            disabled={history.length === 0}
+            disabled={!rv.canEnter}
           >
             ↺
           </button>
@@ -277,16 +276,16 @@ export default function WarmupGame({ onBack, mixed }: { onBack: () => void; mixe
         <div className="fret-actions">
           <div className={`fb ${dCor ? 'ok' : 'no'}`}>{dCor ? '✓ Correct' : '✗ Incorrect'}</div>
           <div className="review-nav" style={{ width: '100%', maxWidth: 360 }}>
-            <button onClick={() => reviewNav(-1)} disabled={reviewIndex === 0}>
+            <button onClick={() => rv.nav(-1)} disabled={rv.atOldest}>
               ← Older
             </button>
-            <button onClick={exitReview}>Return</button>
-            <button onClick={() => reviewNav(1)} disabled={reviewIndex === history.length - 1}>
+            <button onClick={rv.exit}>Return</button>
+            <button onClick={() => rv.nav(1)} disabled={rv.atNewest}>
               Newer →
             </button>
           </div>
           <div className="review-count">
-            {(reviewIndex ?? 0) + 1} of {history.length}
+            {rv.position} of {rv.count}
           </div>
         </div>
       ) : dq ? (

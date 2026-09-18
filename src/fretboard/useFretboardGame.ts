@@ -173,16 +173,10 @@ export function useFretboardGame(settings: FretSettings, onAdvanced?: () => void
     return isCorrect;
   }, [answered, question, selected]);
 
-  const enterReview = useCallback(() => {
-    if (history.length === 0) return;
+  // Reviewing mustn't be interrupted by a pending auto-advance.
+  const cancelAdvance = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
-    setReviewIndex(history.length - 1);
-  }, [history.length]);
-  const reviewNav = useCallback(
-    (dir: number) => setReviewIndex((i) => (i === null ? null : Math.max(0, Math.min(history.length - 1, i + dir)))),
-    [history.length],
-  );
-  const exitReview = useCallback(() => setReviewIndex(null), []);
+  }, []);
 
   const onAdvancedRef = useRef(onAdvanced);
   onAdvancedRef.current = onAdvanced;
@@ -212,8 +206,7 @@ export function useFretboardGame(settings: FretSettings, onAdvanced?: () => void
     generate,
     advance,
     scheduleAdvance,
-    enterReview,
-    reviewNav,
-    exitReview,
+    setReviewIndex,
+    cancelAdvance,
   };
 }

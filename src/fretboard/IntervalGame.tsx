@@ -18,7 +18,7 @@ import { armUnlock, stopAll } from '../audio/engine';
 import { useInstrument } from '../audio/instrument';
 import { playFrettedInterval, playIntervalClass, prefetchFretted } from '../audio/phrases';
 import { ThemeIconButton } from '../components/ThemeSwitch';
-import type { MixedHooks } from '../lib/mixed';
+import { reviewControls, type MixedHooks } from '../lib/mixed';
 
 const STORAGE_KEY = 'diatone.intervals.v1';
 const ADVANCE_MS = 900;
@@ -82,7 +82,9 @@ export default function IntervalGame({ onBack, mixed }: { onBack: () => void; mi
   const [streak, setStreak] = useState(0);
   const [flash, setFlash] = useState<'' | 'flash-ok' | 'flash-no'>('');
   const [history, setHistory] = useState<HistoryEntry[]>([]);
-  const [reviewIndex, setReviewIndex] = useState<number | null>(null);
+  const [ownReviewIndex, setReviewIndex] = useState<number | null>(null);
+  const rv = reviewControls(ownReviewIndex, setReviewIndex, history.length, mixed);
+  const reviewIndex = rv.index;
   const timer = useRef<number | null>(null);
   const lastCls = useRef<number | undefined>(undefined);
   // Bumped on every new question. Playback that outlives its question (you
@@ -209,13 +211,10 @@ export default function IntervalGame({ onBack, mixed }: { onBack: () => void; mi
   };
 
   const enterReview = () => {
-    if (history.length === 0) return;
+    if (!rv.canEnter) return;
     if (timer.current) clearTimeout(timer.current);
-    setReviewIndex(history.length - 1);
+    rv.enter();
   };
-  const reviewNav = (dir: number) =>
-    setReviewIndex((i) => (i === null ? null : Math.max(0, Math.min(history.length - 1, i + dir))));
-  const exitReview = () => setReviewIndex(null);
 
   const notes = dq ? buildNotes(dq, dAnswer, dCorrect) : [];
   // Tap anywhere to move on once the answer is showing (§18) — the header and
@@ -247,7 +246,7 @@ export default function IntervalGame({ onBack, mixed }: { onBack: () => void; mi
             className="icon-btn"
             aria-label="Review"
             onClick={enterReview}
-            disabled={history.length === 0}
+            disabled={!rv.canEnter}
           >
             ↺
           </button>
@@ -328,16 +327,16 @@ export default function IntervalGame({ onBack, mixed }: { onBack: () => void; mi
         <div className="fret-actions" onClick={stop}>
           <div className={`fb ${dCorrect ? 'ok' : 'no'}`}>{dCorrect ? '✓ Correct' : '✗ Incorrect'}</div>
           <div className="review-nav" style={{ width: '100%', maxWidth: 360 }}>
-            <button onClick={() => reviewNav(-1)} disabled={reviewIndex === 0}>
+            <button onClick={() => rv.nav(-1)} disabled={rv.atOldest}>
               ← Older
             </button>
-            <button onClick={exitReview}>Return</button>
-            <button onClick={() => reviewNav(1)} disabled={reviewIndex === history.length - 1}>
+            <button onClick={rv.exit}>Return</button>
+            <button onClick={() => rv.nav(1)} disabled={rv.atNewest}>
               Newer →
             </button>
           </div>
           <div className="review-count">
-            {(reviewIndex ?? 0) + 1} of {history.length}
+            {rv.position} of {rv.count}
           </div>
         </div>
       ) : dq ? (
