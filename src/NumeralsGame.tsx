@@ -10,7 +10,7 @@ import { pickSeed, type Settings } from './lib/engine';
 import { Prompt } from './components/Prompt';
 import { useAnswerBuilder, Keypad } from './components/AnswerInput';
 import { SettingsSheet } from './components/SettingsSheet';
-import { Review } from './components/Review';
+import { ReviewBar } from './components/ReviewBar';
 import { InfoModal } from './components/InfoModal';
 import { KeyWheel } from './components/KeyWheel';
 import { MODES, transposeStranded } from './lib/modes';
@@ -322,7 +322,7 @@ export default function NumeralsGame({
   }
 
   return (
-    <div className={`app ${flash}`} onClick={onAppClick}>
+    <div className={`app ${flash}${reviewing ? ' reviewing' : ''}`} onClick={onAppClick}>
       <div className="top reveal" style={{ animationDelay: '.02s' }} onClick={stop}>
         <div className="top-left">
           <button className="icon-btn" aria-label="Home" onClick={onBack}>
@@ -374,9 +374,51 @@ export default function NumeralsGame({
       </div>
 
       <div className="stage play-stage">
-        {question ? (
+        {reviewEntry ? (
+          // A past question, where live ones are asked and as it was answered.
           <Prompt
-            question={question}
+            key={`review-${reviewIndex}`}
+            prompt={reviewEntry.prompt}
+            feedback={{ correct: reviewEntry.correct, correctAnswer: reviewEntry.correctAnswer }}
+            userAnswer={reviewEntry.userAnswer}
+            builder={builder}
+            autoAdvance={false}
+            review
+            hear={
+              state.settings.playback ? (
+                <div className="hear-slot hear-row" onClick={stop}>
+                  {reviewEntry.correct ? (
+                    <button
+                      className="hear"
+                      onClick={() => void playAnswer(reviewEntry.correctAnswer, reviewEntry.key)}
+                    >
+                      ▶ hear it again
+                    </button>
+                  ) : (
+                    <>
+                      {soundable(reviewEntry.userAnswer, reviewEntry.key) && (
+                        <button
+                          className="hear no"
+                          onClick={() => void playAnswer(reviewEntry.userAnswer, reviewEntry.key)}
+                        >
+                          ▶ yours
+                        </button>
+                      )}
+                      <button
+                        className="hear ok"
+                        onClick={() => void playAnswer(reviewEntry.correctAnswer, reviewEntry.key)}
+                      >
+                        ▶ answer
+                      </button>
+                    </>
+                  )}
+                </div>
+              ) : null
+            }
+          />
+        ) : question ? (
+          <Prompt
+            prompt={question.prompt}
             feedback={state.feedback}
             userAnswer={state.userAnswer}
             builder={builder}
@@ -419,10 +461,24 @@ export default function NumeralsGame({
         )}
       </div>
 
-      {question && (
-        <div onClick={stop}>
-          <Keypad builder={builder} disabled={disabled} />
+      {reviewEntry ? (
+        <div className="review-slot" onClick={stop}>
+          <ReviewBar
+            rv={{
+              ...rv,
+              nav: (dir) => (dir < 0 ? reviewPrev() : reviewNext()),
+              exit: reviewClose,
+            }}
+            ok={reviewEntry.correct}
+            verdict={reviewEntry.correct ? 'Right' : 'Wrong'}
+          />
         </div>
+      ) : (
+        question && (
+          <div onClick={stop}>
+            <Keypad builder={builder} disabled={disabled} />
+          </div>
+        )
       )}
 
       {settingsOpen && (
@@ -463,19 +519,6 @@ export default function NumeralsGame({
         </div>
       )}
 
-      {reviewing && (
-        <div onClick={stop}>
-          <Review
-            entry={reviewEntry}
-            index={rv.position - 1}
-            total={rv.count}
-            onPrev={reviewPrev}
-            onNext={reviewNext}
-            onClose={reviewClose}
-            onHear={state.settings.playback ? (text, key) => void playAnswer(text, key) : undefined}
-          />
-        </div>
-      )}
     </div>
   );
 }

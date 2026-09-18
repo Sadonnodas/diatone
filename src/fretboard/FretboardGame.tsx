@@ -8,6 +8,7 @@ import { buildFretNotes } from './fretDisplay';
 import { renderJazz } from '../components/ChordDisplay';
 import { haptic, TAP, CORRECT, WRONG } from '../lib/haptics';
 import { ThemeIconButton } from '../components/ThemeSwitch';
+import { ReviewBar } from '../components/ReviewBar';
 import { reviewControls, type MixedHooks } from '../lib/mixed';
 
 const STORAGE_KEY = 'diatone.fret.v1';
@@ -102,7 +103,7 @@ export default function FretboardGame({ onBack, mixed }: { onBack: () => void; m
     : '';
 
   return (
-    <div className={`app ${flash}`}>
+    <div className={`app ${flash}${reviewing ? ' reviewing' : ''}`}>
       <div className="top reveal" style={{ animationDelay: '.02s' }}>
         <div className="top-left">
           <button className="icon-btn" aria-label="Home" onClick={onBack}>
@@ -171,19 +172,7 @@ export default function FretboardGame({ onBack, mixed }: { onBack: () => void; m
 
       {reviewing ? (
         <div className="fret-actions">
-          <div className={`fb ${dCor ? 'ok' : 'no'}`}>{dCor ? '✓ Correct' : '✗ Incorrect'}</div>
-          <div className="review-nav" style={{ width: '100%', maxWidth: 360 }}>
-            <button onClick={() => rv.nav(-1)} disabled={rv.atOldest}>
-              ← Older
-            </button>
-            <button onClick={rv.exit}>Return</button>
-            <button onClick={() => rv.nav(1)} disabled={rv.atNewest}>
-              Newer →
-            </button>
-          </div>
-          <div className="review-count">
-            {rv.position} of {rv.count}
-          </div>
+          <ReviewBar rv={rv} ok={!!dCor} verdict={dCor ? 'Right' : 'Wrong'} />
         </div>
       ) : valid ? (
         <div className="fret-actions">

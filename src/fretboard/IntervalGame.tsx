@@ -18,6 +18,7 @@ import { armUnlock, stopAll } from '../audio/engine';
 import { useInstrument } from '../audio/instrument';
 import { playFrettedInterval, playIntervalClass, prefetchFretted } from '../audio/phrases';
 import { ThemeIconButton } from '../components/ThemeSwitch';
+import { ReviewBar } from '../components/ReviewBar';
 import { reviewControls, type MixedHooks } from '../lib/mixed';
 
 const STORAGE_KEY = 'diatone.intervals.v1';
@@ -226,7 +227,7 @@ export default function IntervalGame({ onBack, mixed }: { onBack: () => void; mi
   const stop = (e: React.MouseEvent) => e.stopPropagation();
 
   return (
-    <div className={`app ${flash}`} onClick={advance}>
+    <div className={`app ${flash}${reviewing ? ' reviewing' : ''}`} onClick={advance}>
       <div className="top reveal" style={{ animationDelay: '.02s' }} onClick={stop}>
         <div className="top-left">
           <button className="icon-btn" aria-label="Home" onClick={onBack}>
@@ -325,19 +326,7 @@ export default function IntervalGame({ onBack, mixed }: { onBack: () => void; mi
 
       {reviewing ? (
         <div className="fret-actions" onClick={stop}>
-          <div className={`fb ${dCorrect ? 'ok' : 'no'}`}>{dCorrect ? '✓ Correct' : '✗ Incorrect'}</div>
-          <div className="review-nav" style={{ width: '100%', maxWidth: 360 }}>
-            <button onClick={() => rv.nav(-1)} disabled={rv.atOldest}>
-              ← Older
-            </button>
-            <button onClick={rv.exit}>Return</button>
-            <button onClick={() => rv.nav(1)} disabled={rv.atNewest}>
-              Newer →
-            </button>
-          </div>
-          <div className="review-count">
-            {rv.position} of {rv.count}
-          </div>
+          <ReviewBar rv={rv} ok={!!dCorrect} verdict={dCorrect ? 'Right' : 'Wrong'} />
         </div>
       ) : dq ? (
         <div className="pad iv-pad">

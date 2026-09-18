@@ -11,6 +11,7 @@ import {
 import { renderJazz } from '../components/ChordDisplay';
 import { WarmupInfo } from './WarmupInfo';
 import { ThemeSettingRow } from '../components/ThemeSwitch';
+import { ReviewBar } from '../components/ReviewBar';
 import { reviewControls, type MixedHooks } from '../lib/mixed';
 import { haptic, TAP, CORRECT, WRONG } from '../lib/haptics';
 import { ThemeIconButton } from '../components/ThemeSwitch';
@@ -210,7 +211,7 @@ export default function WarmupGame({ onBack, mixed }: { onBack: () => void; mixe
   const fretNotes = dq ? buildFretNotes(dq.notes, dq.target, dSel, dAns, 'none') : [];
 
   return (
-    <div className={`app ${flash}`}>
+    <div className={`app ${flash}${reviewing ? ' reviewing' : ''}`}>
       <div className="top reveal" style={{ animationDelay: '.02s' }}>
         <div className="top-left">
           <button className="icon-btn" aria-label="Home" onClick={onBack}>
@@ -274,19 +275,7 @@ export default function WarmupGame({ onBack, mixed }: { onBack: () => void; mixe
 
       {reviewing ? (
         <div className="fret-actions">
-          <div className={`fb ${dCor ? 'ok' : 'no'}`}>{dCor ? '✓ Correct' : '✗ Incorrect'}</div>
-          <div className="review-nav" style={{ width: '100%', maxWidth: 360 }}>
-            <button onClick={() => rv.nav(-1)} disabled={rv.atOldest}>
-              ← Older
-            </button>
-            <button onClick={rv.exit}>Return</button>
-            <button onClick={() => rv.nav(1)} disabled={rv.atNewest}>
-              Newer →
-            </button>
-          </div>
-          <div className="review-count">
-            {rv.position} of {rv.count}
-          </div>
+          <ReviewBar rv={rv} ok={!!dCor} verdict={dCor ? 'Right' : 'Wrong'} />
         </div>
       ) : dq ? (
         <div className="fret-actions">

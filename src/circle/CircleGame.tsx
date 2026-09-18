@@ -40,6 +40,7 @@ import { playChord, playProgression, prefetchChords } from '../audio/phrases';
 import { chordToMidi } from '../audio/harmony';
 import { answersMatch } from '../lib/normalize';
 import { reviewControls, type MixedHooks } from '../lib/mixed';
+import { ReviewBar } from '../components/ReviewBar';
 
 const STORAGE_KEY = 'diatone.circle.v2';
 
@@ -120,13 +121,24 @@ function loadSettings(): CircleSettings {
   return defaultCircleSettings;
 }
 
-/** One line under a reviewed question: how it went, and what you said when
-    you missed — the question itself already shows the right answers. */
+/** How a past question went, for the review bar. */
+function reviewScore(entry: HistoryEntry): { ok: boolean; verdict: string } {
+  const total =
+    entry.drill === 'layout'
+      ? entry.layout.blanks.length
+      : entry.drill === 'wedge'
+        ? entry.wedge.slots.length
+        : entry.prog.degrees.length;
+  const right = entry.answered - entry.misses.length;
+  if (right === total) return { ok: true, verdict: total === 1 ? 'Right' : `All ${total} right` };
+  return { ok: false, verdict: `${right} of ${total} right` };
+}
+
+/** The line under a reviewed question: what you said where you missed (the
+    question itself shows the right answers), or where you left off. */
 function ReviewSummary({ answered, total, misses }: { answered: number; total: number; misses: string[] }) {
-  const partial = answered < total ? `${answered} of ${total} answered` : null;
-  if (misses.length === 0) {
-    return <span className="lead">{partial ? `${partial} · all right` : `all ${total} right`}</span>;
-  }
+  const partial = answered < total ? `left after ${answered} of ${total}` : null;
+  if (misses.length === 0) return partial ? <span className="lead">{partial}</span> : null;
   return (
     <span className="miss">
       {partial ? `${partial} · ` : ''}you said {misses.join(' · ')}
@@ -626,7 +638,7 @@ export default function CircleGame({
   }
 
   return (
-    <div className={`app ${flash}`} onClick={advance}>
+    <div className={`app ${flash}${reviewing ? ' reviewing' : ''}`} onClick={advance}>
       <div className="top reveal" style={{ animationDelay: '.02s' }} onClick={stop}>
         <div className="top-left">
           <button className="icon-btn" aria-label="Home" onClick={onBack}>
@@ -718,7 +730,7 @@ export default function CircleGame({
           ) : (
             <>
               <div className="ctx">
-                <span className="lead">review</span>
+                <span className="lead">name the gap</span>
               </div>
               <div className="cof-wheel">
                 <CircleWheel
@@ -872,19 +884,8 @@ export default function CircleGame({
       )}
 
       {reviewing && (
-        <div className="fret-actions" onClick={stop}>
-          <div className="review-nav" style={{ width: '100%', maxWidth: 360 }}>
-            <button onClick={() => rv.nav(-1)} disabled={rv.atOldest}>
-              ← Older
-            </button>
-            <button onClick={rv.exit}>Return</button>
-            <button onClick={() => rv.nav(1)} disabled={rv.atNewest}>
-              Newer →
-            </button>
-          </div>
-          <div className="review-count">
-            {rv.position} of {rv.count}
-          </div>
+        <div className="fret-actions review-slot" onClick={stop}>
+          {entry && <ReviewBar rv={rv} {...reviewScore(entry)} />}
         </div>
       )}
 

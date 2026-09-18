@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { Question } from '../lib/engine';
+import type { PromptObj } from '../lib/engine';
 import type { Feedback } from '../state/trainerReducer';
 import { renderJazz } from './ChordDisplay';
 import { Preview, type BuilderApi } from './AnswerInput';
@@ -39,14 +39,15 @@ function Context({ keys }: { keys: string[] }) {
 // a fixed-height sub-area that shows the answer as you build it, then your
 // answer + the verdict — so nothing reflows on submit.
 export function Prompt({
-  question,
+  prompt,
   feedback,
   userAnswer,
   builder,
   autoAdvance,
   hear,
+  review = false,
 }: {
-  question: Question;
+  prompt: PromptObj;
   feedback: Feedback | null;
   userAnswer: string;
   builder: BuilderApi;
@@ -54,9 +55,9 @@ export function Prompt({
   /** Playback controls, if playback is on. Rendered in a reserved slot so the
       hero never shifts when the answer lands. */
   hear?: ReactNode;
+  /** A past question, redrawn as it was answered: no "tap to continue". */
+  review?: boolean;
 }) {
-  const { prompt } = question;
-
   return (
     <>
       {/* The question centres in the space above the answer band. Grouping it
@@ -90,7 +91,7 @@ export function Prompt({
         {hear}
       </div>
 
-      {feedback && !(feedback.correct && autoAdvance) && (
+      {!review && feedback && !(feedback.correct && autoAdvance) && (
         <div className="next-hint">tap to continue →</div>
       )}
     </>

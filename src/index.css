@@ -585,7 +585,7 @@ button {
   100% { background: var(--bg); }
 }
 
-/* ---- Bottom sheet (settings + review) ---- */
+/* ---- Bottom sheet (settings) ---- */
 .scrim {
   position: fixed;
   inset: 0;
@@ -841,45 +841,6 @@ button {
 }
 
 /* ---- Review ---- */
-.review-card {
-  border: 0.5px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface-2);
-  padding: 16px 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.review-prompt {
-  font-size: 14px;
-  color: var(--text-2);
-}
-.review-prompt .k {
-  color: var(--accent);
-  font-weight: 600;
-}
-.review-content {
-  font-family: var(--font-display);
-  font-size: 30px;
-  margin-top: 4px;
-  color: var(--text);
-}
-.review-line {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  font-size: 15px;
-}
-.review-line .lab {
-  color: var(--text-3);
-  font-size: 12px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-.review-line .val {
-  font-family: var(--font-display);
-  font-size: 20px;
-}
 .review-nav {
   display: flex;
   justify-content: space-between;
@@ -897,12 +858,6 @@ button {
 }
 .review-nav button:disabled {
   opacity: 0.35;
-}
-.review-count {
-  font-size: 12px;
-  color: var(--text-3);
-  text-align: center;
-  margin-top: 10px;
 }
 .empty {
   text-align: center;
@@ -1720,23 +1675,6 @@ button {
   align-items: center;
   margin-top: 8px;
 }
-/* The inline ▶ beside an answer in the review sheet. */
-.hear-mini {
-  margin-left: 9px;
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  border: 1px solid var(--line-strong);
-  border-radius: 50%;
-  background: var(--surface-2);
-  color: var(--text-2);
-  font-size: 10px;
-  line-height: 1;
-  vertical-align: middle;
-}
-.hear-mini:active {
-  transform: scale(0.94);
-}
 
 /* Accidentals (♯ / ♭) — symbol font, set slightly smaller like real accidentals. */
 .acc {
@@ -2319,4 +2257,82 @@ html.short-screen .play-stage {
     max(10px, 2svh) + 44px + max(clamp(64px, 8.5svh, 78px), 80px) + 10px + 8px + 46px
       + 8px /* air between the question and the answer */
   );
+}
+
+/* ---- Review, the same in every drill ----
+   The past question stays in place, drawn as it was answered; the review bar
+   takes the keypad's spot, and an accent edge round the screen says "this is
+   the past" at a glance. */
+.app.reviewing::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  box-shadow:
+    inset 0 0 0 1.5px var(--accent-line),
+    inset 0 0 70px var(--accent-dim);
+}
+.review-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto;
+  padding: 14px 14px 12px;
+  border-radius: var(--radius);
+  border: 0.5px solid var(--accent-line);
+  background: var(--surface-1);
+}
+.review-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.review-tag {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.review-verdict {
+  font-weight: 600;
+  font-size: 15px;
+  text-align: center;
+  flex: 1;
+}
+.review-verdict.ok {
+  color: var(--correct);
+}
+.review-verdict.no {
+  color: var(--wrong);
+}
+.review-pos {
+  font-size: 12px;
+  color: var(--text-3);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.review-bar .review-nav {
+  margin-top: 0;
+  gap: 8px;
+}
+.review-bar .review-nav button {
+  flex: 1;
+  padding: 11px 6px;
+  white-space: nowrap;
+}
+.review-bar .review-nav .review-return {
+  border-color: var(--accent-line);
+  color: var(--accent);
+}
+/* Where the bar replaces a tall keypad, keep it at the bottom. */
+.review-slot {
+  margin-top: auto;
+  padding-top: 8px;
 }
