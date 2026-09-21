@@ -14,7 +14,7 @@ import {
   type IntervalSettings as Settings,
 } from './intervalData';
 import { haptic, TAP, CORRECT, WRONG } from '../lib/haptics';
-import { armUnlock, stopAll } from '../audio/engine';
+import { armUnlock, releaseAudio, stopAll } from '../audio/engine';
 import { useInstrument } from '../audio/instrument';
 import { playFrettedInterval, playIntervalClass, prefetchFretted } from '../audio/phrases';
 import { ThemeIconButton } from '../components/ThemeSwitch';
@@ -95,7 +95,8 @@ export default function IntervalGame({ onBack, mixed }: { onBack: () => void; mi
   const mixedRef = useRef(mixed);
   mixedRef.current = mixed;
 
-  useEffect(armUnlock, []);
+  // Claim the phone's audio only while this drill can actually sound.
+  useEffect(() => armUnlock(settings.playback), [settings.playback]);
 
   useEffect(() => {
     try {
@@ -145,17 +146,19 @@ export default function IntervalGame({ onBack, mixed }: { onBack: () => void; mi
   // Warm this question's samples so answering sounds instant — also on an
   // instrument switch, which needs a different pair of recordings.
   useEffect(() => {
-    if (question) {
+    // Nothing is fetched (and no audio context is built) for a silent drill.
+    if (question && settings.playback) {
       prefetchFretted(instrument, [
         [question.rootString, question.rootFret],
         [question.noteString, question.noteFret],
       ]);
     }
-  }, [question, instrument]);
+  }, [question, instrument, settings.playback]);
 
   useEffect(() => () => {
     if (timer.current) clearTimeout(timer.current);
     stopAll();
+    releaseAudio();
   }, []);
 
   const reviewing = reviewIndex !== null;

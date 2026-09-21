@@ -16,7 +16,7 @@ import { KeyWheel } from './components/KeyWheel';
 import { MODES, transposeStranded } from './lib/modes';
 import { reviewControls, type MixedHooks } from './lib/mixed';
 import { haptic, TAP, CORRECT, WRONG } from './lib/haptics';
-import { armUnlock, stopAll } from './audio/engine';
+import { armUnlock, releaseAudio, stopAll } from './audio/engine';
 import { useInstrument } from './audio/instrument';
 import { playChord, playProgression, prefetchChords } from './audio/phrases';
 import { chordToMidi, progressionToMidi, tonicTriad } from './audio/harmony';
@@ -82,7 +82,8 @@ export default function NumeralsGame({
   const playToken = useRef(0);
   const { instrument } = useInstrument();
 
-  useEffect(armUnlock, []);
+  // Claim the phone's audio only while this drill can actually sound.
+  useEffect(() => armUnlock(state.settings.playback), [state.settings.playback]);
 
   const question = currentQuestion(state);
   // In a mixed session the session drives review (see lib/mixed); on its own
@@ -212,6 +213,7 @@ export default function NumeralsGame({
   useEffect(
     () => () => {
       stopAll();
+      releaseAudio();
       if (advanceTimer.current) clearTimeout(advanceTimer.current);
     },
     [],

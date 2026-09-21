@@ -40,10 +40,16 @@ function ensureCtx(): AudioContext | null {
  * applies. Safari 16.4+ exposes this directly; older iOS needs the silent-media
  * element trick below.
  *
- * The trade-off is the one every media app makes: `playback` also means we may
- * interrupt or duck whatever else the phone is playing.
+ * The trade-off is the one every media app makes: `playback` also means we
+ * interrupt whatever else the phone is playing. So the session is only claimed
+ * by a drill that actually sounds: with playback off, Diatone never touches it
+ * and your music plays on.
  */
+let claimed = false;
+
 function claimPlaybackSession(): void {
+  if (claimed) return;
+  claimed = true;
   const nav = navigator as Navigator & { audioSession?: { type: string } };
   if (nav.audioSession) {
     try {
@@ -54,6 +60,23 @@ function claimPlaybackSession(): void {
     }
   }
   primeSilentTrack();
+}
+
+/** Hand the phone's audio back to whatever else wants it. */
+function releasePlaybackSession(): void {
+  if (!claimed) return;
+  claimed = false;
+  const nav = navigator as Navigator & { audioSession?: { type: string } };
+  if (nav.audioSession) {
+    try {
+      // 'auto' is the default: ambient until something plays, which is what a
+      // page that isn't sounding should be.
+      nav.audioSession.type = 'auto';
+    } catch {
+      /* ignore */
+    }
+  }
+  if (silentTrack) silentTrack.pause();
 }
 
 // Pre-16.4 fallback: an <audio> element that is actually playing flips the
@@ -124,12 +147,28 @@ export function unlockAudio(): void {
 }
 
 /**
+ * Step out of the phone's audio session and drop anything holding it open.
+ * Called when a drill's playback is off or when it leaves the screen.
+ */
+export function releaseAudio(): void {
+  releasePlaybackSession();
+}
+
+/**
  * Bring the context up on the next tap anywhere. Screens call this on mount so
  * the context is alive well before the first note is due — creating it inside
  * the gesture that also wants to play tends to lose the first few milliseconds.
  * Returns a cleanup for the effect.
+ *
+ * `playback` is the drill's own setting: with it off nothing is created and the
+ * audio session is left alone (and given back, if an earlier drill held it), so
+ * a silent drill can't interrupt music from another app.
  */
-export function armUnlock(): () => void {
+export function armUnlock(playback: boolean): () => void {
+  if (!playback) {
+    releaseAudio();
+    return () => {};
+  }
   const handler = () => unlockAudio();
   window.addEventListener('pointerdown', handler, { once: true, passive: true });
   return () => window.removeEventListener('pointerdown', handler);

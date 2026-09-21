@@ -34,7 +34,7 @@ import {
   type WedgeSlot,
 } from './circleData';
 import { haptic, TAP, CORRECT, WRONG } from '../lib/haptics';
-import { armUnlock, stopAll } from '../audio/engine';
+import { armUnlock, releaseAudio, stopAll } from '../audio/engine';
 import { useInstrument } from '../audio/instrument';
 import { playChord, playProgression, prefetchChords } from '../audio/phrases';
 import { chordToMidi } from '../audio/harmony';
@@ -67,7 +67,9 @@ type HistoryEntry =
       cells: ProgressionCell[];
       placed: Record<string, string>;
       marks: Record<string, Mark>;
-      misses: { degree: string; tapped: string }[];
+      /** A step you didn't get clean: the field you tapped instead, or the
+          chord you built. One per step at most — the field comes first. */
+      misses: { degree: string; tapped: string; field?: boolean }[];
       answered: number;
     }
   | {
@@ -136,12 +138,26 @@ function reviewScore(entry: HistoryEntry): { ok: boolean; verdict: string } {
 
 /** The line under a reviewed question: what you said where you missed (the
     question itself shows the right answers), or where you left off. */
-function ReviewSummary({ answered, total, misses }: { answered: number; total: number; misses: string[] }) {
+function ReviewSummary({
+  answered,
+  total,
+  misses,
+  prefix = 'you said ',
+}: {
+  answered: number;
+  total: number;
+  misses: string[];
+  /** Dropped where each miss already says what went wrong ("tapped V for
+      iii" — a field, not a chord). */
+  prefix?: string;
+}) {
   const partial = answered < total ? `left after ${answered} of ${total}` : null;
   if (misses.length === 0) return partial ? <span className="lead">{partial}</span> : null;
   return (
     <span className="miss">
-      {partial ? `${partial} · ` : ''}you said {misses.join(' · ')}
+      {partial ? `${partial} · ` : ''}
+      {prefix}
+      {misses.join(' · ')}
     </span>
   );
 }
@@ -193,7 +209,13 @@ export default function CircleGame({
   const [cells, setCells] = useState<ProgressionCell[]>([]);
   const [progPlaced, setProgPlaced] = useState<Record<string, string>>({});
   const [progMarks, setProgMarks] = useState<Record<string, Mark>>({});
-  const [progMisses, setProgMisses] = useState<{ degree: string; tapped: string }[]>([]);
+  const [progMisses, setProgMisses] = useState<{ degree: string; tapped: string; field?: boolean }[]>([]);
+  // A wrong field, shown red on the wedge until the next tap. The step isn't
+  // settled by it: tapping is its own action, so you go on until you find the
+  // right field and only then build its chord.
+  const [badField, setBadField] = useState<string | null>(null);
+  // The first wrong field of this step, for the record.
+  const [stepBadField, setStepBadField] = useState<string | null>(null);
   const [lastTap, setLastTap] = useState<{ chord: string; right: boolean } | null>(null);
   // The slot tapped for this step. Tapping is only half the answer: the chord
   // that goes there still has to be built.
@@ -217,7 +239,8 @@ export default function CircleGame({
   const recentProgs = useRef<string[]>([]);
   const { instrument } = useInstrument();
 
-  useEffect(armUnlock, []);
+  // Claim the phone's audio only while this drill can actually sound.
+  useEffect(() => armUnlock(settings.playback), [settings.playback]);
 
   useEffect(() => {
     try {
@@ -253,6 +276,8 @@ export default function CircleGame({
       setProgMarks({});
       setProgMisses([]);
       setLastTap(null);
+      setBadField(null);
+      setStepBadField(null);
       setProgTapped(null);
     } else if (kind === 'wedge') {
       const q = generateWedge(settings, Math.random, lastKey.current);
@@ -314,6 +339,7 @@ export default function CircleGame({
     () => () => {
       if (timer.current) clearTimeout(timer.current);
       stopAll();
+      releaseAudio();
     },
     [],
   );
@@ -490,14 +516,17 @@ export default function CircleGame({
     return playProgression(instrument, chords);
   };
 
-  /** One step's verdict: the strip takes the right chord either way, the slot
-      is marked, and the progression plays once it's spelled out. */
-  const settleProgStep = (right: boolean, missNote?: string) => {
+  /** A step's verdict once its chord is in: the strip takes the right chord
+      either way, the slot is marked, and the progression plays once it's
+      spelled out. A step counts as right only if the field was found first
+      time and the chord is right — two actions, both of them yours. */
+  const settleProgStep = (chordRight: boolean, missNote?: string) => {
     if (!prog || !progWant) return;
-    mixedRef.current?.onResult(right);
-    haptic(right ? CORRECT : WRONG);
-    setStreak((st) => (right ? st + 1 : 0));
-    setFlash(right ? 'flash-ok' : 'flash-no');
+    const right = chordRight && !stepBadField;
+    mixedRef.current?.onResult(chordRight);
+    haptic(chordRight ? CORRECT : WRONG);
+    setStreak((st) => (chordRight ? st + 1 : 0));
+    setFlash(chordRight ? 'flash-ok' : 'flash-no');
     window.setTimeout(() => setFlash(''), 460);
 
     const chord = progChord(progWant);
@@ -506,12 +535,19 @@ export default function CircleGame({
     const nextMarks: Record<string, Mark> = { ...progMarks, [progWant]: right ? 'ok' : 'no' };
     const nextMisses = right
       ? progMisses
-      : [...progMisses, { degree: progWant, tapped: missNote ?? '' }];
+      : [
+          ...progMisses,
+          stepBadField
+            ? { degree: progWant, tapped: stepBadField, field: true }
+            : { degree: progWant, tapped: missNote ?? '' },
+        ];
     setCells(nextCells);
     setProgPlaced(nextPlaced);
     setProgMarks(nextMarks);
     setProgMisses(nextMisses);
     setProgTapped(null);
+    setBadField(null);
+    setStepBadField(null);
 
     const answered = progStep + 1;
     record({
@@ -543,13 +579,21 @@ export default function CircleGame({
   const tapProgSlot = (degree: string) => {
     if (!prog || progDone || progNeedsChord || reviewIndex !== null) return;
     if (degree !== progWant) {
-      // Wrong slot: the step is missed, and the right one is filled in.
-      setLastTap({ chord: progChord(degree), right: false });
-      settleProgStep(false, progChord(degree));
+      // Wrong field — and that's all it is. The step stays open: keep looking
+      // for the right one, then build its chord.
+      haptic(WRONG);
+      setStreak(0);
+      mixedRef.current?.onResult(false);
+      setFlash('flash-no');
+      window.setTimeout(() => setFlash(''), 460);
+      setLastTap(null);
+      setBadField(degree);
+      setStepBadField((cur) => cur ?? degree);
       return;
     }
     haptic(TAP);
     setLastTap(null);
+    setBadField(null);
     setProgTapped(degree);
   };
 
@@ -689,7 +733,12 @@ export default function CircleGame({
                 <ReviewSummary
                   answered={entry.answered}
                   total={entry.prog.degrees.length}
-                  misses={entry.misses.map((m) => `${prettyChord(m.tapped)} for ${m.degree}`)}
+                  misses={entry.misses.map((m) =>
+                    m.field
+                      ? `tapped ${m.tapped} for ${m.degree}`
+                      : `said ${prettyChord(m.tapped)} for ${m.degree}`,
+                  )}
+                  prefix=""
                 />
               </div>
               <div className="wedge-wrap" onClick={stop}>
@@ -787,6 +836,10 @@ export default function CircleGame({
                 <span className="lead">
                   now build <b className="numeral">{progWant}</b>
                 </span>
+              ) : badField ? (
+                <span className="miss">
+                  not there — that's <b className="numeral">{badField}</b>
+                </span>
               ) : lastTap && !lastTap.right ? (
                 <span className="miss">you said {prettyChord(lastTap.chord)}</span>
               ) : (
@@ -805,7 +858,7 @@ export default function CircleGame({
               <WedgeBoard
                 slots={prog.slots}
                 placed={progPlaced}
-                marks={progMarks}
+                marks={badField ? { ...progMarks, [badField]: 'no' } : progMarks}
                 hints={{}}
                 picked={progTapped}
                 tapFilled
