@@ -66,7 +66,10 @@ type HistoryEntry =
       guide: boolean;
       cells: ProgressionCell[];
       placed: Record<string, string>;
+      /** The slot: did you tap the right field? */
       marks: Record<string, Mark>;
+      /** The chord you built in it — its own answer. */
+      chordMarks: Record<string, Mark>;
       /** A step you didn't get clean: the field you tapped instead, or the
           chord you built. One per step at most — the field comes first. */
       misses: { degree: string; tapped: string; field?: boolean }[];
@@ -209,6 +212,7 @@ export default function CircleGame({
   const [cells, setCells] = useState<ProgressionCell[]>([]);
   const [progPlaced, setProgPlaced] = useState<Record<string, string>>({});
   const [progMarks, setProgMarks] = useState<Record<string, Mark>>({});
+  const [progChordMarks, setProgChordMarks] = useState<Record<string, Mark>>({});
   const [progMisses, setProgMisses] = useState<{ degree: string; tapped: string; field?: boolean }[]>([]);
   // A wrong field, shown red on the wedge until the next tap. The step isn't
   // settled by it: tapping is its own action, so you go on until you find the
@@ -275,6 +279,7 @@ export default function CircleGame({
       setProgPlaced({});
       setProgMarks({});
       setProgMisses([]);
+      setProgChordMarks({});
       setLastTap(null);
       setBadField(null);
       setStepBadField(null);
@@ -530,9 +535,22 @@ export default function CircleGame({
     window.setTimeout(() => setFlash(''), 460);
 
     const chord = progChord(progWant);
-    const nextCells = cells.map((c, i) => (i === progStep ? { ...c, chord, right } : c));
+    const nextCells = cells.map((c, i) =>
+      i === progStep
+        ? { ...c, chord, right, fieldRight: !stepBadField, chordRight }
+        : c,
+    );
     const nextPlaced = { ...progPlaced, [progWant]: chord };
-    const nextMarks: Record<string, Mark> = { ...progMarks, [progWant]: right ? 'ok' : 'no' };
+    // Each half of the step answers for itself: the slot's outline for the
+    // field you tapped, the chord's letters for the chord you built.
+    const nextMarks: Record<string, Mark> = {
+      ...progMarks,
+      [progWant]: stepBadField ? 'no' : 'ok',
+    };
+    const nextChordMarks: Record<string, Mark> = {
+      ...progChordMarks,
+      [progWant]: chordRight ? 'ok' : 'no',
+    };
     const nextMisses = right
       ? progMisses
       : [
@@ -544,6 +562,7 @@ export default function CircleGame({
     setCells(nextCells);
     setProgPlaced(nextPlaced);
     setProgMarks(nextMarks);
+    setProgChordMarks(nextChordMarks);
     setProgMisses(nextMisses);
     setProgTapped(null);
     setBadField(null);
@@ -558,6 +577,7 @@ export default function CircleGame({
       cells: nextCells,
       placed: nextPlaced,
       marks: nextMarks,
+      chordMarks: nextChordMarks,
       misses: nextMisses,
       answered,
     });
@@ -723,9 +743,12 @@ export default function CircleGame({
               </div>
               <div className="review-prog">
                 {entry.cells.map((c, i) => (
-                  <span key={i} className={c.chord ? (c.right ? 'ok' : 'no') : ''}>
-                    <small>{c.degree}</small>
-                    {c.chord ? renderJazz(prettyChord(c.chord), `rpc${i}`) : '·'}
+                  // The numeral carries the field's verdict, the chord its own.
+                  <span key={i}>
+                    <small className={c.chord && !c.fieldRight ? 'no' : ''}>{c.degree}</small>
+                    <em className={c.chord ? (c.chordRight ? 'ok' : 'no') : ''}>
+                      {c.chord ? renderJazz(prettyChord(c.chord), `rpc${i}`) : '·'}
+                    </em>
                   </span>
                 ))}
               </div>
@@ -746,6 +769,7 @@ export default function CircleGame({
                   slots={entry.prog.slots}
                   placed={entry.placed}
                   marks={entry.marks}
+                  labelMarks={entry.chordMarks}
                   hints={{}}
                   picked={null}
                   onTapSlot={() => {}}
@@ -859,6 +883,7 @@ export default function CircleGame({
                 slots={prog.slots}
                 placed={progPlaced}
                 marks={badField ? { ...progMarks, [badField]: 'no' } : progMarks}
+                labelMarks={progChordMarks}
                 hints={{}}
                 picked={progTapped}
                 tapFilled

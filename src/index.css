@@ -2191,7 +2191,10 @@ text.cof-label {
   font-size: 17px;
   color: var(--text);
 }
-.prog-cell.no .prog-chord {
+.prog-chord.ok {
+  color: var(--correct);
+}
+.prog-chord.no {
   color: var(--wrong);
 }
 
@@ -2204,7 +2207,9 @@ text.cof-label {
   font-size: 20px;
   color: var(--text);
 }
-.review-prog span {
+/* Direct children only: a chord's accidental is a span too, and stacking it
+   under its letter broke "E♭" into two lines. */
+.review-prog > span {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2216,8 +2221,15 @@ text.cof-label {
   font-weight: 600;
   color: var(--text-3);
 }
-.review-prog .no {
+.review-prog small.no,
+.review-prog em.no {
   color: var(--wrong);
+}
+.review-prog em.ok {
+  color: var(--correct);
+}
+.review-prog em {
+  font-style: normal;
 }
 
 /* A numeral inside the capitalised status line keeps its case — "ii" and "II"
@@ -2335,4 +2347,12 @@ html.short-screen .play-stage {
 .review-slot {
   margin-top: auto;
   padding-top: 8px;
+}
+
+/* A wedge where the slot and the chord in it are two separate answers (a
+   progression step: find the field, then build its chord). The outline is the
+   field's verdict, the chord name its own — so a red field can carry a green
+   chord, and the other way round. */
+.wedge.split-marks .wedge-label.ok .wedge-token {
+  fill: var(--correct);
 }

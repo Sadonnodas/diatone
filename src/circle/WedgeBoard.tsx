@@ -68,7 +68,12 @@ export interface WedgeBoardProps {
   slots: WedgeSlot[];
   /** degree → the token dropped in it. */
   placed: Record<string, string>;
+  /** How the slot itself went — the outline and fill. */
   marks: Record<string, Mark>;
+  /** How the chord written in it went, when that's a separate question from
+      the slot (a progression: find the field, then build its chord). Left out,
+      the chord follows the slot's mark. */
+  labelMarks?: Record<string, Mark>;
   /** degree → the label already printed in the slot. The numeral when it's a
       guide for placing chords; the chord itself when you're placing numerals
       onto it. */
@@ -84,13 +89,19 @@ export function WedgeBoard({
   slots,
   placed,
   marks,
+  labelMarks,
   hints,
   picked,
   tapFilled = false,
   onTapSlot,
 }: WedgeBoardProps) {
   return (
-    <svg className="wedge" viewBox={`0 0 ${W} ${H}`} role="group" aria-label="Key wedge">
+    <svg
+      className={`wedge${labelMarks ? ' split-marks' : ''}`}
+      viewBox={`0 0 ${W} ${H}`}
+      role="group"
+      aria-label="Key wedge"
+    >
       <defs>
         {/* Fade the neighbours out sideways rather than cutting them off. */}
         <linearGradient id="wedgeFade" x1="0" x2="1" y1="0" y2="0">
@@ -130,6 +141,9 @@ export function WedgeBoard({
         const token = placed[w.degree];
         const hint = hints[w.degree];
         const mark = marks[w.degree];
+        // Two answers in one slot: the outline says whether this was the right
+        // place, the chord says whether it was spelled right.
+        const labelMark = labelMarks ? labelMarks[w.degree] : mark;
 
         return (
           <Fragment key={w.degree}>
@@ -143,7 +157,7 @@ export function WedgeBoard({
               style={{ cursor: token && !tapFilled ? 'default' : 'pointer' }}
             />
             <text
-              className={`wedge-label${mark ? ` ${mark}` : ''}`}
+              className={`wedge-label${labelMark ? ` ${labelMark}` : ''}`}
               x={lx}
               y={ly}
               textAnchor="middle"

@@ -7,6 +7,10 @@ export interface ProgressionCell {
       whether you found its slot and spelled it. */
   chord?: string;
   right?: boolean;
+  /** The two halves apart, matching the wedge: the cell's border is the slot
+      you tapped, the chord's letters the chord you built. */
+  fieldRight?: boolean;
+  chordRight?: boolean;
 }
 
 /**
@@ -21,11 +25,11 @@ export function ProgressionStrip({ cells, step }: { cells: ProgressionCell[]; st
         <div
           key={i}
           className={`prog-cell${i === step ? ' live' : ''}${
-            c.chord ? (c.right ? ' ok' : ' no') : ''
+            c.chord ? (c.fieldRight ?? c.right ? ' ok' : ' no') : ''
           }`}
         >
           <span className="prog-degree">{c.degree}</span>
-          <span className="prog-chord">
+          <span className={`prog-chord${c.chord ? (c.chordRight ?? c.right ? ' ok' : ' no') : ''}`}>
             {c.chord ? <span>{renderJazz(prettyChord(c.chord), `pc${i}`)}</span> : '·'}
           </span>
         </div>
