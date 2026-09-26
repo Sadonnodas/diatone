@@ -2,19 +2,20 @@
 // an optional `mixed` prop; without it, a drill behaves exactly as it does on
 // its own.
 
-export type GameId = 'numerals' | 'fretboard' | 'intervals' | 'circle' | 'warmup';
+export type GameId = 'numerals' | 'fretboard' | 'intervals' | 'circle' | 'modes' | 'warmup';
 
 export const GAMES: { id: GameId; label: string }[] = [
   { id: 'numerals', label: 'Numerals' },
   { id: 'fretboard', label: 'Fretboard' },
   { id: 'intervals', label: 'Intervals' },
   { id: 'circle', label: 'Circle' },
+  { id: 'modes', label: 'Modes' },
   { id: 'warmup', label: 'Warm-up' },
 ];
 
 /** The drills the home screen's Random button picks from — the warm-up isn't
     an exercise in its own right. */
-export const RANDOM_GAMES: GameId[] = ['numerals', 'fretboard', 'intervals', 'circle'];
+export const RANDOM_GAMES: GameId[] = ['numerals', 'fretboard', 'intervals', 'circle', 'modes'];
 
 export interface MixedHooks {
   /** This drill is the one on screen. The others stay mounted, hidden, so each

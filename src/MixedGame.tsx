@@ -4,11 +4,12 @@ import FretboardGame from './fretboard/FretboardGame';
 import IntervalGame from './fretboard/IntervalGame';
 import WarmupGame from './fretboard/WarmupGame';
 import CircleGame from './circle/CircleGame';
+import ModalGame from './modal/ModalGame';
 import { ThemeIconButton } from './components/ThemeSwitch';
 import { GAMES, pickGame, type GameId, type MixedHooks, type MixedReview } from './lib/mixed';
 
 const STORAGE_KEY = 'diatone.mixed.v1';
-const DEFAULT_POOL: GameId[] = ['numerals', 'fretboard', 'intervals', 'circle'];
+const DEFAULT_POOL: GameId[] = ['numerals', 'fretboard', 'intervals', 'circle', 'modes'];
 
 function loadPool(): GameId[] {
   try {
@@ -31,6 +32,7 @@ const COMPONENTS: Record<
   fretboard: (p) => <FretboardGame {...p} />,
   intervals: (p) => <IntervalGame {...p} />,
   circle: (p) => <CircleGame {...p} />,
+  modes: (p) => <ModalGame {...p} />,
   warmup: (p) => <WarmupGame {...p} />,
 };
 

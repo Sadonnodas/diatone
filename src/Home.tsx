@@ -1,7 +1,15 @@
 import type { PwaApi } from './pwa';
 import { ThemeToggleButton } from './components/ThemeSwitch';
 
-export type Screen = 'home' | 'numerals' | 'fretboard' | 'intervals' | 'warmup' | 'circle' | 'mixed';
+export type Screen =
+  | 'home'
+  | 'numerals'
+  | 'fretboard'
+  | 'intervals'
+  | 'warmup'
+  | 'circle'
+  | 'modes'
+  | 'mixed';
 
 function formatBuild(iso: string): string {
   const d = new Date(iso);
@@ -106,6 +114,35 @@ function IntervalIcon() {
   );
 }
 
+// Seven steps rising, the fourth one lifted — a mode is the scale with one
+// degree moved.
+function ModeIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      {[
+        [3, 18],
+        [6, 16],
+        [9, 14],
+        [12, 8],
+        [15, 10],
+        [18, 8],
+        [21, 6],
+      ].map(([x, y], i) => (
+        <rect
+          key={i}
+          x={x - 1.3}
+          y={y}
+          width="2.6"
+          height={20 - y}
+          rx="1.1"
+          fill="currentColor"
+          opacity={i === 3 ? 1 : 0.55}
+        />
+      ))}
+    </svg>
+  );
+}
+
 export default function Home({
   onPick,
   onRandom,
@@ -188,6 +225,21 @@ export default function Home({
         <button
           className="gamecard reveal"
           style={{ animationDelay: '.34s' }}
+          onClick={() => onPick('modes')}
+        >
+          <div className="gc-icon">
+            <ModeIcon />
+          </div>
+          <div className="gc-text">
+            <div className="gc-title">Modes</div>
+            <div className="gc-desc">Tensions, harmonizations and vamps</div>
+          </div>
+          <div className="gc-arrow">→</div>
+        </button>
+
+        <button
+          className="gamecard reveal"
+          style={{ animationDelay: '.4s' }}
           onClick={() => onPick('warmup')}
         >
           <div className="gc-icon">
@@ -202,7 +254,7 @@ export default function Home({
       </div>
 
       {/* Ways in that aren't one particular drill. */}
-      <div className="home-modes reveal" style={{ animationDelay: '.38s' }}>
+      <div className="home-modes reveal" style={{ animationDelay: '.44s' }}>
         <button className="home-mode" onClick={onRandom}>
           <DieIcon />
           <span>

@@ -10,13 +10,20 @@ The name comes from *diatonic* harmony — which is the whole app.
 
 ## Features
 
-- **Five drills** — Numerals (Name Chord, Name Numeral, Progression, Transpose),
-  Fretboard, Intervals, Circle of fifths, Warm-up.
+- **Six drills** — Numerals (Name Chord, Name Numeral, Progression, Transpose),
+  Fretboard, Intervals, Circle of fifths, Modes, Warm-up. Plus a random pick and
+  a mixed session that deals from several at once.
 - **Circle of fifths** — the printed chord wheel's layout (majors innermost,
   each relative minor immediately outside it, vii° on the rim) with two drills.
   *Layout* blanks segments and you name them on the keypad. *Key wedge* zooms
   in on one key, turned to the top, and you place its seven chords — or its
   numerals — where they belong.
+- **Modes** — the modal cheat sheet drilled from every side: which mode sits on
+  which degree, the tensions each one takes (Phrygian: ♭9, 11, ♭13), the tetrad
+  underneath, major versus minor and the single degree that marks a mode
+  (Dorian is minor, but its VI is natural where Aeolian flattens it), whole
+  harmonizations, and the chords and vamps that state a mode. Locrian is left
+  out: it belongs to neither family.
 - **Chromatic tap-to-build input** — compose any answer from ~13 buttons; the OS
   keyboard never opens. Roots are always fully chromatic, so you produce the
   correct enharmonic spelling from recall (E♯ in F♯, C♭ in G♭, …).
