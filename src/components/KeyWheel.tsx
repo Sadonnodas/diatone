@@ -15,15 +15,17 @@ export function KeyWheel({
       <div className="wheel">
         {ALL_KEYS.map((k, i) => {
           const angle = (-90 + i * 30) * (Math.PI / 180);
-          const r = 105;
-          const x = 128 + r * Math.cos(angle);
-          const y = 128 + r * Math.sin(angle);
+          // Placed in per cent of the box, not pixels, so the wheel can be
+          // sized from CSS — it shrinks on a short screen.
+          const r = (105 / 256) * 100;
+          const x = 50 + r * Math.cos(angle);
+          const y = 50 + r * Math.sin(angle);
           const on = selected.includes(k);
           return (
             <button
               key={k}
               className={`kbtn${on ? ' on' : ''}`}
-              style={{ left: `${x}px`, top: `${y}px` }}
+              style={{ left: `${x}%`, top: `${y}%` }}
               onClick={() => onToggle(k)}
             >
               {renderJazz(k, `w${k}`)}

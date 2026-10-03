@@ -787,8 +787,8 @@ button {
 }
 .wheel {
   position: relative;
-  width: 256px;
-  height: 256px;
+  width: var(--kw-size, 256px);
+  height: var(--kw-size, 256px);
 }
 .wheel .kbtn {
   position: absolute;
@@ -957,6 +957,13 @@ button {
 .setup-stage {
   /* centring (safe) comes from .stage */
   gap: clamp(18px, 4svh, 32px);
+  /* On a short screen — a phone browser with its toolbars — the keys, the
+     drills and the note add up to more than the stage. Scroll them inside it,
+     the way the circle's setup does, rather than letting them spill over the
+     Start button below. Safe centring still centres them when they fit. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: 8px;
 }
 .setup-head {
   display: flex;
@@ -2517,4 +2524,53 @@ html.short-screen .play-stage {
 }
 .modal-said .no {
   color: var(--wrong);
+}
+
+/* A phone browser with its toolbars: the setup screen has a wheel, a drill
+   picker and a note to fit above Start. Everything gives a little so they all
+   stay on screen — the installed app, which is taller, is untouched. */
+html.short-screen .setup-stage {
+  gap: 10px;
+}
+html.short-screen .setup-title {
+  font-size: clamp(25px, 7.5vw, 30px);
+}
+html.short-screen .wheel {
+  --kw-size: 180px;
+}
+/* Twelve keys round a smaller circle: their centres are ~39px apart, so the
+   buttons shrink with it or they'd touch (and a selected one grows by 10%). */
+html.short-screen .wheel .kbtn {
+  width: 32px;
+  height: 32px;
+  margin: -16px 0 0 -16px;
+  font-size: 13px;
+}
+html.short-screen .wheel-center {
+  font-size: 10px;
+  width: 76px;
+}
+html.short-screen .wheel-wrap {
+  gap: 8px;
+}
+html.short-screen .setup-note {
+  min-height: 1.4em;
+  font-size: 12px;
+}
+html.short-screen .setup-head {
+  gap: 6px;
+}
+/* Six families on a short screen: the rows tighten so Start stays reachable
+   without a long scroll. */
+html.short-screen .family-list {
+  gap: 6px;
+}
+html.short-screen .family {
+  padding: 8px 12px;
+}
+html.short-screen .family-name {
+  font-size: 14px;
+}
+html.short-screen .family-blurb {
+  font-size: 11px;
 }
