@@ -115,6 +115,10 @@ export const MODE_NAMES = MODES.map((m) => m.name);
 /** Every tension that appears anywhere on the sheet, low to high. */
 export const TENSIONS = ['b9', '9', '11', '#11', 'b13', '13'];
 
+/** Sheet spelling into print: b9 → ♭9, #IV-7(b5) → ♯IV-7(♭5). */
+export const symbols = (text: string): string =>
+  text.replace(/b(?=[IViv0-9])/g, '♭').replace(/#(?=[IViv0-9])/g, '♯');
+
 // ── Settings ────────────────────────────────────────────────────────────────
 
 export type Family = 'order' | 'extensions' | 'tetrads' | 'category' | 'harmony' | 'colour';

@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { InfoModal } from '../components/InfoModal';
+import { renderJazz } from '../components/ChordDisplay';
 import { ThemeIconButton, ThemeSettingRow } from '../components/ThemeSwitch';
 import { ReviewBar } from '../components/ReviewBar';
 import { reviewControls, type MixedHooks } from '../lib/mixed';
 import { haptic, TAP, CORRECT, WRONG } from '../lib/haptics';
 import { ModalOptions, ModalSettingsSheet } from './ModalOptions';
+import { ModalInfo } from './ModalInfo';
 import {
   defaultModalSettings,
+  symbols,
   generateModal,
   modalAnswerMatches,
   modalReady,
@@ -40,10 +43,6 @@ function loadSettings(): ModalSettings {
   }
   return defaultModalSettings;
 }
-
-/** Sheet spelling into print: b9 → ♭9, #IV-7(b5) → ♯IV-7(♭5). */
-export const symbols = (text: string): string =>
-  text.replace(/b(?=[IViv0-9])/g, '♭').replace(/#(?=[IViv0-9])/g, '♯');
 
 export default function ModalGame({
   onBack,
@@ -251,11 +250,11 @@ export default function ModalGame({
                 {dq.subjectKind === 'tensions' ? (
                   dq.subject.split(' · ').map((t) => (
                     <span className="tension" key={t}>
-                      {symbols(t)}
+                      {renderJazz(symbols(t), `t${t}`)}
                     </span>
                   ))
                 ) : (
-                  <span>{symbols(dq.subject)}</span>
+                  <span>{renderJazz(symbols(dq.subject), 'sub')}</span>
                 )}
               </div>
             </div>
@@ -320,7 +319,7 @@ export default function ModalGame({
                     tap(o);
                   }}
                 >
-                  {symbols(o)}
+                  {renderJazz(symbols(o), `o${o}`)}
                 </button>
               );
             })}
@@ -351,30 +350,13 @@ export default function ModalGame({
 
       {infoOpen && (
         <div onClick={stop}>
-          <InfoModal title="Modes — the connections" onClose={() => setInfoOpen(false)}>
+          <InfoModal title="Modes" subtitle="the cheat sheet" onClose={() => setInfoOpen(false)}>
             <p>
-              The modal cheat sheet, asked from every side: the degree a mode sits on, the tensions
-              it takes, its harmonization, and the chords and vamps that state it.
+              The drill asks all of this from every side — the mode from its chords, the chords
+              from the mode — and tells you the connection behind each answer. Pick which kinds of
+              question you want with <b>⚙</b>.
             </p>
-            <ul>
-              <li>
-                <b>Order</b> — the 5th mode is Mixolydian, and back again.
-              </li>
-              <li>
-                <b>Tensions</b> — Phrygian takes ♭9, 11, ♭13. Which modes share a set?
-              </li>
-              <li>
-                <b>Major / minor</b> — which family a mode belongs to, and the one degree that
-                marks it: Dorian is minor, but its VI is natural where Aeolian flattens it.
-              </li>
-              <li>
-                <b>Harmonization</b>, <b>chords &amp; vamps</b> — name the mode from its chords, or
-                its chords from the mode.
-              </li>
-            </ul>
-            <p className="info-dim">
-              Six modes: Locrian sits outside the major and minor families, so it's left out.
-            </p>
+            <ModalInfo />
           </InfoModal>
         </div>
       )}
