@@ -19,7 +19,7 @@ The name comes from *diatonic* harmony — which is the whole app.
   in on one key, turned to the top, and you place its seven chords — or its
   numerals — where they belong.
 - **Modes** — the modal cheat sheet drilled from every side: which mode sits on
-  which degree, the tensions each one takes (Phrygian: ♭9, 11, ♭13), the tetrad
+  which degree, the extensions each one takes (Phrygian: ♭9, 11, ♭13), the tetrad
   underneath, major versus minor and the single degree that marks a mode
   (Dorian is minor, but its VI is natural where Aeolian flattens it), whole
   harmonizations, and the chords and vamps that state a mode. Locrian is left

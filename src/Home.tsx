@@ -232,7 +232,7 @@ export default function Home({
           </div>
           <div className="gc-text">
             <div className="gc-title">Modes</div>
-            <div className="gc-desc">Tensions, harmonizations and vamps</div>
+            <div className="gc-desc">Extensions, harmonizations and vamps</div>
           </div>
           <div className="gc-arrow">→</div>
         </button>

@@ -38,7 +38,7 @@ export function ModalInfo() {
       <p>
         A mode is the major scale started on a different degree — so the parent
         scale's harmonization hands each degree its own seventh chord, and the
-        notes left over become the tensions you can stack on it.
+        notes left over become the extensions you can stack on it.
       </p>
 
       <table className="mode-table">
@@ -46,7 +46,7 @@ export function ModalInfo() {
           <tr>
             <th>Deg</th>
             <th>Tetrad</th>
-            <th>Tensions</th>
+            <th>Extensions</th>
             <th>Mode</th>
           </tr>
         </thead>
@@ -66,7 +66,7 @@ export function ModalInfo() {
         A mode is <b>major</b> or <b>minor</b> by the third in its own tonic
         chord: Imaj7 or I7 against I-7. Each one is then the plain scale of its
         family with a single degree moved — that degree is its colour, and where
-        its characteristic tension comes from.
+        its characteristic extension comes from.
       </p>
 
       <ul>

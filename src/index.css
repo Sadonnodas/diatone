@@ -2366,7 +2366,7 @@ html.short-screen .play-stage {
 
 /* ---- Modes ----
    A question set as a line of type — a mode's name, a harmonization, a row of
-   tensions — over a pad of answers. Everything is tapped, nothing is typed. */
+   extensions — over a pad of answers. Everything is tapped, nothing is typed. */
 .modal-stage {
   gap: 4px;
 }
@@ -2389,13 +2389,13 @@ html.short-screen .play-stage {
   margin-left: auto;
   margin-right: auto;
 }
-.modal-subject.tensions {
+.modal-subject.extensions {
   display: flex;
   justify-content: center;
   gap: 10px;
   flex-wrap: wrap;
 }
-.modal-subject.tensions .tension {
+.modal-subject.extensions .extension {
   font-size: clamp(24px, 7vw, 34px);
   padding: 2px 14px;
   border-radius: 999px;

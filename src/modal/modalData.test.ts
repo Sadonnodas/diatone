@@ -33,7 +33,7 @@ describe('the sheet', () => {
     expect(MODES.map((m) => m.degree)).toEqual([1, 2, 3, 4, 5, 6]);
   });
 
-  it('carries the tensions from the table', () => {
+  it('carries the extensions from the table', () => {
     expect(byName('Phrygian').extensions).toEqual(['b9', '11', 'b13']);
     expect(byName('Lydian').extensions).toEqual(['9', '#11', '13']);
     expect(byName('Aeolian').extensions).toEqual(['9', '11', 'b13']);

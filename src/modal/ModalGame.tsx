@@ -247,9 +247,9 @@ export default function ModalGame({
                 className={`modal-subject ${dq.subjectKind} reveal`}
                 style={{ animationDelay: '.08s' }}
               >
-                {dq.subjectKind === 'tensions' ? (
+                {dq.subjectKind === 'extensions' ? (
                   dq.subject.split(' · ').map((t) => (
-                    <span className="tension" key={t}>
+                    <span className="extension" key={t}>
                       {renderJazz(symbols(t), `t${t}`)}
                     </span>
                   ))

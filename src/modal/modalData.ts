@@ -1,4 +1,4 @@
-// The modal cheat sheet as data: the degree each mode sits on, the tensions it
+// The modal cheat sheet as data: the degree each mode sits on, the extensions it
 // takes, its harmonization, and the chords and vamps that state it. Everything
 // the drill asks comes from this one table, so the connections it tests are the
 // connections the sheet draws.
@@ -15,7 +15,7 @@ export interface ModeRow {
   category: Category;
   /** The tetrad on that degree of the parent scale. */
   tetrad: string;
-  /** The tensions available over it, low to high. */
+  /** The extensions available over it, low to high — the sheet's wording. */
   extensions: [string, string, string];
   /** The mode's own harmonization, from its own root. */
   harmonization: string[];
@@ -112,8 +112,8 @@ export const MODES: ModeRow[] = [
 export const byName = (name: string): ModeRow => MODES.find((m) => m.name === name)!;
 export const byDegree = (degree: number): ModeRow => MODES.find((m) => m.degree === degree)!;
 export const MODE_NAMES = MODES.map((m) => m.name);
-/** Every tension that appears anywhere on the sheet, low to high. */
-export const TENSIONS = ['b9', '9', '11', '#11', 'b13', '13'];
+/** Every extension that appears anywhere on the sheet, low to high. */
+export const EXTENSIONS = ['b9', '9', '11', '#11', 'b13', '13'];
 
 /** Sheet spelling into print: b9 → ♭9, #IV-7(b5) → ♯IV-7(♭5). */
 export const symbols = (text: string): string =>
@@ -125,7 +125,7 @@ export type Family = 'order' | 'extensions' | 'tetrads' | 'category' | 'harmony'
 
 export const FAMILIES: { id: Family; label: string; blurb: string }[] = [
   { id: 'order', label: 'Order', blurb: 'Which mode sits on which degree.' },
-  { id: 'extensions', label: 'Tensions', blurb: 'The 9, 11 and 13 each mode takes.' },
+  { id: 'extensions', label: 'Extensions', blurb: 'The 9, 11 and 13 each mode takes.' },
   { id: 'tetrads', label: 'Tetrads', blurb: 'The seventh chord under each mode.' },
   { id: 'category', label: 'Major / minor', blurb: 'The two families, and the degree that marks each mode.' },
   { id: 'harmony', label: 'Harmonization', blurb: 'A mode’s seven chords — both directions.' },
@@ -161,8 +161,8 @@ export interface ModalQuestion {
   /** What's being asked about, set large. Chord symbols are printed as-is. */
   subject: string;
   /** How the subject should be set: a mode name reads as a word, chords as
-      symbols, a list of tensions as a row of chips. */
-  subjectKind: 'word' | 'chords' | 'tensions' | 'degree';
+      symbols, a list of extensions as a row of chips. */
+  subjectKind: 'word' | 'chords' | 'extensions' | 'degree';
   options: string[];
   /** Everything that has to be tapped. More than one means tap them all. */
   answer: string[];
@@ -216,15 +216,15 @@ function orderQuestion(rand: () => number): ModalQuestion {
 
 function extensionQuestion(rand: () => number): ModalQuestion {
   const roll = rand();
-  // Which tensions does this mode take?
+  // Which extensions does this mode take?
   if (roll < 0.4) {
     const mode = pick(MODES, rand);
     return {
       family: 'extensions',
-      lead: 'which tensions does it take',
+      lead: 'which extensions does it take',
       subject: mode.name,
       subjectKind: 'word',
-      options: TENSIONS.slice(),
+      options: EXTENSIONS.slice(),
       answer: [...mode.extensions],
       note: `Degree ${mode.degree}: ${mode.extensions.join(' · ')} over ${mode.tetrad}.`,
     };
@@ -237,23 +237,23 @@ function extensionQuestion(rand: () => number): ModalQuestion {
       family: 'extensions',
       lead: sharing.length > 1 ? 'which modes take these' : 'which mode takes these',
       subject: mode.extensions.join(' · '),
-      subjectKind: 'tensions',
+      subjectKind: 'extensions',
       options: shuffle(MODE_NAMES, rand),
       answer: sharing.map((m) => m.name),
       note:
         sharing.length > 1
-          ? `${sharing.map((m) => m.name).join(', ')} all take the natural tensions.`
+          ? `${sharing.map((m) => m.name).join(', ')} all take the natural extensions.`
           : `Only ${mode.name} — ${mode.extensions.join(' · ')}.`,
     };
   }
-  // Which modes carry one particular tension?
-  const tension = pick(TENSIONS, rand);
-  const holders = MODES.filter((m) => (m.extensions as string[]).includes(tension));
+  // Which modes carry one particular extension?
+  const extension = pick(EXTENSIONS, rand);
+  const holders = MODES.filter((m) => (m.extensions as string[]).includes(extension));
   return {
     family: 'extensions',
     lead: holders.length > 1 ? 'which modes carry the' : 'which mode carries the',
-    subject: tension,
-    subjectKind: 'tensions',
+    subject: extension,
+    subjectKind: 'extensions',
     options: shuffle(MODE_NAMES, rand),
     answer: holders.map((m) => m.name),
     note: `${holders.map((m) => m.name).join(', ')} — ${holders.length === MODES.length ? 'all of them' : `${holders.length} of the six`}.`,
@@ -374,7 +374,7 @@ function colourQuestion(rand: () => number): ModalQuestion {
       options: shuffle([mode.modalChords, ...wrong], rand),
       answer: [mode.modalChords],
       wide: true,
-      note: `Its tensions: ${mode.extensions.join(' · ')}.`,
+      note: `Its extensions: ${mode.extensions.join(' · ')}.`,
     };
   }
   // A vamp, either way round.
