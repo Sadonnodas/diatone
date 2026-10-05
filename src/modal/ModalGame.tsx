@@ -7,7 +7,10 @@ import { reviewControls, type MixedHooks } from '../lib/mixed';
 import { haptic, TAP, CORRECT, WRONG } from '../lib/haptics';
 import { ModalOptions, ModalSettingsSheet } from './ModalOptions';
 import { ModalInfo } from './ModalInfo';
+import { ChordRow } from './ChordRow';
 import {
+  PLAIN_SCALE,
+  cycleDegree,
   defaultModalSettings,
   symbols,
   generateModal,
@@ -61,6 +64,8 @@ export default function ModalGame({
   const [infoOpen, setInfoOpen] = useState(false);
   const [question, setQuestion] = useState<ModalQuestion | null>(null);
   const [picked, setPicked] = useState<string[]>([]);
+  // The scale builder's seven degrees, altered as you tap them.
+  const [built, setBuilt] = useState<string[]>(PLAIN_SCALE);
   const [correct, setCorrect] = useState<boolean | null>(null);
   const [streak, setStreak] = useState(0);
   const [flash, setFlash] = useState<'' | 'flash-ok' | 'flash-no'>('');
@@ -85,6 +90,7 @@ export default function ModalGame({
   const generate = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
     setPicked([]);
+    setBuilt(PLAIN_SCALE);
     setCorrect(null);
     setReviewIndex(null);
     const q = generateModal({ ...defaultModalSettings, families }, Math.random, lastSig.current);
@@ -118,7 +124,10 @@ export default function ModalGame({
   const dPicked = reviewing ? entry!.picked : picked;
   const dCorrect = reviewing ? entry!.correct : correct;
   const answered = dCorrect !== null;
-  const multi = !!dq && dq.answer.length > 1;
+  const spelling = dq?.input === 'formula';
+  const multi = !!dq && !spelling && dq.answer.length > 1;
+  // In review the spelling shows what was built, not the live builder.
+  const dBuilt = reviewing ? (entry!.picked.length ? entry!.picked : PLAIN_SCALE) : built;
 
   const settle = (chosen: string[]) => {
     if (!question || correct !== null || reviewing) return;
@@ -132,6 +141,12 @@ export default function ModalGame({
     setFlash(isCorrect ? 'flash-ok' : 'flash-no');
     window.setTimeout(() => setFlash(''), 500);
     if (isCorrect && settings.autoAdvance) timer.current = window.setTimeout(next, ADVANCE_MS);
+  };
+
+  const alterDegree = (i: number) => {
+    if (!question || answered || reviewing) return;
+    haptic(TAP);
+    setBuilt((b) => b.map((d, j) => (j === i ? cycleDegree(d) : d)));
   };
 
   const tap = (option: string) => {
@@ -253,6 +268,15 @@ export default function ModalGame({
                       {renderJazz(symbols(t), `t${t}`)}
                     </span>
                   ))
+                ) : (dq.subjectKind === 'chords' || dq.subjectKind === 'vamp') &&
+                  /\s/.test(dq.subject) ? (
+                  <ChordRow text={dq.subject} />
+                ) : dq.subjectKind === 'formula' ? (
+                  dq.subject.split(' ').map((d, i) => (
+                    <span className="degree-chip" key={i}>
+                      {renderJazz(symbols(d), `f${i}`)}
+                    </span>
+                  ))
                 ) : (
                   <span>{renderJazz(symbols(dq.subject), 'sub')}</span>
                 )}
@@ -283,6 +307,8 @@ export default function ModalGame({
                   )}
                   {dq.note && <span className="modal-why">{symbols(dq.note)}</span>}
                 </>
+              ) : spelling ? (
+                <span className="lead">tap a degree to flatten or sharpen it</span>
               ) : multi ? (
                 <span className="lead">tap all that apply</span>
               ) : null}
@@ -295,6 +321,36 @@ export default function ModalGame({
       {reviewing ? (
         <div className="fret-actions" onClick={stop}>
           <ReviewBar rv={rv} ok={!!dCorrect} verdict={dCorrect ? 'Right' : 'Wrong'} />
+        </div>
+      ) : dq && !dq.error && spelling ? (
+        <div className="modal-answers" onClick={stop}>
+          <div className="scale-builder">
+            {dBuilt.map((d, i) => {
+              const right = dq.answer[i];
+              const fixed = d === '1';
+              return (
+                <button
+                  key={i}
+                  className={`degree-key${d.length > 1 ? ' altered' : ''}${
+                    fixed ? ' fixed' : ''
+                  }${answered ? (d === right ? ' right' : ' wrong') : ''}`}
+                  aria-label={`Degree ${i + 1}: ${d}`}
+                  onClick={() => (answered ? next() : alterDegree(i))}
+                >
+                  {renderJazz(symbols(d), `d${i}`)}
+                  {/* What it should have been, under what you built. */}
+                  {answered && d !== right && (
+                    <small>{renderJazz(symbols(right), `r${i}`)}</small>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          {!answered && (
+            <button className="bigbtn" onClick={() => settle(built)}>
+              Check
+            </button>
+          )}
         </div>
       ) : dq && !dq.error ? (
         <div className="modal-answers" onClick={stop}>
@@ -319,7 +375,11 @@ export default function ModalGame({
                     tap(o);
                   }}
                 >
-                  {renderJazz(symbols(o), `o${o}`)}
+                  {dq.optionKind === 'chords' ? (
+                    <ChordRow text={o} size="sm" />
+                  ) : (
+                    renderJazz(symbols(o), `o${o}`)
+                  )}
                 </button>
               );
             })}

@@ -1,4 +1,5 @@
 import { MODES, symbols, type Category } from './modalData';
+import { ChordRow } from './ChordRow';
 
 /**
  * The cheat sheet itself, for the drill's "?" — read it here instead of
@@ -17,14 +18,30 @@ function ModeBlock({ name }: { name: string }) {
           <span className="mode-ref-sig plain">the reference</span>
         )}
       </div>
-      <div className="mode-ref-line">{symbols(m.harmonization.join('  '))}</div>
+      <div className="mode-ref-line">
+        <ChordRow text={m.harmonization.join(' ')} size="sm" />
+      </div>
+      <div className="mode-ref-row">
+        <span className="lab">spelled</span>
+        <span className="mode-ref-formula">
+          {m.formula.map((d, i) => (
+            <span className={`degree-chip${d.length > 1 ? ' altered' : ''}`} key={i}>
+              {symbols(d)}
+            </span>
+          ))}
+        </span>
+      </div>
       <div className="mode-ref-row">
         <span className="lab">states it</span>
         <span>{symbols(m.modalChords)}</span>
       </div>
       <div className="mode-ref-row">
         <span className="lab">vamps</span>
-        <span>{m.vamps.map((v) => `‖: ${symbols(v)} :‖`).join('   ')}</span>
+        <span className="mode-ref-vamps">
+          {m.vamps.map((v) => (
+            <ChordRow key={v} text={`‖: ${v} :‖`} size="sm" />
+          ))}
+        </span>
       </div>
     </div>
   );
@@ -38,7 +55,9 @@ export function ModalInfo() {
       <p>
         A mode is the major scale started on a different degree — so the parent
         scale's harmonization hands each degree its own seventh chord, and the
-        notes left over become the extensions you can stack on it.
+        notes left over become the extensions you can stack on it. Spelled
+        against the major scale, that shift is what you hear: Aeolian is
+        1 2 ♭3 4 5 ♭6 ♭7, Lydian 1 2 3 ♯4 5 6 7.
       </p>
 
       <table className="mode-table">

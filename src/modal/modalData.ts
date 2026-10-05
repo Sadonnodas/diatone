@@ -17,6 +17,8 @@ export interface ModeRow {
   tetrad: string;
   /** The extensions available over it, low to high — the sheet's wording. */
   extensions: [string, string, string];
+  /** The scale spelled against the major scale: Aeolian is 1 2 b3 4 5 b6 b7. */
+  formula: [string, string, string, string, string, string, string];
   /** The mode's own harmonization, from its own root. */
   harmonization: string[];
   /** The chord (or chords) that state the mode on their own. */
@@ -35,6 +37,7 @@ export const MODES: ModeRow[] = [
     category: 'major',
     tetrad: 'Imaj7',
     extensions: ['9', '11', '13'],
+    formula: ['1', '2', '3', '4', '5', '6', '7'],
     harmonization: ['Imaj7', 'II-7', 'III-7', 'IVmaj7', 'V7', 'VI-7', 'VII-7(b5)'],
     modalChords: 'Imaj7, Imaj9 or Imaj13',
     vamps: ['Imaj7 | II-7', 'Imaj7 | IVmaj7'],
@@ -45,6 +48,7 @@ export const MODES: ModeRow[] = [
     category: 'minor',
     tetrad: 'II-7',
     extensions: ['9', '11', '13'],
+    formula: ['1', '2', 'b3', '4', '5', '6', 'b7'],
     harmonization: ['I-7', 'II-7', 'bIIImaj7', 'IV7', 'V-7', 'VI-7(b5)', 'bVIImaj7'],
     modalChords: 'I-6, I-69 or I-13',
     vamps: ['I-7 | II-7', 'I-7 | IV7'],
@@ -59,6 +63,7 @@ export const MODES: ModeRow[] = [
     category: 'minor',
     tetrad: 'III-7',
     extensions: ['b9', '11', 'b13'],
+    formula: ['1', 'b2', 'b3', '4', '5', 'b6', 'b7'],
     harmonization: ['I-7', 'bIImaj7', 'bIII7', 'IV-7', 'V-7(b5)', 'bVImaj7', 'bVII-7'],
     modalChords: 'Isus4(b9)',
     vamps: ['I-7 | bIImaj7', 'I-7 | bVII-7'],
@@ -73,6 +78,7 @@ export const MODES: ModeRow[] = [
     category: 'major',
     tetrad: 'IVmaj7',
     extensions: ['9', '#11', '13'],
+    formula: ['1', '2', '3', '#4', '5', '6', '7'],
     // The sheet prints V7 here, but Lydian's fifth carries a major 7th — its
     // own vamp list says Imaj7 | Vmaj7.
     harmonization: ['Imaj7', 'II7', 'III-7', '#IV-7(b5)', 'Vmaj7', 'VI-7', 'VII-7'],
@@ -89,6 +95,7 @@ export const MODES: ModeRow[] = [
     category: 'major',
     tetrad: 'V7',
     extensions: ['9', '11', '13'],
+    formula: ['1', '2', '3', '4', '5', '6', 'b7'],
     harmonization: ['I7', 'II-7', 'III-7(b5)', 'IVmaj7', 'V-7', 'VI-7', 'bVIImaj7'],
     modalChords: 'I7, I9, I13 or I7sus',
     vamps: ['I7 | bVIImaj7', 'I7 | V-7', 'I7 | II-7'],
@@ -103,6 +110,7 @@ export const MODES: ModeRow[] = [
     category: 'minor',
     tetrad: 'VI-7',
     extensions: ['9', '11', 'b13'],
+    formula: ['1', '2', 'b3', '4', '5', 'b6', 'b7'],
     harmonization: ['I-7', 'II-7(b5)', 'bIIImaj7', 'IV-7', 'V-7', 'bVImaj7', 'bVII7'],
     modalChords: 'I-(b6) or I-9(b6)',
     vamps: ['I-7 | bVII7', 'I-7 | IV-7'],
@@ -121,13 +129,34 @@ export const symbols = (text: string): string =>
 
 // ── Settings ────────────────────────────────────────────────────────────────
 
-export type Family = 'order' | 'extensions' | 'tetrads' | 'category' | 'harmony' | 'colour';
+export type Family =
+  | 'order'
+  | 'extensions'
+  | 'tetrads'
+  | 'category'
+  | 'spelling'
+  | 'harmony'
+  | 'colour';
+
+/** The seven degrees of a scale, unaltered — what the builder starts from. */
+export const PLAIN_SCALE: string[] = ['1', '2', '3', '4', '5', '6', '7'];
+
+/** Tap a degree to flatten it, again to sharpen it, again to leave it alone.
+    The tonic never moves. */
+export function cycleDegree(step: string): string {
+  const n = step.replace(/[b#]/, '');
+  if (n === '1') return n;
+  if (step.startsWith('b')) return `#${n}`;
+  if (step.startsWith('#')) return n;
+  return `b${n}`;
+}
 
 export const FAMILIES: { id: Family; label: string; blurb: string }[] = [
   { id: 'order', label: 'Order', blurb: 'Which mode sits on which degree.' },
   { id: 'extensions', label: 'Extensions', blurb: 'The 9, 11 and 13 each mode takes.' },
   { id: 'tetrads', label: 'Tetrads', blurb: 'The seventh chord under each mode.' },
   { id: 'category', label: 'Major / minor', blurb: 'The two families, and the degree that marks each mode.' },
+  { id: 'spelling', label: 'Spell it', blurb: 'Build the scale: Aeolian is 1 2 b3 4 5 b6 b7.' },
   { id: 'harmony', label: 'Harmonization', blurb: 'A mode’s seven chords — both directions.' },
   { id: 'colour', label: 'Chords & vamps', blurb: 'The chord or vamp that states a mode.' },
 ];
@@ -143,6 +172,7 @@ export const defaultModalSettings: ModalSettings = {
     extensions: true,
     tetrads: true,
     category: true,
+    spelling: true,
     harmony: true,
     colour: true,
   },
@@ -162,8 +192,14 @@ export interface ModalQuestion {
   subject: string;
   /** How the subject should be set: a mode name reads as a word, chords as
       symbols, a list of extensions as a row of chips. */
-  subjectKind: 'word' | 'chords' | 'extensions' | 'degree';
+  subjectKind: 'word' | 'chords' | 'vamp' | 'extensions' | 'degree' | 'formula';
+  /** How the answer is given: a pad of options, or the scale builder, where
+      the seven degrees are altered until they spell the mode. */
+  input?: 'options' | 'formula';
   options: string[];
+  /** Options that are themselves rows of chords (a harmonization, a vamp) are
+      set chip per chord rather than as one long line. */
+  optionKind?: 'text' | 'chords';
   /** Everything that has to be tapped. More than one means tap them all. */
   answer: string[];
   /** Wide options (harmonizations, vamps) stack one per row. */
@@ -189,6 +225,10 @@ const decoys = (pool: string[], answer: string[], count: number, rand: () => num
   shuffle(pool.filter((p) => !answer.includes(p)), rand).slice(0, count);
 
 const ORDINALS = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
+
+/** "b3, b6 and b7" — a list that reads like a sentence. */
+const andList = (items: string[]): string =>
+  items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
 
 function orderQuestion(rand: () => number): ModalQuestion {
   const mode = pick(MODES, rand);
@@ -333,6 +373,39 @@ function categoryQuestion(rand: () => number): ModalQuestion {
   };
 }
 
+function spellingQuestion(rand: () => number): ModalQuestion {
+  const mode = pick(MODES, rand);
+  const spelled = mode.formula.join(' ');
+  // Build it: the seven degrees start plain and you alter them yourself.
+  if (rand() < 0.6) {
+    const moved = mode.formula.filter((d) => d.length > 1);
+    return {
+      family: 'spelling',
+      lead: 'spell the scale',
+      subject: mode.name,
+      subjectKind: 'word',
+      input: 'formula',
+      options: [],
+      answer: [...mode.formula],
+      note: moved.length
+        ? `${spelled} — ${andList(moved)} against the major scale.`
+        : `${spelled} — the major scale itself.`,
+    };
+  }
+  // Or read it: which mode is spelled like this?
+  return {
+    family: 'spelling',
+    lead: 'which mode is spelled',
+    subject: spelled,
+    subjectKind: 'formula',
+    options: shuffle(MODE_NAMES, rand),
+    answer: [mode.name],
+    note: `${mode.name} — ${mode.category} mode${
+      mode.signature ? `, and that's its ${mode.signature.degree}` : ', the plain scale'
+    }.`,
+  };
+}
+
 function harmonyQuestion(rand: () => number): ModalQuestion {
   const mode = pick(MODES, rand);
   const line = (m: ModeRow) => m.harmonization.join(' ');
@@ -356,6 +429,7 @@ function harmonyQuestion(rand: () => number): ModalQuestion {
     options: shuffle([line(mode), ...wrong], rand),
     answer: [line(mode)],
     wide: true,
+    optionKind: 'chords',
     note: `From its own root — degree ${mode.degree} of the major scale.`,
   };
 }
@@ -385,7 +459,7 @@ function colourQuestion(rand: () => number): ModalQuestion {
       family: 'colour',
       lead: 'which mode does this vamp hold',
       subject: `‖: ${vamp} :‖`,
-      subjectKind: 'chords',
+      subjectKind: 'vamp',
       options: shuffle(MODE_NAMES, rand),
       answer: [mode.name],
       note: `${mode.name} — ${mode.modalChords}.`,
@@ -400,6 +474,7 @@ function colourQuestion(rand: () => number): ModalQuestion {
     options: shuffle([vamp, ...wrong], rand),
     answer: [vamp],
     wide: true,
+    optionKind: 'chords',
     note: `Two chords are enough: they pin ${mode.name}'s ${mode.signature ? mode.signature.degree : 'tonic'}.`,
   };
 }
@@ -409,6 +484,7 @@ const BUILDERS: Record<Family, (rand: () => number) => ModalQuestion> = {
   extensions: extensionQuestion,
   tetrads: tetradQuestion,
   category: categoryQuestion,
+  spelling: spellingQuestion,
   harmony: harmonyQuestion,
   colour: colourQuestion,
 };
@@ -441,6 +517,9 @@ export function generateModal(
   return q;
 }
 
-/** Did they tap exactly the right set? */
+/** Did they tap exactly the right set — or, for a spelling, the right degree
+    in every position? */
 export const modalAnswerMatches = (picked: string[], q: ModalQuestion): boolean =>
-  picked.length === q.answer.length && q.answer.every((a) => picked.includes(a));
+  q.input === 'formula'
+    ? picked.length === q.answer.length && q.answer.every((a, i) => picked[i] === a)
+    : picked.length === q.answer.length && q.answer.every((a) => picked.includes(a));

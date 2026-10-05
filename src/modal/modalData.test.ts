@@ -3,6 +3,8 @@ import {
   FAMILIES,
   MODES,
   MODE_NAMES,
+  PLAIN_SCALE,
+  cycleDegree,
   byName,
   defaultModalSettings,
   generateModal,
@@ -51,6 +53,30 @@ describe('the sheet', () => {
     expect(byName('Lydian').vamps).toContain('Imaj7 | Vmaj7');
   });
 
+  it('spells each mode the way the major scale makes it', () => {
+    // The major scale in semitones, and a mode read off it from its own degree.
+    const MAJOR = [0, 2, 4, 5, 7, 9, 11];
+    for (const m of MODES) {
+      const start = MAJOR[m.degree - 1];
+      const derived = MAJOR.map((_, i) => {
+        const semis = (MAJOR[(m.degree - 1 + i) % 7] - start + 12) % 12;
+        const diff = semis - MAJOR[i];
+        return `${diff === 0 ? '' : diff < 0 ? 'b' : '#'}${i + 1}`;
+      });
+      expect(m.formula).toEqual(derived);
+    }
+    expect(byName('Aeolian').formula).toEqual(['1', '2', 'b3', '4', '5', 'b6', 'b7']);
+    expect(byName('Lydian').formula).toEqual(['1', '2', '3', '#4', '5', '6', '7']);
+  });
+
+  it('taps a degree down, then up, then back — and never the tonic', () => {
+    expect(cycleDegree('3')).toBe('b3');
+    expect(cycleDegree('b3')).toBe('#3');
+    expect(cycleDegree('#3')).toBe('3');
+    expect(cycleDegree('1')).toBe('1');
+    expect(PLAIN_SCALE).toEqual(['1', '2', '3', '4', '5', '6', '7']);
+  });
+
   it('marks each coloured mode with the degree that sets it apart', () => {
     expect(byName('Dorian').signature?.degree).toBe('VI');
     expect(byName('Phrygian').signature?.degree).toBe('bII');
@@ -66,8 +92,14 @@ describe('questions', () => {
   it('always offers its own answer, without repeating an option', () => {
     for (const q of sample(600)) {
       expect(q.error).toBeUndefined();
-      expect(new Set(q.options).size).toBe(q.options.length);
       expect(q.answer.length).toBeGreaterThan(0);
+      if (q.input === 'formula') {
+        // Answered in the builder, so there's nothing to offer: seven degrees.
+        expect(q.options).toEqual([]);
+        expect(q.answer).toHaveLength(7);
+        continue;
+      }
+      expect(new Set(q.options).size).toBe(q.options.length);
       for (const a of q.answer) expect(q.options).toContain(a);
     }
   });
@@ -83,6 +115,7 @@ describe('questions', () => {
       extensions: false,
       tetrads: false,
       category: false,
+      spelling: false,
       harmony: false,
       colour: false,
       [id]: true,
@@ -117,6 +150,32 @@ describe('questions', () => {
     }
   });
 
+  it('builds a spelling question you answer in place, in order', () => {
+    const built = sample(900).filter((q) => q.family === 'spelling' && q.input === 'formula');
+    expect(built.length).toBeGreaterThan(0);
+    for (const q of built) {
+      const mode = byName(q.subject);
+      expect(q.answer).toEqual([...mode.formula]);
+      expect(modalAnswerMatches([...q.answer], q)).toBe(true);
+      // Order matters here, unlike a set of taps: 1 b2 3 is not 1 2 b3.
+      const swapped = [...q.answer].reverse();
+      if (swapped.join() !== q.answer.join()) {
+        expect(modalAnswerMatches(swapped, q)).toBe(false);
+      }
+      expect(modalAnswerMatches([...PLAIN_SCALE], q)).toBe(mode.name === 'Ionian');
+    }
+  });
+
+  it('asks the spelling the other way round too', () => {
+    const read = sample(900).filter((q) => q.family === 'spelling' && q.input !== 'formula');
+    expect(read.length).toBeGreaterThan(0);
+    for (const q of read) {
+      const mode = MODES.find((m) => m.formula.join(' ') === q.subject)!;
+      expect(q.answer).toEqual([mode.name]);
+      expect(q.options).toContain(mode.name);
+    }
+  });
+
   it('explains the answer', () => {
     for (const q of sample(300)) expect(q.note && q.note.length).toBeTruthy();
   });
@@ -144,6 +203,7 @@ describe('questions', () => {
       extensions: false,
       tetrads: false,
       category: false,
+      spelling: false,
       harmony: false,
       colour: false,
     };
