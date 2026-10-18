@@ -176,6 +176,15 @@ describe('questions', () => {
     }
   });
 
+  it('never asks for a tetrad by its degree — the numeral gives it away', () => {
+    const tetrads = sample(900).filter((q) => q.family === 'tetrads');
+    expect(tetrads.length).toBeGreaterThan(0);
+    for (const q of tetrads) {
+      expect(q.subjectKind).toBe('chords');
+      expect(q.options).toEqual(expect.arrayContaining([...MODE_NAMES]));
+    }
+  });
+
   it('explains the answer', () => {
     for (const q of sample(300)) expect(q.note && q.note.length).toBeTruthy();
   });

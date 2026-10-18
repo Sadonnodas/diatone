@@ -154,7 +154,7 @@ export function cycleDegree(step: string): string {
 export const FAMILIES: { id: Family; label: string; blurb: string }[] = [
   { id: 'order', label: 'Order', blurb: 'Which mode sits on which degree.' },
   { id: 'extensions', label: 'Extensions', blurb: 'The 9, 11 and 13 each mode takes.' },
-  { id: 'tetrads', label: 'Tetrads', blurb: 'The seventh chord under each mode.' },
+  { id: 'tetrads', label: 'Tetrads', blurb: 'Which mode sits on each seventh chord.' },
   { id: 'category', label: 'Major / minor', blurb: 'The two families, and the degree that marks each mode.' },
   { id: 'spelling', label: 'Spell it', blurb: 'Build the scale: Aeolian is 1 2 b3 4 5 b6 b7.' },
   { id: 'harmony', label: 'Harmonization', blurb: 'A mode’s seven chords — both directions.' },
@@ -300,20 +300,13 @@ function extensionQuestion(rand: () => number): ModalQuestion {
   };
 }
 
+/**
+ * Only one direction here. Asking "what tetrad sits on degree 4?" gave itself
+ * away: every option is a roman numeral, so IVmaj7 announces its own degree.
+ * Naming the mode under a tetrad is the connection worth having.
+ */
 function tetradQuestion(rand: () => number): ModalQuestion {
   const mode = pick(MODES, rand);
-  const allTetrads = [...MODES.map((m) => m.tetrad), 'VII-7(b5)'];
-  if (rand() < 0.5) {
-    return {
-      family: 'tetrads',
-      lead: 'what tetrad sits on degree',
-      subject: String(mode.degree),
-      subjectKind: 'degree',
-      options: shuffle(allTetrads, rand),
-      answer: [mode.tetrad],
-      note: `${mode.tetrad} — that's ${mode.name}.`,
-    };
-  }
   return {
     family: 'tetrads',
     lead: 'which mode sits on',
