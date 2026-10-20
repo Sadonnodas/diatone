@@ -82,7 +82,10 @@ export function Prompt({
                 <div className="tick">✓</div>
               ) : (
                 <div className="correct-line">
-                  answer <span className="g">{renderJazz(feedback.correctAnswer, 'ca')}</span>
+                  <span>answer</span>
+                  {/* The one line you read when you got it wrong: a
+                      progression here is split chord by chord too. */}
+                  <Glyphs text={feedback.correctAnswer} className="correct-answer" />
                 </div>
               )}
             </>

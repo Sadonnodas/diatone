@@ -2820,3 +2820,71 @@ html.short-screen .family-blurb {
   border-color: var(--accent-line);
   color: var(--accent);
 }
+
+/* ---- A progression reads as chords, not as one string ----
+   Four seventh chords in a row ("I△7 V7 vi-7 IV△7") ran together into a wall
+   of symbols: the serif's tight spacing gave the eye no boundary between one
+   chord and the next. Each chord already has its own span, so it gets the same
+   chip the Modes drill uses — the notation stays exactly as it was, it just
+   comes with edges. */
+.hero.multi {
+  font-size: clamp(26px, 8.4vw, 42px);
+  gap: 8px;
+}
+.hero.multi > span {
+  padding: 5px 11px;
+  border-radius: 11px;
+  border: 0.5px solid var(--line);
+  background: var(--surface-1);
+  white-space: nowrap;
+}
+/* The verdict colours the type; the chip keeps its own quiet edge. */
+.hero.multi.correct > span {
+  border-color: var(--accent-line);
+  background: var(--accent-dim);
+}
+.hero.multi.wrong > span {
+  border-color: var(--wrong);
+  background: var(--wrong-dim);
+}
+.answer-line.multi {
+  gap: 7px;
+}
+.answer-line.multi > span {
+  padding: 3px 9px;
+  border-radius: 9px;
+  border: 0.5px solid var(--line);
+  background: var(--surface-1);
+  white-space: nowrap;
+}
+.answer-line.multi.ok > span {
+  border-color: var(--correct);
+  background: var(--correct-dim);
+}
+.answer-line.multi.no > span {
+  border-color: var(--wrong);
+  background: var(--wrong-dim);
+}
+/* The right answer under a miss, chord by chord like everything else. */
+.correct-answer {
+  font-family: var(--font-display);
+  color: var(--correct);
+  line-height: 1.1;
+}
+.correct-answer.single {
+  font-size: 25px;
+}
+.correct-answer.multi {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  font-size: 20px;
+}
+.correct-answer.multi > span {
+  padding: 2px 8px;
+  border-radius: 8px;
+  border: 0.5px solid var(--correct);
+  background: var(--correct-dim);
+  white-space: nowrap;
+}
