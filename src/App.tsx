@@ -6,6 +6,7 @@ import IntervalGame from './fretboard/IntervalGame';
 import WarmupGame from './fretboard/WarmupGame';
 import CircleGame from './circle/CircleGame';
 import ModalGame from './modal/ModalGame';
+import CircleTool from './circle/CircleTool';
 import MixedGame from './MixedGame';
 import { RANDOM_GAMES, pickGame } from './lib/mixed';
 import { usePwa } from './pwa';
@@ -50,6 +51,7 @@ export default function App() {
       {screen === 'warmup' && <WarmupGame onBack={home} />}
       {screen === 'circle' && <CircleGame onBack={home} skipSetup={skipSetup} />}
       {screen === 'modes' && <ModalGame onBack={home} skipSetup={skipSetup} />}
+      {screen === 'wheel' && <CircleTool onBack={home} />}
       {screen === 'mixed' && <MixedGame onBack={home} />}
     </>
   );

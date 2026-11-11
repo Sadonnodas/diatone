@@ -9,6 +9,7 @@ export type Screen =
   | 'warmup'
   | 'circle'
   | 'modes'
+  | 'wheel'
   | 'mixed';
 
 function formatBuild(iso: string): string {
@@ -267,6 +268,14 @@ export default function Home({
           <span>
             <b>Mixed</b>
             <small>questions from several</small>
+          </span>
+        </button>
+        {/* Not an exercise: the wheel to look things up on. */}
+        <button className="home-mode tool" onClick={() => onPick('wheel')}>
+          <CircleIcon />
+          <span>
+            <b>Circle of fifths</b>
+            <small>look up any key</small>
           </span>
         </button>
       </div>

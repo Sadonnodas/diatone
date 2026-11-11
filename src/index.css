@@ -1275,15 +1275,15 @@ button {
 .home-cards {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   flex-shrink: 0;
 }
 .gamecard {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   text-align: left;
-  padding: clamp(11px, 1.7svh, 16px) 18px;
+  padding: clamp(9px, 1.4svh, 13px) 16px;
   border-radius: var(--radius);
   border: 0.5px solid var(--line-strong);
   background: var(--surface-1);
@@ -1294,8 +1294,8 @@ button {
   background: var(--surface-2);
 }
 .gc-icon {
-  width: 46px;
-  height: 46px;
+  width: 40px;
+  height: 40px;
   flex: none;
   border-radius: 12px;
   background: var(--surface-2);
@@ -1316,7 +1316,7 @@ button {
 }
 .gc-title {
   font-family: var(--font-display);
-  font-size: 21px;
+  font-size: 20px;
   font-weight: 500;
   color: var(--text);
 }
@@ -1334,8 +1334,8 @@ button {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  margin-top: 4px;
+  gap: 5px;
+  margin-top: 2px;
   flex-shrink: 0;
 }
 .update-link {
@@ -2104,14 +2104,14 @@ text.cof-label {
 .home-modes {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 8px;
   flex-shrink: 0;
 }
 .home-mode {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 11px 13px;
+  padding: 10px 12px;
   border-radius: var(--radius);
   border: 0.5px solid var(--accent-line);
   background: var(--accent-dim);
@@ -2887,4 +2887,135 @@ html.short-screen .family-blurb {
   border: 0.5px solid var(--correct);
   background: var(--correct-dim);
   white-space: nowrap;
+}
+
+/* ---- The wheel as a tool ----
+   Same circle as the drill, but it answers taps and hides nothing. */
+.cof-seg.tappable {
+  cursor: pointer;
+}
+/* The seven segments under the window: the key's own chords. */
+.cof-seg.in-key {
+  filter: brightness(1.35);
+}
+.tool-title {
+  font-family: var(--font-display);
+  font-size: 17px;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.tool-stage {
+  gap: 10px;
+}
+.tool-key {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.tool-key-name {
+  font-family: var(--font-display);
+  font-size: clamp(34px, 10vw, 48px);
+  line-height: 1;
+  color: var(--accent);
+}
+.tool-key-sub {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.tool-accs {
+  color: var(--text-2);
+  letter-spacing: 0.14em;
+}
+.tool-facts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  width: 100%;
+}
+.tool-fact {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 6px 2px;
+  border-radius: 10px;
+  border: 0.5px solid var(--line);
+  background: var(--surface-1);
+}
+.tool-fact small {
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+.tool-fact b {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--text);
+}
+/* The key's seven chords, numeral over chord — tap one to hear it. */
+.tool-chords {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  width: 100%;
+}
+.tool-chord {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 7px 3px;
+  border-radius: 11px;
+  border: 0.5px solid var(--line-strong);
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 17px;
+  line-height: 1.1;
+  transition: transform 0.1s ease, background 0.15s ease, border-color 0.15s ease;
+}
+.tool-chord:active {
+  transform: scale(0.97);
+}
+.tool-chord.sounding {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+.tool-chord .numeral {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: none;
+  color: var(--text-3);
+}
+.tool-chord.sounding .numeral {
+  color: var(--accent);
+}
+/* The tool sits under the two session buttons, across both columns — and on
+   one line, where the session buttons stack their hint under the name. */
+.home-mode.tool span {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+.home-mode.tool small {
+  min-width: 0;
+}
+.home-mode.tool {
+  grid-column: 1 / -1;
+  border-color: var(--line-strong);
+  background: var(--surface-1);
+  color: var(--text-2);
+}
+.home-mode.tool b {
+  color: var(--text);
 }

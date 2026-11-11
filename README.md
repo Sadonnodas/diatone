@@ -25,6 +25,11 @@ The name comes from *diatonic* harmony — which is the whole app.
   (Dorian is minor, but its VI is natural where Aeolian flattens it), whole
   harmonizations, and the chords and vamps that state a mode. Locrian is left
   out: it belongs to neither family.
+- **Circle of fifths (a tool, not a drill)** — the same wheel, but it answers
+  taps and hides nothing: pick any key and read its signature and accidentals,
+  its seven chords as triads or sevenths (tap one to hear it), its relative
+  minor, and the neighbouring spokes that are its IV and V. Plus a I–IV–V–I to
+  hear the key.
 - **Chromatic tap-to-build input** — compose any answer from ~13 buttons; the OS
   keyboard never opens. Roots are always fully chromatic, so you produce the
   correct enharmonic spelling from recall (E♯ in F♯, C♭ in G♭, …).

@@ -54,6 +54,9 @@ export interface WheelProps {
   revealed?: Record<string, string>;
   keyPos?: number | null;
   rotate?: number;
+  /** Makes the wheel a picker: every spoke answers taps with its position.
+      Left out, the wheel is display-only, as the drills want it. */
+  onTapPos?: (pos: number) => void;
 }
 
 export function CircleWheel({
@@ -63,6 +66,7 @@ export function CircleWheel({
   revealed,
   keyPos = null,
   rotate = 0,
+  onTapPos,
 }: WheelProps) {
   const blankKeys = new Set(blanks.map(slotKey));
 
@@ -95,7 +99,10 @@ export function CircleWheel({
                 data-slot={key}
                 className={`cof-seg cof-${ring}${open ? ' open' : ''}${mark ? ` ${mark}` : ''}${
                   open && highlight === key ? ' asked' : ''
+                }${onTapPos ? ' tappable' : ''}${
+                  onTapPos && keyPos === pos ? ' in-key' : ''
                 }`}
+                onClick={onTapPos ? () => onTapPos(pos) : undefined}
               />
               {open && highlight === key && (
                 <text
