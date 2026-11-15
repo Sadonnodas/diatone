@@ -8,15 +8,17 @@ import React from 'react';
 const GLYPHS = new Set(['△', 'ø', '°']);
 const isNote = (ch: string | undefined) => !!ch && /[A-Ga-g]/.test(ch);
 
-export function renderJazz(text: string, keyPrefix = ''): React.ReactNode[] {
+type Piece = { kind: 'text' | 'acc' | 'glyph'; text: string };
+
+/** The string cut into runs of plain text and the glyphs that need their own
+    element. Shared so HTML and SVG renderings can't drift apart. */
+function pieces(text: string): Piece[] {
   const chars = Array.from(text);
-  const out: React.ReactNode[] = [];
+  const out: Piece[] = [];
   let buf = '';
-  const flush = (i: number) => {
-    if (buf) {
-      out.push(<React.Fragment key={`${keyPrefix}t${i}`}>{buf}</React.Fragment>);
-      buf = '';
-    }
+  const flush = () => {
+    if (buf) out.push({ kind: 'text', text: buf });
+    buf = '';
   };
   for (let i = 0; i < chars.length; i++) {
     const ch = chars[i];
@@ -25,25 +27,41 @@ export function renderJazz(text: string, keyPrefix = ''): React.ReactNode[] {
     const flat = ch === '♭' || (ch === 'b' && isNote(chars[i - 1]));
     const sharp = ch === '♯' || ch === '#';
     if (flat || sharp) {
-      flush(i);
-      out.push(
-        <span className="acc" key={`${keyPrefix}a${i}`}>
-          {flat ? '♭' : '♯'}
-        </span>,
-      );
+      flush();
+      out.push({ kind: 'acc', text: flat ? '♭' : '♯' });
     } else if (GLYPHS.has(ch)) {
-      flush(i);
-      out.push(
-        <span className="q-glyph" key={`${keyPrefix}g${i}`}>
-          {ch}
-        </span>,
-      );
+      flush();
+      out.push({ kind: 'glyph', text: ch });
     } else {
       buf += ch;
     }
   }
-  flush(chars.length);
+  flush();
   return out;
+}
+
+export function renderJazz(text: string, keyPrefix = ''): React.ReactNode[] {
+  return pieces(text).map((piece, i) => {
+    const key = `${keyPrefix}${piece.kind}${i}`;
+    if (piece.kind === 'text') return <React.Fragment key={key}>{piece.text}</React.Fragment>;
+    return (
+      <span className={piece.kind === 'acc' ? 'acc' : 'q-glyph'} key={key}>
+        {piece.text}
+      </span>
+    );
+  });
+}
+
+/** The same, inside an SVG <text>, where a <span> would draw nothing. */
+export function jazzTspans(text: string, keyPrefix = ''): React.ReactNode[] {
+  return pieces(text).map((piece, i) => (
+    <tspan
+      className={piece.kind === 'text' ? undefined : piece.kind === 'acc' ? 'acc' : 'q-glyph'}
+      key={`${keyPrefix}${piece.kind}${i}`}
+    >
+      {piece.text}
+    </tspan>
+  ));
 }
 
 export function ChordDisplay({ text, className }: { text: string; className?: string }) {

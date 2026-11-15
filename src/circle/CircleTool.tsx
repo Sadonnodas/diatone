@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { CircleWheel, prettyChord } from './CircleWheel';
 import { ALL_KEYS, chordData } from '../lib/chordData';
-import { keySignature, neighbours, relativeMinor, signatureText } from './keySignature';
+import { keySignature, signatureText } from './keySignature';
+import { cadence, cells, facts, tonicChord, type Tonality } from './tonality';
+import { WindowShape } from './WindowShape';
 import { renderJazz } from '../components/ChordDisplay';
 import { chordToJazz } from '../lib/jazz';
 import { InfoModal } from '../components/InfoModal';
@@ -16,11 +18,12 @@ const STORAGE_KEY = 'diatone.wheel.v1';
 
 interface ToolState {
   key: string;
+  tonality: Tonality;
   sevenths: boolean;
   playback: boolean;
 }
 
-const DEFAULTS: ToolState = { key: 'C', sevenths: false, playback: true };
+const DEFAULTS: ToolState = { key: 'C', tonality: 'major', sevenths: false, playback: true };
 
 function load(): ToolState {
   try {
@@ -31,6 +34,7 @@ function load(): ToolState {
         ...DEFAULTS,
         ...saved,
         key: saved.key && ALL_KEYS.includes(saved.key) ? saved.key : DEFAULTS.key,
+        tonality: saved.tonality === 'minor' ? 'minor' : 'major',
       };
     }
   } catch {
@@ -41,8 +45,9 @@ function load(): ToolState {
 
 /**
  * The wheel as a reference rather than a drill: tap a key and read what sits
- * around it — its signature, its seven chords, its relative minor, and the two
- * neighbours that are its IV and V. Nothing is hidden and nothing is scored.
+ * around it — its signature, its seven chords in the window's own shape, and
+ * the two neighbours that hold its fourth and fifth. Major or minor is a
+ * matter of which chord you count from; the window itself never moves.
  */
 export default function CircleTool({ onBack }: { onBack: () => void }) {
   const [state, setState] = useState<ToolState>(load);
@@ -51,14 +56,16 @@ export default function CircleTool({ onBack }: { onBack: () => void }) {
   const { instrument } = useInstrument();
   const timer = useRef<number | null>(null);
 
-  const { key, sevenths, playback } = state;
+  const { key, tonality, sevenths, playback } = state;
   // Triads read as the wheel prints them (Dm, B°); sevenths take the jazz
   // notation the rest of the app uses for them (D-7, Dø7).
   const label = (chord: string) => (sevenths ? chordToJazz(chord) : prettyChord(chord));
   const pos = ALL_KEYS.indexOf(key);
   const form = chordData[key][sevenths ? 'sevenths' : 'triads'];
   const sig = keySignature(key);
-  const { down, up } = neighbours(key);
+  const window7 = cells(tonality);
+  const tonic = window7[0];
+  const home = prettyChord(tonicChord(tonality, key));
 
   const update = (patch: Partial<ToolState>) => setState((s) => ({ ...s, ...patch }));
 
@@ -99,21 +106,32 @@ export default function CircleTool({ onBack }: { onBack: () => void }) {
     void playChord(instrument, notes);
   };
 
-  // I – IV – V – I: the three chords the wheel puts side by side.
+  // I–IV–V–I, or i–iv–v–i: the three chords the wheel puts side by side.
   const soundCadence = () => {
     haptic(TAP);
     if (!playback) return;
-    const chords = [0, 3, 4, 0]
+    const chords = cadence(tonality)
       .map((d) => chordToMidi(form.chords[d]))
       .filter((c): c is number[] => c !== null);
     if (chords.length === 4) void playProgression(instrument, chords);
   };
 
-  const pickKey = (p: number) => {
-    haptic(TAP);
+  const hush = () => {
     stopAll();
     setSounding(null);
+  };
+
+  const pickKey = (p: number) => {
+    haptic(TAP);
+    hush();
     update({ key: ALL_KEYS[p] });
+  };
+
+  const pickTonality = (t: Tonality) => {
+    if (t === tonality) return;
+    haptic(TAP);
+    hush();
+    update({ tonality: t });
   };
 
   return (
@@ -151,11 +169,17 @@ export default function CircleTool({ onBack }: { onBack: () => void }) {
 
       <div className="stage tool-stage">
         <div className="cof-wheel reveal" style={{ animationDelay: '.06s' }}>
-          <CircleWheel blanks={[]} marks={{}} keyPos={pos} onTapPos={pickKey} />
+          <CircleWheel
+            blanks={[]}
+            marks={{}}
+            keyPos={pos}
+            tonic={{ ring: tonic.ring, pos }}
+            onTapPos={pickKey}
+          />
         </div>
 
         <div className="tool-key reveal" style={{ animationDelay: '.1s' }}>
-          <span className="tool-key-name">{renderJazz(key, 'tk')}</span>
+          <span className="tool-key-name">{renderJazz(home, 'tk')}</span>
           <span className="tool-key-sub">
             {signatureText(key)}
             {sig.accidentals.length > 0 && (
@@ -164,41 +188,45 @@ export default function CircleTool({ onBack }: { onBack: () => void }) {
           </span>
         </div>
 
-        {/* The three things the wheel puts next to a key: its relative minor
-            just outside it, and the neighbouring spokes that are its IV and V. */}
-        <div className="tool-facts reveal" style={{ animationDelay: '.12s' }}>
-          <div className="tool-fact">
-            <small>relative minor</small>
-            <b>{renderJazz(prettyChord(relativeMinor(key)), 'rm')}</b>
-          </div>
-          <div className="tool-fact">
-            <small>IV · a fifth down</small>
-            <b>{renderJazz(down, 'nd')}</b>
-          </div>
-          <div className="tool-fact">
-            <small>V · a fifth up</small>
-            <b>{renderJazz(up, 'nu')}</b>
-          </div>
+        {/* Major or minor is the same seven chords counted from a different
+            one — so this switches what everything below is called, and which
+            cell of the window is home. */}
+        <div className="tool-tonality reveal" style={{ animationDelay: '.11s' }} role="group">
+          {(['major', 'minor'] as Tonality[]).map((t) => (
+            <button
+              key={t}
+              className={`tonality-btn${t === tonality ? ' on' : ''}`}
+              aria-pressed={t === tonality}
+              onClick={() => pickTonality(t)}
+            >
+              {t}
+            </button>
+          ))}
         </div>
 
-        <div className="tool-chords reveal" style={{ animationDelay: '.14s' }}>
-          {form.chords.map((chord, i) => (
-            <button
-              key={chord}
-              className={`tool-chord${sounding === i ? ' sounding' : ''}`}
-              onClick={() => sound(i)}
-              aria-label={`${form.numerals[i]} — ${chord}`}
-            >
-              <small className="numeral">{form.numerals[i]}</small>
-              <span>{renderJazz(label(chord), `tc${i}`)}</span>
-            </button>
+        {/* The window itself, with the degrees in their places. Tap a cell to
+            hear the chord that sits there. */}
+        <div className="tool-shape reveal" style={{ animationDelay: '.13s' }}>
+          <WindowShape
+            items={window7.map((cell) => ({ cell, text: label(form.chords[cell.index]) }))}
+            sounding={sounding}
+            onTap={sound}
+          />
+        </div>
+
+        <div className="tool-facts reveal" style={{ animationDelay: '.15s' }}>
+          {facts(tonality, key).map((fact) => (
+            <div className="tool-fact" key={fact.label}>
+              <small>{fact.label}</small>
+              <b>{renderJazz(prettyChord(fact.chord), fact.label)}</b>
+            </div>
           ))}
         </div>
       </div>
 
       <div className="fret-actions">
         <button className="bigbtn" onClick={soundCadence} disabled={!playback}>
-          ▶ hear I · IV · V · I
+          ▶ hear {tonic.numeral} · {window7[3].numeral} · {window7[4].numeral} · {tonic.numeral}
         </button>
       </div>
 
@@ -214,12 +242,23 @@ export default function CircleTool({ onBack }: { onBack: () => void }) {
             its <b>ii</b>, <b>vi</b> and <b>iii</b>. Everything a key needs sits side by side.
           </p>
           <p>
+            Major and minor share a window. C major and A minor hold the same seven chords — the
+            switch only changes which cell is home, and so what every other cell is called. Count
+            from the major and you get I ii iii IV V vi vii°; count from the minor outside it and
+            the same chords read i ii° III iv v VI VII.
+          </p>
+          <p>
             Each step clockwise adds a sharp, each step anticlockwise a flat, always in the same
             order — F♯ C♯ G♯ D♯ A♯ E♯ B♯ going one way, B♭ E♭ A♭ D♭ G♭ C♭ F♭ the other.
           </p>
           <p className="info-dim">
             The circle closes on an enharmonic seam: carry on past F♯ and the next key is written
             D♭, the same pitch as F♯'s own C♯ spelled the flat way.
+          </p>
+          <p className="info-dim">
+            A minor key's <b>v</b> is minor here, because the wheel draws the natural minor. The
+            major V7 you hear at the end of so many minor tunes (E7 in A minor) is borrowed from
+            the harmonic minor, and sits off the wheel.
           </p>
         </InfoModal>
       )}

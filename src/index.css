@@ -1859,6 +1859,16 @@ text.cof-label {
   pointer-events: none;
 }
 
+/* Home: the one segment of the wedge you count from. Which ring it's in is
+   the difference between C major and A minor. */
+.cof-tonic {
+  fill: color-mix(in srgb, var(--accent) 26%, transparent);
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
 /* The hub: what to place next. */
 .cof-hub {
   position: absolute;
@@ -2907,6 +2917,11 @@ html.short-screen .family-blurb {
 .tool-stage {
   gap: 10px;
 }
+/* No keypad here, so the wheel would happily take the whole screen and push
+   the window and the facts under the button. Trade width for the rows below. */
+.tool-stage .cof-wheel {
+  width: min(100%, 360px, max(192px, calc(100svh - 500px)));
+}
 .tool-key {
   display: flex;
   flex-direction: column;
@@ -2958,47 +2973,107 @@ html.short-screen .family-blurb {
   font-weight: 500;
   color: var(--text);
 }
-/* The key's seven chords, numeral over chord — tap one to hear it. */
-.tool-chords {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
-  width: 100%;
+/* Major or minor: the same window, counted from a different cell. */
+.tool-tonality {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 999px;
+  border: 0.5px solid var(--line);
+  background: var(--surface-1);
 }
-.tool-chord {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
-  padding: 7px 3px;
-  border-radius: 11px;
-  border: 0.5px solid var(--line-strong);
-  background: var(--surface-2);
-  color: var(--text);
-  font-family: var(--font-display);
-  font-size: 17px;
-  line-height: 1.1;
-  transition: transform 0.1s ease, background 0.15s ease, border-color 0.15s ease;
+.tonality-btn {
+  padding: 5px 20px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-3);
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
-.tool-chord:active {
-  transform: scale(0.97);
-}
-.tool-chord.sounding {
-  border-color: var(--accent);
+.tonality-btn.on {
   background: var(--accent-dim);
   color: var(--accent);
 }
-.tool-chord .numeral {
+
+/* The window: the wheel's own wedge, laid out flat so the degrees can be read
+   in their places. Tap a cell to hear the chord sitting there. */
+.tool-shape {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+.shape {
+  display: block;
+  width: min(100%, 250px);
+  height: auto;
+  overflow: visible;
+}
+.shape-cell {
+  fill: var(--surface-2);
+  stroke: var(--line-strong);
+  stroke-width: 1;
+  cursor: pointer;
+  transition:
+    fill 0.15s ease,
+    stroke 0.15s ease;
+}
+.shape-cell.tonic {
+  fill: var(--accent-dim);
+  stroke: var(--accent);
+  stroke-width: 1.6;
+}
+.shape-cell.sounding {
+  fill: var(--accent-dim);
+  stroke: var(--accent);
+}
+.shape-num,
+.shape-chord {
+  pointer-events: none;
+  user-select: none;
+}
+.shape-num {
+  fill: var(--text-2);
   font-family: var(--font-ui);
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: none;
-  color: var(--text-3);
+  letter-spacing: 0.04em;
 }
-.tool-chord.sounding .numeral {
-  color: var(--accent);
+.shape-chord {
+  fill: var(--text);
+  font-family: var(--font-display);
+  font-size: 12.5px;
 }
+.shape-num.tonic,
+.shape-num.sounding,
+.shape-chord.tonic,
+.shape-chord.sounding {
+  fill: var(--accent);
+}
+/* A short screen gets the same five rows, tightened: the window and the
+   facts matter more here than a big key letter or a big wheel. */
+html.short-screen .tool-stage {
+  gap: 6px;
+}
+html.short-screen .tool-key-name {
+  font-size: clamp(26px, 8vw, 34px);
+}
+html.short-screen .shape {
+  width: min(100%, 198px);
+}
+html.short-screen .tool-fact {
+  padding: 4px 2px;
+}
+html.short-screen .tool-fact b {
+  font-size: 15px;
+}
+
 /* The tool sits under the two session buttons, across both columns — and on
    one line, where the session buttons stack their hint under the name. */
 .home-mode.tool span {

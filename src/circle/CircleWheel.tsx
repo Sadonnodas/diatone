@@ -57,6 +57,9 @@ export interface WheelProps {
   /** Makes the wheel a picker: every spoke answers taps with its position.
       Left out, the wheel is display-only, as the drills want it. */
   onTapPos?: (pos: number) => void;
+  /** The one segment to call home — the major of the spoke in a major key,
+      the minor outside it in a minor one. */
+  tonic?: Slot | null;
 }
 
 export function CircleWheel({
@@ -67,6 +70,7 @@ export function CircleWheel({
   keyPos = null,
   rotate = 0,
   onTapPos,
+  tonic = null,
 }: WheelProps) {
   const blankKeys = new Set(blanks.map(slotKey));
 
@@ -144,14 +148,29 @@ export function CircleWheel({
         // The key's wedge, outlined over the top. Drawn as a fill underneath it
         // was invisible — the segments are opaque — and tinting them would have
         // fought the major/minor colours. An outline says "these seven, and
-        // they're adjacent" without touching anything else.
+        // they're adjacent" without touching anything else. It starts at the
+        // major ring: I, IV and V are three of the seven.
         <path
           className="cof-wedge"
           d={segmentPath(
-            RADII.minor[0],
+            RADII.major[0],
             RADII.dim[1],
             (keyPos + rotate - 1.5) * STEP,
             (keyPos + rotate + 1.5) * STEP,
+          )}
+        />
+      )}
+
+      {tonic && (
+        // Home, in a wedge that reads two ways: the window doesn't move
+        // between C major and A minor, only the chord you count from.
+        <path
+          className="cof-tonic"
+          d={segmentPath(
+            RADII[tonic.ring][0],
+            RADII[tonic.ring][1],
+            (tonic.pos + rotate) * STEP - STEP / 2,
+            (tonic.pos + rotate) * STEP + STEP / 2,
           )}
         />
       )}
