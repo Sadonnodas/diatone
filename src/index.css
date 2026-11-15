@@ -2916,11 +2916,14 @@ html.short-screen .family-blurb {
 }
 .tool-stage {
   gap: 10px;
+  /* The rows below the wheel are fixed heights; if a screen is shorter than
+     the sums below allow for, scroll rather than slide under the button. */
+  overflow-y: auto;
 }
 /* No keypad here, so the wheel would happily take the whole screen and push
    the window and the facts under the button. Trade width for the rows below. */
 .tool-stage .cof-wheel {
-  width: min(100%, 360px, max(192px, calc(100svh - 500px)));
+  width: min(100%, 360px, max(192px, calc(100svh - 528px)));
 }
 .tool-key {
   display: flex;
@@ -3011,7 +3014,7 @@ html.short-screen .family-blurb {
 }
 .shape {
   display: block;
-  width: min(100%, 250px);
+  width: min(100%, 274px);
   height: auto;
   overflow: visible;
 }
@@ -3041,14 +3044,14 @@ html.short-screen .family-blurb {
 .shape-num {
   fill: var(--text-2);
   font-family: var(--font-ui);
-  font-size: 9.5px;
+  font-size: 9px;
   font-weight: 600;
   letter-spacing: 0.04em;
 }
 .shape-chord {
   fill: var(--text);
   font-family: var(--font-display);
-  font-size: 12.5px;
+  font-size: 11.5px;
 }
 .shape-num.tonic,
 .shape-num.sounding,
@@ -3065,7 +3068,7 @@ html.short-screen .tool-key-name {
   font-size: clamp(26px, 8vw, 34px);
 }
 html.short-screen .shape {
-  width: min(100%, 198px);
+  width: min(100%, 218px);
 }
 html.short-screen .tool-fact {
   padding: 4px 2px;

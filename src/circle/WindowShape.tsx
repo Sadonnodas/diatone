@@ -4,37 +4,47 @@ import type { Cell } from './tonality';
 
 /**
  * The window: the wedge-shaped cut-out you slide over a printed chord wheel,
- * drawn on its own so the seven degrees can be read in place. Same geometry
- * as the wheel — majors nearest the hub, their relative minors outside them,
- * the diminished on the rim — only here the hub is off the top of the box and
- * the three spokes are splayed a little wider, so the labels have room.
+ * drawn on its own so the seven degrees can be read in place. Same way up as
+ * the wheel — the hub below the box, majors nearest it, their relative minors
+ * stacked outside them and the diminished on the rim — only here the window
+ * sits further out and splays a little less, which flattens the cells enough
+ * for a horizontal label like A♭△7 to fit inside one.
  */
-const CX = 82;
-const STEP = 25;
-const RADII: Record<Cell['ring'], [number, number]> = {
-  major: [50, 78],
-  minor: [78, 104],
-  dim: [104, 130],
-};
+const STEP = 22;
 const SPAN = 1.5 * STEP;
-
-// The wheel's own geometry with the y-axis flipped: the hub sits above the
-// box at y = 0, and angles are measured from straight down.
-const pt = (r: number, deg: number): [number, number] => {
-  const a = (deg * Math.PI) / 180;
-  return [CX + r * Math.sin(a), r * Math.cos(a)];
+const RADII: Record<Cell['ring'], [number, number]> = {
+  major: [105, 134],
+  minor: [134, 163],
+  dim: [163, 192],
 };
+/** Where the two lines sit in a band: the numeral just under its outer edge,
+    the chord just above its inner one. Measured from the edges rather than
+    the middle, so the thinnest band can't push a label out of the shape. */
+const NUMERAL_IN = 6.5;
+const CHORD_OUT = 8.5;
+
+const rad = (deg: number) => (deg * Math.PI) / 180;
+const CX = RADII.dim[1] * Math.sin(rad(SPAN));
+const BASE = RADII.dim[1]; // the hub's y: everything is drawn above it
+
+// The wheel's own geometry, hub moved off the bottom of the box.
+const pt = (r: number, deg: number): [number, number] => [
+  CX + r * Math.sin(rad(deg)),
+  BASE - r * Math.cos(rad(deg)),
+];
 
 function cellPath(ri: number, ro: number, a0: number, a1: number): string {
   const [x0o, y0o] = pt(ro, a0);
   const [x1o, y1o] = pt(ro, a1);
   const [x1i, y1i] = pt(ri, a1);
   const [x0i, y0i] = pt(ri, a0);
-  return `M${x0o} ${y0o}A${ro} ${ro} 0 0 0 ${x1o} ${y1o}L${x1i} ${y1i}A${ri} ${ri} 0 0 1 ${x0i} ${y0i}Z`;
+  return `M${x0o} ${y0o}A${ro} ${ro} 0 0 1 ${x1o} ${y1o}L${x1i} ${y1i}A${ri} ${ri} 0 0 0 ${x0i} ${y0i}Z`;
 }
 
-const TOP = RADII.major[0] * Math.cos((SPAN * Math.PI) / 180) - 2;
-const VIEW = `0 ${TOP.toFixed(1)} ${CX * 2} ${(RADII.dim[1] + 2 - TOP).toFixed(1)}`;
+// A couple of units of air all round, so no stroke or descender is clipped.
+const PAD = 3;
+const BOTTOM = BASE - RADII.major[0] * Math.cos(rad(SPAN));
+const VIEW = `${-PAD} ${-PAD} ${(CX * 2 + 2 * PAD).toFixed(1)} ${(BOTTOM + 2 * PAD).toFixed(1)}`;
 
 export interface ShapeItem {
   cell: Cell;
@@ -60,8 +70,9 @@ export function WindowShape({
       {items.map(({ cell, text }) => {
         const [ri, ro] = RADII[cell.ring];
         const mid = cell.offset * STEP;
-        const [nx, ny] = pt((ri + ro) / 2 - 7, mid);
-        const [cx, cy] = pt((ri + ro) / 2 + 6.5, mid);
+        // Numeral above the chord — which out here means a touch further out.
+        const [nx, ny] = pt(ro - NUMERAL_IN, mid);
+        const [cx, cy] = pt(ri + CHORD_OUT, mid);
         const state = `${cell.index === tonic ? ' tonic' : ''}${
           sounding === cell.index ? ' sounding' : ''
         }`;
