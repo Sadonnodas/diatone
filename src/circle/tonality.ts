@@ -49,30 +49,6 @@ export function cells(tonality: Tonality): Cell[] {
   });
 }
 
-/** Tonic, subdominant, dominant, tonic — as indices into the key's table. */
-export const cadence = (tonality: Tonality): number[] =>
-  [0, 3, 4, 0].map((d) => cells(tonality)[d].index);
-
 /** The chord you'd call home, spelled by the key's own table. */
 export const tonicChord = (tonality: Tonality, key: string): string =>
   chordData[key].triads.chords[cells(tonality)[0].index];
-
-export interface Fact {
-  label: string;
-  chord: string;
-}
-
-/**
- * The three things the wheel puts next to a key: the other way of reading the
- * same window, and the neighbouring spokes that hold its fourth and fifth.
- */
-export function facts(tonality: Tonality, key: string): Fact[] {
-  const table = chordData[key].triads.chords;
-  const c = cells(tonality);
-  const other = tonality === 'major' ? 'minor' : 'major';
-  return [
-    { label: `relative ${other}`, chord: tonicChord(other, key) },
-    { label: `${c[3].numeral} · a fifth down`, chord: table[c[3].index] },
-    { label: `${c[4].numeral} · a fifth up`, chord: table[c[4].index] },
-  ];
-}

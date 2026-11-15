@@ -2915,15 +2915,15 @@ html.short-screen .family-blurb {
   white-space: nowrap;
 }
 .tool-stage {
-  gap: 10px;
+  gap: 12px;
   /* The rows below the wheel are fixed heights; if a screen is shorter than
-     the sums below allow for, scroll rather than slide under the button. */
+     the sums below allow for, scroll rather than crush them. */
   overflow-y: auto;
 }
-/* No keypad here, so the wheel would happily take the whole screen and push
-   the window and the facts under the button. Trade width for the rows below. */
+/* No keypad and no buttons here, so the wheel would happily take the whole
+   screen and push the window off the bottom. Trade width for the rows below. */
 .tool-stage .cof-wheel {
-  width: min(100%, 360px, max(192px, calc(100svh - 528px)));
+  width: min(100%, 380px, max(192px, calc(100svh - 372px)));
 }
 .tool-key {
   display: flex;
@@ -2946,35 +2946,6 @@ html.short-screen .family-blurb {
 .tool-accs {
   color: var(--text-2);
   letter-spacing: 0.14em;
-}
-.tool-facts {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-  width: 100%;
-}
-.tool-fact {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
-  padding: 6px 2px;
-  border-radius: 10px;
-  border: 0.5px solid var(--line);
-  background: var(--surface-1);
-}
-.tool-fact small {
-  font-size: 9.5px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-3);
-  white-space: nowrap;
-}
-.tool-fact b {
-  font-family: var(--font-display);
-  font-size: 17px;
-  font-weight: 500;
-  color: var(--text);
 }
 /* Major or minor: the same window, counted from a different cell. */
 .tool-tonality {
@@ -3014,7 +2985,7 @@ html.short-screen .family-blurb {
 }
 .shape {
   display: block;
-  width: min(100%, 274px);
+  width: min(100%, 300px);
   height: auto;
   overflow: visible;
 }
@@ -3059,8 +3030,8 @@ html.short-screen .family-blurb {
 .shape-chord.sounding {
   fill: var(--accent);
 }
-/* A short screen gets the same five rows, tightened: the window and the
-   facts matter more here than a big key letter or a big wheel. */
+/* A short screen gets the same rows, tightened: the window matters more here
+   than a big key letter or a big wheel. */
 html.short-screen .tool-stage {
   gap: 6px;
 }
@@ -3068,13 +3039,7 @@ html.short-screen .tool-key-name {
   font-size: clamp(26px, 8vw, 34px);
 }
 html.short-screen .shape {
-  width: min(100%, 218px);
-}
-html.short-screen .tool-fact {
-  padding: 4px 2px;
-}
-html.short-screen .tool-fact b {
-  font-size: 15px;
+  width: min(100%, 238px);
 }
 
 /* The tool sits under the two session buttons, across both columns — and on

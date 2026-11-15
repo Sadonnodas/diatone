@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_KEYS, chordData } from '../lib/chordData';
 import { chordToMidi } from '../audio/harmony';
-import { cadence, cells, facts, tonicChord, type Tonality } from './tonality';
+import { cells, tonicChord, type Tonality } from './tonality';
 
 const BOTH: Tonality[] = ['major', 'minor'];
 
@@ -51,38 +51,15 @@ describe('reading the window twice', () => {
     }
   });
 
-  it('cadences home either way', () => {
-    const chords = (t: Tonality) => cadence(t).map((i) => chordData['C'].triads.chords[i]);
-    expect(chords('major')).toEqual(['C', 'F', 'G', 'C']);
-    expect(chords('minor')).toEqual(['Am', 'Dm', 'Em', 'Am']);
-  });
-
   it('names the relative key each way round', () => {
     expect(tonicChord('major', 'C')).toBe('C');
     expect(tonicChord('minor', 'C')).toBe('Am');
     expect(tonicChord('minor', 'Eb')).toBe('Cm');
+    // Each reading names the other's tonic: the relative key is just the
+    // same window, counted from the other end.
     for (const key of ALL_KEYS) {
-      expect(facts('major', key)[0]).toEqual({
-        label: 'relative minor',
-        chord: tonicChord('minor', key),
-      });
-      expect(facts('minor', key)[0]).toEqual({
-        label: 'relative major',
-        chord: tonicChord('major', key),
-      });
+      expect(tonicChord('minor', key)).toBe(chordData[key].triads.chords[5]);
+      expect(tonicChord('major', key)).toBe(chordData[key].triads.chords[0]);
     }
-  });
-
-  it('labels the fifths with the numerals of the reading', () => {
-    expect(facts('major', 'C').map((f) => `${f.label} ${f.chord}`)).toEqual([
-      'relative minor Am',
-      'IV · a fifth down F',
-      'V · a fifth up G',
-    ]);
-    expect(facts('minor', 'C').map((f) => `${f.label} ${f.chord}`)).toEqual([
-      'relative major C',
-      'iv · a fifth down Dm',
-      'v · a fifth up Em',
-    ]);
   });
 });

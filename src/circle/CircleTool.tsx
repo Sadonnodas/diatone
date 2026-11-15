@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { CircleWheel, prettyChord } from './CircleWheel';
 import { ALL_KEYS, chordData } from '../lib/chordData';
 import { keySignature, signatureText } from './keySignature';
-import { cadence, cells, facts, tonicChord, type Tonality } from './tonality';
+import { cells, tonicChord, type Tonality } from './tonality';
 import { WindowShape } from './WindowShape';
 import { renderJazz } from '../components/ChordDisplay';
 import { chordToJazz } from '../lib/jazz';
@@ -11,7 +11,7 @@ import { ThemeIconButton } from '../components/ThemeSwitch';
 import { haptic, TAP } from '../lib/haptics';
 import { armUnlock, releaseAudio, stopAll } from '../audio/engine';
 import { useInstrument } from '../audio/instrument';
-import { playChord, playProgression, prefetchChords } from '../audio/phrases';
+import { playChord, prefetchChords } from '../audio/phrases';
 import { chordToMidi } from '../audio/harmony';
 
 const STORAGE_KEY = 'diatone.wheel.v1';
@@ -45,9 +45,10 @@ function load(): ToolState {
 
 /**
  * The wheel as a reference rather than a drill: tap a key and read what sits
- * around it — its signature, its seven chords in the window's own shape, and
- * the two neighbours that hold its fourth and fifth. Major or minor is a
- * matter of which chord you count from; the window itself never moves.
+ * around it — its signature, and its seven chords in the window's own shape,
+ * each one tappable. Major or minor is a matter of which chord you count
+ * from; the window itself never moves. Nothing else: the page is something to
+ * look things up in, so every extra row is one more thing to read past.
  */
 export default function CircleTool({ onBack }: { onBack: () => void }) {
   const [state, setState] = useState<ToolState>(load);
@@ -104,16 +105,6 @@ export default function CircleTool({ onBack }: { onBack: () => void }) {
     if (timer.current) clearTimeout(timer.current);
     timer.current = window.setTimeout(() => setSounding(null), 900);
     void playChord(instrument, notes);
-  };
-
-  // I–IV–V–I, or i–iv–v–i: the three chords the wheel puts side by side.
-  const soundCadence = () => {
-    haptic(TAP);
-    if (!playback) return;
-    const chords = cadence(tonality)
-      .map((d) => chordToMidi(form.chords[d]))
-      .filter((c): c is number[] => c !== null);
-    if (chords.length === 4) void playProgression(instrument, chords);
   };
 
   const hush = () => {
@@ -214,20 +205,6 @@ export default function CircleTool({ onBack }: { onBack: () => void }) {
           />
         </div>
 
-        <div className="tool-facts reveal" style={{ animationDelay: '.15s' }}>
-          {facts(tonality, key).map((fact) => (
-            <div className="tool-fact" key={fact.label}>
-              <small>{fact.label}</small>
-              <b>{renderJazz(prettyChord(fact.chord), fact.label)}</b>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="fret-actions">
-        <button className="bigbtn" onClick={soundCadence} disabled={!playback}>
-          ▶ hear {tonic.numeral} · {window7[3].numeral} · {window7[4].numeral} · {tonic.numeral}
-        </button>
       </div>
 
       {infoOpen && (

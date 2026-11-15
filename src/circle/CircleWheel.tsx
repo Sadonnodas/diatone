@@ -18,6 +18,11 @@ const RADII: Record<Ring, [number, number]> = {
   major: [58, 107],
 };
 const STEP = 360 / POSITIONS;
+/* The rim reaches 172 of a 170 half-width, and the window's outline is drawn
+   on top of it with a stroke of its own — so the box is a little wider than
+   the circle, or both get shaved flat at the four compass points. */
+const PAD = 6;
+const VIEW = `${-PAD} ${-PAD} ${SIZE + 2 * PAD} ${SIZE + 2 * PAD}`;
 
 const pt = (r: number, deg: number): [number, number] => {
   const a = ((deg - 90) * Math.PI) / 180;
@@ -30,6 +35,28 @@ function segmentPath(ri: number, ro: number, a0: number, a1: number): string {
   const [x1i, y1i] = pt(ri, a1);
   const [x0i, y0i] = pt(ri, a0);
   return `M${x0o} ${y0o}A${ro} ${ro} 0 0 1 ${x1o} ${y1o}L${x1i} ${y1i}A${ri} ${ri} 0 0 0 ${x0i} ${y0i}Z`;
+}
+
+/**
+ * The window over the key: three spokes wide across the majors and their
+ * relative minors, but only one spoke deep into the rim — a key has three
+ * majors, three minors and a single diminished, and the dim tabs either side
+ * belong to the neighbouring keys. Stepped rather than square, exactly like
+ * the cut-out in the printed wheel.
+ */
+function windowPath(center: number): string {
+  const ri = RADII.major[0];
+  const rm = RADII.minor[1];
+  const ro = RADII.dim[1];
+  const [a0, a1, a2, a3] = [-1.5, -0.5, 0.5, 1.5].map((n) => (center + n) * STEP);
+  const p = (r: number, a: number) => pt(r, a).join(' ');
+  return (
+    `M${p(ri, a0)}L${p(rm, a0)}` +
+    `A${rm} ${rm} 0 0 1 ${p(rm, a1)}L${p(ro, a1)}` +
+    `A${ro} ${ro} 0 0 1 ${p(ro, a2)}L${p(rm, a2)}` +
+    `A${rm} ${rm} 0 0 1 ${p(rm, a3)}L${p(ri, a3)}` +
+    `A${ri} ${ri} 0 0 0 ${p(ri, a0)}Z`
+  );
 }
 
 /** ASCII chord name → the way it should be read. Bdim → B°, Bbm → B♭m. */
@@ -77,7 +104,7 @@ export function CircleWheel({
   return (
     <svg
       className="cof"
-      viewBox={`0 0 ${SIZE} ${SIZE}`}
+      viewBox={VIEW}
       role="group"
       aria-label="Circle of fifths"
     >
@@ -145,20 +172,11 @@ export function CircleWheel({
       )}
 
       {keyPos !== null && (
-        // The key's wedge, outlined over the top. Drawn as a fill underneath it
-        // was invisible — the segments are opaque — and tinting them would have
-        // fought the major/minor colours. An outline says "these seven, and
-        // they're adjacent" without touching anything else. It starts at the
-        // major ring: I, IV and V are three of the seven.
-        <path
-          className="cof-wedge"
-          d={segmentPath(
-            RADII.major[0],
-            RADII.dim[1],
-            (keyPos + rotate - 1.5) * STEP,
-            (keyPos + rotate + 1.5) * STEP,
-          )}
-        />
+        // The key's window, outlined over the top. Drawn as a fill underneath
+        // it was invisible — the segments are opaque — and tinting them would
+        // have fought the major/minor colours. An outline says "these seven,
+        // and they're adjacent" without touching anything else.
+        <path className="cof-wedge" d={windowPath(keyPos + rotate)} />
       )}
 
       {tonic && (
