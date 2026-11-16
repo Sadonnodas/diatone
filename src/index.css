@@ -1859,15 +1859,6 @@ text.cof-label {
   pointer-events: none;
 }
 
-/* Home: the one segment of the wedge you count from. Which ring it's in is
-   the difference between C major and A minor. */
-.cof-tonic {
-  fill: color-mix(in srgb, var(--accent) 26%, transparent);
-  stroke: var(--accent);
-  stroke-width: 2.5;
-  stroke-linejoin: round;
-  pointer-events: none;
-}
 
 /* The hub: what to place next. */
 .cof-hub {
@@ -2907,6 +2898,15 @@ html.short-screen .family-blurb {
 /* The seven segments under the window: the key's own chords. */
 .cof-seg.in-key {
   filter: brightness(1.35);
+}
+/* Home: the one segment of the window you count from. Which ring it's in is
+   the difference between C major and A minor. Colour, not an outline — an
+   outline here crossed the window's own and the two read as a mistake. The
+   fill belongs to the segment, so its chord name stays on top of it, and it
+   sits out the in-key brightening, which would wash it back towards white. */
+.cof-seg.home {
+  fill: color-mix(in srgb, var(--accent) 36%, var(--cof-minor));
+  filter: none;
 }
 .tool-title {
   font-family: var(--font-display);

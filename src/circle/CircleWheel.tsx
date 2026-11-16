@@ -116,6 +116,7 @@ export function CircleWheel({
           const a0 = (pos + rotate) * STEP - STEP / 2;
           const a1 = (pos + rotate) * STEP + STEP / 2;
           const blank = blankKeys.has(key);
+          const home = tonic?.ring === ring && tonic.pos === pos;
           const mark = marks[key];
           const open = blank && !mark;
           const shown = mark && revealed?.[key] ? revealed[key] : segmentLabel(slot);
@@ -128,7 +129,7 @@ export function CircleWheel({
               <path
                 d={segmentPath(ri, ro, a0, a1)}
                 data-slot={key}
-                className={`cof-seg cof-${ring}${open ? ' open' : ''}${mark ? ` ${mark}` : ''}${
+                className={`cof-seg cof-${ring}${home ? ' home' : ''}${open ? ' open' : ''}${mark ? ` ${mark}` : ''}${
                   open && highlight === key ? ' asked' : ''
                 }${onTapPos ? ' tappable' : ''}${
                   onTapPos && keyPos === pos ? ' in-key' : ''
@@ -172,25 +173,11 @@ export function CircleWheel({
       )}
 
       {keyPos !== null && (
-        // The key's window, outlined over the top. Drawn as a fill underneath
-        // it was invisible — the segments are opaque — and tinting them would
-        // have fought the major/minor colours. An outline says "these seven,
-        // and they're adjacent" without touching anything else.
+        // The key's window, outlined over the top — one line round the seven,
+        // with home coloured in underneath it rather than outlined as well.
+        // The outline says "these seven, and they're adjacent" without
+        // touching the major/minor colours the rings are read by.
         <path className="cof-wedge" d={windowPath(keyPos + rotate)} />
-      )}
-
-      {tonic && (
-        // Home, in a wedge that reads two ways: the window doesn't move
-        // between C major and A minor, only the chord you count from.
-        <path
-          className="cof-tonic"
-          d={segmentPath(
-            RADII[tonic.ring][0],
-            RADII[tonic.ring][1],
-            (tonic.pos + rotate) * STEP - STEP / 2,
-            (tonic.pos + rotate) * STEP + STEP / 2,
-          )}
-        />
       )}
     </svg>
   );
