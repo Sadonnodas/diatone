@@ -165,6 +165,7 @@ export default function CircleTool({ onBack }: { onBack: () => void }) {
             marks={{}}
             keyPos={pos}
             tonic={{ ring: tonic.ring, pos }}
+            focus={tonic.ring}
             onTapPos={pickKey}
           />
         </div>

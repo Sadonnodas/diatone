@@ -2899,6 +2899,23 @@ html.short-screen .family-blurb {
 .cof-seg.in-key {
   filter: brightness(1.35);
 }
+/* Reading a minor key: the ring the chords are counted from takes the light
+   the majors have by default, and the majors step back into its place. The
+   rings keep their order — dim stays the darkest — but the circle you're
+   reading is the one that comes forward. Home keeps its own colour. */
+.cof.focus-minor .cof-minor:not(.home) {
+  fill: var(--cof-major);
+}
+.cof.focus-minor .cof-major:not(.home) {
+  fill: var(--cof-minor);
+}
+.cof.focus-minor .cof-minor + text.cof-label {
+  fill: var(--text);
+}
+.cof.focus-minor .cof-major + text.cof-label {
+  fill: var(--text-2);
+}
+
 /* Home: the one segment of the window you count from. Which ring it's in is
    the difference between C major and A minor. Colour, not an outline — an
    outline here crossed the window's own and the two read as a mistake. The

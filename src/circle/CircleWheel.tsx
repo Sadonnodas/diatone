@@ -87,6 +87,9 @@ export interface WheelProps {
   /** The one segment to call home — the major of the spoke in a major key,
       the minor outside it in a minor one. */
   tonic?: Slot | null;
+  /** Which ring to light: the majors, as the printed wheel does it, or the
+      minors when a minor key is the one being read. */
+  focus?: Ring;
 }
 
 export function CircleWheel({
@@ -98,12 +101,13 @@ export function CircleWheel({
   rotate = 0,
   onTapPos,
   tonic = null,
+  focus = 'major',
 }: WheelProps) {
   const blankKeys = new Set(blanks.map(slotKey));
 
   return (
     <svg
-      className="cof"
+      className={`cof${focus === 'minor' ? ' focus-minor' : ''}`}
       viewBox={VIEW}
       role="group"
       aria-label="Circle of fifths"
