@@ -106,8 +106,21 @@ export function segmentSpellings(slot: Slot): string[] {
   return [own, ...names.filter((n) => n !== own)];
 }
 
-/** What a segment prints, e.g. "Bbm/A#m" at the seam. */
-export const segmentLabel = (slot: Slot): string => segmentSpellings(slot).join('/');
+/**
+ * Spellings a segment answers to but doesn't print. C# major is seven sharps
+ * and A#m its relative — you'd have to go looking for a song written in
+ * either, and both chords are already on the wheel as Db and Bbm. Gb and Ebm
+ * stay: that side of the seam is a key people do play in, so its spoke still
+ * says so.
+ */
+const UNPRINTED = ['C#', 'A#m'];
+
+/** What a segment prints, e.g. "F#/Gb" at the seam. */
+export const segmentLabel = (slot: Slot): string => {
+  const names = segmentSpellings(slot);
+  const shown = names.filter((n) => !UNPRINTED.includes(n));
+  return (shown.length ? shown : names).join('/');
+};
 
 // ── Settings ────────────────────────────────────────────────────────────────
 

@@ -91,9 +91,16 @@ describe('the wedge', () => {
   it('prints both names where the seam needs them', () => {
     const fSharp = ALL_KEYS.indexOf('F#');
     const db = ALL_KEYS.indexOf('Db');
-    // F# major's iii lands on Db's vi: same sound, two spellings.
-    expect(segmentLabel({ ring: 'minor', pos: db })).toBe('Bbm/A#m');
+    // F# major's iii lands on Db's vi: same sound, two spellings. The flat
+    // side is a key people play in, so that spoke carries both names.
     expect(segmentLabel({ ring: 'major', pos: fSharp })).toBe('F#/Gb');
+    expect(segmentLabel({ ring: 'minor', pos: fSharp })).toBe('D#m/Ebm');
+    // The sharp side of the same seam is C# major and A#m — seven sharps
+    // apiece. The segments still answer to them; the rim doesn't print them.
+    expect(segmentLabel({ ring: 'major', pos: db })).toBe('Db');
+    expect(segmentLabel({ ring: 'minor', pos: db })).toBe('Bbm');
+    expect(segmentSpellings({ ring: 'major', pos: db })).toContain('C#');
+    expect(segmentSpellings({ ring: 'minor', pos: db })).toContain('A#m');
     // Away from the seam a segment has just the one name.
     expect(segmentLabel({ ring: 'major', pos: ALL_KEYS.indexOf('C') })).toBe('C');
     expect(segmentLabel({ ring: 'minor', pos: ALL_KEYS.indexOf('C') })).toBe('Am');
