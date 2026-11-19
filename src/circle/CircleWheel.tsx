@@ -90,6 +90,10 @@ export interface WheelProps {
   /** Which ring to light: the majors, as the printed wheel does it, or the
       minors when a minor key is the one being read. */
   focus?: Ring;
+  /** Print nothing but the blanks and what's been filled into them. The wheel
+      keeps its shape and its colours; every name you could have read an
+      answer off — the other ring, the vii° tabs — is gone. */
+  bare?: boolean;
 }
 
 export function CircleWheel({
@@ -102,6 +106,7 @@ export function CircleWheel({
   onTapPos,
   tonic = null,
   focus = 'major',
+  bare = false,
 }: WheelProps) {
   const blankKeys = new Set(blanks.map(slotKey));
 
@@ -120,6 +125,8 @@ export function CircleWheel({
           const a0 = (pos + rotate) * STEP - STEP / 2;
           const a1 = (pos + rotate) * STEP + STEP / 2;
           const blank = blankKeys.has(key);
+          // In a bare wheel only the blanks ever carry a name.
+          const silent = bare && !blank;
           const home = tonic?.ring === ring && tonic.pos === pos;
           const mark = marks[key];
           const open = blank && !mark;
@@ -151,7 +158,7 @@ export function CircleWheel({
                   ?
                 </text>
               )}
-              {!open && (
+              {!open && !silent && (
                 <text
                   className={`cof-label${mark ? ` ${mark}` : ''}`}
                   x={lx}

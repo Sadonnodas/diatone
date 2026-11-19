@@ -12,6 +12,7 @@ import { renderJazz } from '../components/ChordDisplay';
 import { ThemeIconButton } from '../components/ThemeSwitch';
 import {
   defaultCircleSettings,
+  gapCount,
   SETTINGS_REV,
   generateLayout,
   generateWedge,
@@ -327,7 +328,7 @@ export default function CircleGame({
     return (
       !!layout &&
       !layout.error &&
-      layout.blanks.length === Math.max(1, settings.gaps) &&
+      layout.blanks.length === gapCount(settings) &&
       layout.blanks.every((b) => b.ring !== 'dim' && settings.rings[b.ring])
     );
   };
@@ -940,6 +941,7 @@ export default function CircleGame({
                 marks={marks}
                 highlight={asked ? slotKey(asked) : null}
                 revealed={revealed}
+                bare={settings.bare}
               />
             </div>
             <div className="cof-progress">
@@ -1042,6 +1044,13 @@ export default function CircleGame({
               <b>V</b> one step clockwise, the minors directly outside. The wedge drill turns
               that shape to the top every time, so what you learn is the shape rather than twelve
               separate pictures.
+            </p>
+            <p>
+              Layout settings decide how much of the wheel you're given.{' '}
+              <b>Gaps at once: All</b> blanks every segment of the rings you've turned on, and{' '}
+              <b>No reference</b> takes the rest of the names off as well — the other ring and
+              the vii° tabs. With both on, nothing is printed at all: the wheel is the twelve
+              spokes and whatever you've named, counted from C at the top.
             </p>
             <p className="info-dim">
               Either spelling of a seam segment is accepted — F♯ and G♭ are the same place.

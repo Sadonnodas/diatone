@@ -142,8 +142,13 @@ export interface CircleSettings {
   drill: Drill;
   /** Layout drill: which rings can be blanked. */
   rings: { major: boolean; minor: boolean };
-  /** Layout drill: how many blanks at once. */
-  gaps: number;
+  /** Layout drill: how many blanks at once, or every segment of the rings
+      that are on. */
+  gaps: number | 'all';
+  /** Layout drill: blank the rest of the wheel too — the ring you aren't
+      filling and the vii° tabs — so nothing is left to read the answer off.
+      The wheel's own orientation is the only reference left: C at the top. */
+  bare: boolean;
   /** Wedge drill: place chord buttons, or numeral buttons. */
   place: WedgePlace;
   /** Wedge drill, chords only: build each chord, pick it, or both. */
@@ -162,7 +167,7 @@ export interface CircleSettings {
   playback: boolean;
 }
 
-export const GAP_CHOICES = [1, 2, 4];
+export const GAP_CHOICES: (number | 'all')[] = [1, 2, 4, 'all'];
 
 /** Bump when a default changes and saved settings should follow it once. */
 export const SETTINGS_REV = 1;
@@ -172,6 +177,7 @@ export const defaultCircleSettings: CircleSettings = {
   drill: 'layout',
   rings: { major: true, minor: false },
   gaps: 2,
+  bare: false,
   place: 'chords',
   style: 'build',
   guide: false,
@@ -205,19 +211,33 @@ export interface LayoutQuestion {
   error?: string;
 }
 
+/** The rings a layout question can blank, in drawing order. */
+const blankableRings = (s: CircleSettings): Ring[] => {
+  const rings: Ring[] = [];
+  if (s.rings.major) rings.push('major');
+  if (s.rings.minor) rings.push('minor');
+  return rings;
+};
+
+/** How many blanks these settings ask for — 'all' means every segment of the
+    rings that are on, which is the whole circle twice over when both are. */
+export function gapCount(s: CircleSettings): number {
+  const slots = blankableRings(s).length * POSITIONS;
+  if (slots === 0) return 0;
+  return s.gaps === 'all' ? slots : Math.max(1, Math.min(s.gaps, slots));
+}
+
 export function generateLayout(
   s: CircleSettings,
   rand: () => number = Math.random,
 ): LayoutQuestion {
-  const rings: Ring[] = [];
-  if (s.rings.major) rings.push('major');
-  if (s.rings.minor) rings.push('minor');
+  const rings = blankableRings(s);
   if (rings.length === 0) return { blanks: [], error: 'Turn on the major ring, the minor ring, or both.' };
 
   const all = rings.flatMap((ring) =>
     Array.from({ length: POSITIONS }, (_, pos) => ({ ring, pos }) as Slot),
   );
-  return { blanks: shuffle(all, rand).slice(0, Math.max(1, Math.min(s.gaps, all.length))) };
+  return { blanks: shuffle(all, rand).slice(0, gapCount(s)) };
 }
 
 /**

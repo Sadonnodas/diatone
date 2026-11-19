@@ -102,14 +102,34 @@ export function CircleOptions({
             <div className="seg">
               {GAP_CHOICES.map((g) => (
                 <button
-                  key={g}
+                  key={String(g)}
                   className={settings.gaps === g ? 'on' : ''}
                   onClick={() => update({ gaps: g })}
                 >
-                  {g}
+                  {g === 'all' ? 'All' : g}
                 </button>
               ))}
             </div>
+            <div className="desc" style={{ marginTop: 8 }}>
+              {settings.gaps === 'all'
+                ? 'Every segment of the rings above, blank from the start — one question each, until the wheel is full again.'
+                : 'How many segments are missing at a time.'}
+            </div>
+          </div>
+
+          {/* The rest of the wheel is a reference you can read the answer off:
+              the ring you aren't filling tells you the spoke, and a vii° tab
+              names it outright. Turning this on takes all of it away. */}
+          <div className="setting-row">
+            <div>
+              <div className="label">No reference</div>
+              <div className="desc">
+                Blanks the rest of the wheel as well — the other ring and the vii° tabs. Only what
+                you've named stays on it, so the shape has to come from memory. The wheel never
+                turns: C is always at the top.
+              </div>
+            </div>
+            <Switch on={settings.bare} onClick={() => update({ bare: !settings.bare })} />
           </div>
         </>
       )}

@@ -3,6 +3,7 @@ import {
   POSITIONS,
   RING_ORDER,
   defaultCircleSettings,
+  gapCount,
   generateLayout,
   generateWedge,
   layoutAnswerMatches,
@@ -193,6 +194,33 @@ describe('generateLayout', () => {
   it('never blanks the same segment twice', () => {
     const q = generateLayout(settings({ gaps: 24, rings: { major: true, minor: true } }), seeded(5));
     expect(new Set(q.blanks.map(slotKey)).size).toBe(q.blanks.length);
+  });
+
+  it('can blank a whole ring, or both of them', () => {
+    const minor = generateLayout(
+      settings({ gaps: 'all', rings: { major: false, minor: true } }),
+      seeded(3),
+    );
+    expect(minor.blanks).toHaveLength(POSITIONS);
+    // Every spoke of that ring, once each — the circle with nothing left on it.
+    expect(new Set(minor.blanks.map((b) => b.pos)).size).toBe(POSITIONS);
+    expect(minor.blanks.every((b) => b.ring === 'minor')).toBe(true);
+
+    const both = generateLayout(
+      settings({ gaps: 'all', rings: { major: true, minor: true } }),
+      seeded(3),
+    );
+    expect(both.blanks).toHaveLength(2 * POSITIONS);
+    expect(new Set(both.blanks.map(slotKey)).size).toBe(2 * POSITIONS);
+  });
+
+  it('counts the gaps it will ask for', () => {
+    expect(gapCount(settings({ gaps: 2, rings: { major: true, minor: false } }))).toBe(2);
+    // More gaps than there are segments is just all of them.
+    expect(gapCount(settings({ gaps: 99, rings: { major: true, minor: false } }))).toBe(POSITIONS);
+    expect(gapCount(settings({ gaps: 'all', rings: { major: true, minor: false } }))).toBe(POSITIONS);
+    expect(gapCount(settings({ gaps: 'all', rings: { major: true, minor: true } }))).toBe(2 * POSITIONS);
+    expect(gapCount(settings({ gaps: 'all', rings: { major: false, minor: false } }))).toBe(0);
   });
 
   it('says so instead of producing an empty question', () => {
